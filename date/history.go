@@ -11,6 +11,12 @@ type History[T any] struct {
 	values []T
 }
 
+// Clear removes all items from the history.
+func (h *History[T]) Clear() {
+	h.days = h.days[:0]
+	h.values = h.values[:0]
+}
+
 // Len return the number of items in the history.
 func (h *History[T]) Len() int { return len(h.days) }
 

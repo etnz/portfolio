@@ -17,6 +17,8 @@ func (db *DB) Has(ticker string) bool {
 	return ok
 }
 
+func (db *DB) Get(ticker string) *Security { return db.content[ticker] }
+
 // read a single value from the database for a given (ticker, day).
 func (db *DB) read(ticker string, day date.Date) (float64, bool) {
 	sec, ok := db.content[ticker]
