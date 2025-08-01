@@ -6,7 +6,7 @@ import (
 	"io/fs"
 	"log"
 
-	"github.com/etnz/porfolio/security"
+	"github.com/etnz/portfolio/security"
 	"github.com/google/subcommands"
 )
 

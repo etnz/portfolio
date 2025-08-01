@@ -1,6 +1,6 @@
 package security
 
-import "github.com/etnz/porfolio/date"
+import "github.com/etnz/portfolio/date"
 
 // ID represent the unique identifier of a security. It must follow a specific format.
 type ID string

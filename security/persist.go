@@ -12,7 +12,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/etnz/porfolio/date"
+	"github.com/etnz/portfolio/date"
 )
 
 const attrOn = "on"

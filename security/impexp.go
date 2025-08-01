@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/etnz/porfolio/date"
+	"github.com/etnz/portfolio/date"
 )
 
 // this file contains functions to handle the import/export format.

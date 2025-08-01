@@ -6,7 +6,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/etnz/porfolio/cmd"
+	"github.com/etnz/portfolio/cmd"
 	"github.com/google/subcommands"
 )
 

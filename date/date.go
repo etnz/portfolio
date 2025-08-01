@@ -37,6 +37,9 @@ func (d Date) Before(x Date) bool { return d.time().Before(x.time()) }
 // Return the Date of today.
 func Today() Date { return New(time.Now().Date()) }
 
+// Add returns a new Date with the given number of days added.
+func (d Date) Add(i int) Date { return New(d.y, d.m, d.d+i) }
+
 // Year returns current year.
 func (d Date) Year() int { return d.y }
 

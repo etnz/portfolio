@@ -1,4 +1,4 @@
-module github.com/etnz/porfolio
+module github.com/etnz/portfolio
 
 go 1.24.5
 
