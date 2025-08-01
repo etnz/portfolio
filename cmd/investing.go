@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/etnz/porfolio/date"
+	"github.com/etnz/portfolio/date"
 	"github.com/google/subcommands"
 )
 

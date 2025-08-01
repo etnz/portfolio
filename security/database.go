@@ -1,7 +1,7 @@
 package security
 
 import (
-	"github.com/etnz/porfolio/date"
+	"github.com/etnz/portfolio/date"
 )
 
 // DB holds the all the securities data.
