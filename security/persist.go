@@ -208,7 +208,7 @@ func (s *Securities) persistDefinition(w io.Writer) error {
 
 		data, err := json.Marshal(js)
 		if err != nil {
-			return fmt.Errorf("persist error: cannot marshal security %q: %w", ticker, err)
+			return fmt.Errorf("persist error: cannot marshal security %q: %w", sec.ticker, err)
 		}
 
 		if _, err := w.Write(append(data, '\n')); err != nil {
