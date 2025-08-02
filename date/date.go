@@ -56,6 +56,15 @@ func Parse(str string) (Date, error) {
 	return Date(New(on.Date())), nil
 }
 
+// MustParse is like Parse but panics on error.
+func MustParse(str string) Date {
+	d, err := Parse(str)
+	if err != nil {
+		panic(err.Error())
+	}
+	return d
+}
+
 // UnmarshalJSON implements the json specific way to unmarshall a date from a json string.
 func (j *Date) UnmarshalJSON(bytes []byte) error {
 	var str string
