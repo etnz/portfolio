@@ -1,6 +1,7 @@
 package security
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,36 +16,44 @@ import (
 
 // Import securities from 'r' in the import/export format.
 //
-// The import format is a json file.
+// The import format is a JSONL file, where each line is a JSON object representing a security.
 //
-// The file contains a single json object whose property names are security tickers and values are securities themselves.
-//
-// A security is a single json object whose property 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
+// A security is a single json object whose property 'ticker' contains the security ticker, 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
 //
 // The security history is represented as a single json object whose properties are date.Date parseable by [date] package, and value are the security price as a number.
 func (s *Securities) Import(r io.Reader) error {
 
 	// the readable version of the format is can be summarized by a few types.
-
 	type jsecurity struct {
+		Ticker  string             `json:"ticker"`
 		ID      string             `json:"id"`
 		History map[string]float64 `json:"history"`
 	}
-	content := make(map[string]jsecurity)
-	if err := json.NewDecoder(r).Decode(&content); err != nil {
-		return fmt.Errorf("cannot parse file for Security import format: %v", err)
+
+	var jsecurities []jsecurity
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(strings.TrimSpace(string(line))) == 0 {
+			continue
+		}
+		var js jsecurity
+		if err := json.Unmarshal(line, &js); err != nil {
+			return fmt.Errorf("cannot parse line for Security import format: %q: %w", string(line), err)
+		}
+		jsecurities = append(jsecurities, js)
 	}
 
 	// Check that tickers is not already present in the database.
 	var tickers []string
 	var dateErrors []error
-	for ticker, js := range content {
-		if _, ok := s.index[ticker]; ok {
-			tickers = append(tickers, ticker)
+	for _, js := range jsecurities {
+		if _, ok := s.index[js.Ticker]; ok {
+			tickers = append(tickers, js.Ticker)
 		}
 		for day := range js.History {
 			if _, err := date.Parse(day); err != nil {
-				dateErrors = append(dateErrors, fmt.Errorf("invalid date in %q history: %w", ticker, err))
+				dateErrors = append(dateErrors, fmt.Errorf("invalid date in %q history: %w", js.Ticker, err))
 			}
 		}
 	}
@@ -62,11 +71,11 @@ func (s *Securities) Import(r io.Reader) error {
 	}
 
 	// Append securities for each ticker
-	for ticker, js := range content {
+	for _, js := range jsecurities {
 		// Create the security.
 		sec := &Security{
-			ticker: ticker,
-			id: ID(js.ID),
+			ticker: js.Ticker,
+			id:     ID(js.ID),
 		}
 
 		// fill the security from json
@@ -76,7 +85,7 @@ func (s *Securities) Import(r io.Reader) error {
 			sec.prices.Append(d, value)
 		}
 		s.securities = append(s.securities, sec)
-		s.index[ticker] = sec
+		s.index[sec.ticker] = sec
 	}
 	slices.SortFunc(s.securities, func(a, b *Security) int {
 		return strings.Compare(a.ticker, b.ticker)
@@ -86,28 +95,23 @@ func (s *Securities) Import(r io.Reader) error {
 
 // Export securities in database to 'w' in the import/export format.
 //
-// The format is a json file.
+// The format is a JSONL file, where each line is a JSON object representing a security.
 //
-// The file contains a single json object whose property names are security tickers and values are securities themselves.
-//
-// A security is a single json object whose property 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
+// A security is a single json object whose property 'ticker' contains the security ticker, 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
 //
 // The security history is represented as a single json object whose properties are date.Date parseable by [date] package, and value are the security price as a number.
 func (s *Securities) Export(w io.Writer) error {
 
 	type jsecurity struct {
+		Ticker  string             `json:"ticker"`
 		ID      string             `json:"id"`
 		History map[string]float64 `json:"history"`
 	}
 
-	// Manually construct the JSON to ensure stable key order for testing.
-	if _, err := w.Write([]byte("{")); err != nil {
-		return fmt.Errorf("cannot write Security format: %w", err)
-	}
-
-	for i, sec := range s.securities {
+	for _, sec := range s.securities {
 		// Create the json object security.
 		js := jsecurity{
+			Ticker:  sec.Ticker(),
 			ID:      string(sec.id),
 			History: make(map[string]float64),
 		}
@@ -116,21 +120,13 @@ func (s *Securities) Export(w io.Writer) error {
 			js.History[day.String()] = value
 		}
 
-		keyData, err := json.Marshal(sec.Ticker())
-		if err != nil {
-			return fmt.Errorf("cannot marshal ticker %q: %w", sec.Ticker(), err)
-		}
-		valueData, err := json.Marshal(js)
+		data, err := json.Marshal(js)
 		if err != nil {
 			return fmt.Errorf("cannot marshal security %q: %w", sec.Ticker(), err)
 		}
-
-		fmt.Fprintf(w, "%s:%s", string(keyData), string(valueData))
-		if i < len(s.securities)-1 {
-			fmt.Fprint(w, ",")
+		if _, err := w.Write(append(data, '\n')); err != nil {
+			return fmt.Errorf("cannot write Security format: %w", err)
 		}
 	}
-
-	_, err := w.Write([]byte("}"))
-	return err
+	return nil
 }

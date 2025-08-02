@@ -8,8 +8,10 @@ import (
 // TestImport creates a very basic check that imports is working as expected.
 func TestImport(t *testing.T) {
 	sample1 := `
-	{"ticker1":{"id":"LU345346445.XTRA","history":{"2025-01-01":123.12,"2025-01-02":124.12}}}
-	`
+{"ticker":"AAPL","id":"US0378331005","history":{"2025-07-29":195.5,"2025-07-30":196.25,"2025-07-31":198.1}}
+{"ticker":"NVDA","id":"US67066G1040","history":{"2025-07-29":175.51,"2025-07-30":178.9,"2025-07-31":177.85}}
+`
+
 	sample1 = strings.Trim(sample1, "\n\t")
 
 	securities := New()
