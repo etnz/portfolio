@@ -1,4 +1,4 @@
-package transaction
+package portfolio
 
 import (
 	"bytes"
@@ -22,7 +22,7 @@ func TestLoad(t *testing.T) {
 `
 	reader := strings.NewReader(jsonlStream)
 
-	transactions, err := Load(reader)
+	transactions, err := LoadTransactions(reader)
 
 	// 1. Check for unexpected errors
 	if err != nil {
@@ -122,7 +122,7 @@ func TestLoadAndSaveCycle(t *testing.T) {
 
 	// 2. Act: Load the unsorted data, then save it to a new buffer.
 	reader := strings.NewReader(unsortedJSONL)
-	transactions, err := Load(reader)
+	transactions, err := LoadTransactions(reader)
 	if err != nil {
 		t.Fatalf("Load() failed unexpectedly: %v", err)
 	}

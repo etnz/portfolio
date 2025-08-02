@@ -1,4 +1,4 @@
-package security
+package portfolio
 
 import (
 	"strings"
@@ -14,7 +14,7 @@ func TestImport(t *testing.T) {
 
 	sample1 = strings.Trim(sample1, "\n\t")
 
-	securities := New()
+	securities := NewSecurities()
 	if err := securities.Import(strings.NewReader(sample1)); err != nil {
 		t.Errorf("cannot import sample 1: %v", err)
 	}

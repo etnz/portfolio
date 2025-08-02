@@ -6,7 +6,7 @@ import (
 	"io/fs"
 	"log"
 
-	"github.com/etnz/portfolio/security"
+	"github.com/etnz/portfolio"
 	"github.com/google/subcommands"
 )
 
@@ -28,18 +28,18 @@ var securitiesPath = flag.String("securities-path", ".security", "Path to the se
 var portfolioFile = flag.String("portfolio-file", "transactions.jsonl", "Path to the portfolio transactions file (JSONL format)")
 
 // OpenSecurities is the central function to open the securities database.
-func OpenSecurities() (db *security.Securities, err error) {
-	// Load the security database from the specified file.
-	db, err = security.Load(*securitiesPath)
+func OpenSecurities() (db *portfolio.Securities, err error) {
+	// Load the portfolio database from the specified file.
+	db, err = portfolio.LoadSecurities(*securitiesPath)
 	if errors.Is(err, fs.ErrNotExist) {
 		log.Println("warning, database does not exist, creating an empty database instead")
-		db, err = security.New(), nil
+		db, err = portfolio.NewSecurities(), nil
 
 	}
 	return
 }
 
-func CloseSecurities(db *security.Securities) error {
-	// Close the security database if it is not nil.
+func CloseSecurities(db *portfolio.Securities) error {
+	// Close the portfolio database if it is not nil.
 	return db.Persist(*securitiesPath)
 }
