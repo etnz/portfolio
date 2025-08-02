@@ -17,7 +17,10 @@ var Commands []subcommands.Command
 
 func init() {
 	// Register the subcommands.
+	Commands = append(Commands, subcommands.FlagsCommand())
+	Commands = append(Commands, subcommands.HelpCommand())
 	Commands = append(Commands, &importInvesting{})
+	Commands = append(Commands, &update{})
 }
 
 var securitiesPath = flag.String("securities-path", ".security", "Path to the securities database folder")

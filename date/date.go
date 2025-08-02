@@ -133,3 +133,6 @@ func Iterate[T any](histories ...History[T]) iter.Seq[Date] {
 }
 
 // TODO #2: fill and test this package see issue
+
+// Range represents a range of dates.
+type Range struct{ From, To Date }

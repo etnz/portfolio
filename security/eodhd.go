@@ -1,13 +1,28 @@
 package security
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/etnz/portfolio/date"
 )
+
+const eodhd_api_key = "EODHD_API_KEY"
+const EodhdApiDemoKey = "67adc13417e148.00145034"
+
+var eodhdApiFlag = flag.String("eodhd-api-key", "", "EODHD API key to use for fetching prices from EODHD.com.\n If missing it will read for the environment variable \""+eodhd_api_key+"\". You can get one at https://eodhd.com/")
+
+func eodhdApiKey() string {
+	// If the flag is not set, we try to read it from the environment variable.
+	if *eodhdApiFlag == "" {
+		*eodhdApiFlag = os.Getenv(eodhd_api_key)
+	}
+	return *eodhdApiFlag
+}
 
 // This file contains functions to access the EODHD API.
 
@@ -210,14 +225,3 @@ func eodhdDaily(apiKey, ticker string, from, to date.Date) (open, close date.His
 	}
 	return
 }
-
-// func EODHDUpdate(apiKey, isin, mic string, from, to date.Date) (prices date.History[float64], err error) {
-// 	// Find the eodhd ticker for the given isin and mic.
-// 	ticker, err := eodhdSearch(apiKey, isin, mic)
-// 	if err != nil {
-// 		return prices, err
-// 	}
-
-// 	_, prices, err = eodhdDaily(apiKey, ticker, from, to)
-// 	return prices, err
-// }
