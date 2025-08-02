@@ -22,7 +22,7 @@ func (s *Securities) Update() error {
 
 	var errs error
 
-	for ticker, sec := range s.content {
+	for _, sec := range s.securities {
 		latest, _ := sec.Prices().Latest()
 		if !latest.Before(yesterday) {
 			continue
@@ -63,7 +63,7 @@ func (s *Securities) Update() error {
 		// prices now contains the price updates.
 
 		if prices.Len() == 0 {
-			log.Printf("no prices found for security %q (%v) between %s and %s", ticker, sec.ID(), latest.Add(1).String(), yesterday.String())
+			log.Printf("no prices found for security %q (%v) between %s and %s", sec.Ticker(), sec.ID(), latest.Add(1).String(), yesterday.String())
 		}
 		//append all prices to the security.
 		for day, price := range prices.Values() {

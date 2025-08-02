@@ -17,7 +17,7 @@ import (
 
 const attrOn = "on"
 const securityFilesGlob = "[0-9][0-9][0-9][0-9].jsonl"
-const definitionFilename = "definition.json"
+const definitionFilename = "definition.jsonl"
 
 // this file contains code to persist securities in a folder, in a way that is still human readable, and yet git friendly.
 // the main goal for such a database is to live on a private github repo.
@@ -38,28 +38,38 @@ func (s *Securities) loadDefinition(filename string, r io.Reader) error {
 
 	// jsecurity is the object read from the file using json parser.
 	type jsecurity struct {
-		ID string `json:"id"`
+		Ticker string `json:"ticker"`
+		ID     string `json:"id"`
 		//more to come when the security definition grows.
 	}
 
-	// The top struct of the file format is a map of ticker to jsecurity objects.
-	jsecurities := make(map[string]*jsecurity)
-
-	if err := json.NewDecoder(r).Decode(&jsecurities); err != nil {
-		return fmt.Errorf("format error %q: %w", filename, err)
-	}
-
-	// Now load the struct we just read into the database.
-	for ticker, js := range jsecurities {
-		if s.Has(ticker) {
-			return fmt.Errorf("format error %q: ticker %q is already defined", filename, ticker)
+	// The definition file is a JSONL file, one security per line.
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(strings.TrimSpace(string(line))) == 0 {
+			continue
 		}
-		// Create the real security object from the json proxy.
-		s.content[ticker] = &Security{
+
+		var js jsecurity
+		if err := json.Unmarshal(line, &js); err != nil {
+			return fmt.Errorf("format error in %q on line %q: %w", filename, string(line), err)
+		}
+
+		if s.Has(js.Ticker) {
+			return fmt.Errorf("format error in %q: ticker %q is already defined", filename, js.Ticker)
+		}
+		sec := &Security{
+			ticker: js.Ticker,
 			id:     ID(js.ID),
 			prices: date.History[float64]{},
 		}
+		s.securities = append(s.securities, sec)
+		s.index[js.Ticker] = sec
 	}
+	slices.SortFunc(s.securities, func(a, b *Security) int {
+		return strings.Compare(a.ticker, b.ticker)
+	})
 	return nil
 }
 
@@ -134,7 +144,7 @@ func (s *Securities) loadLine(l line) error {
 			return fmt.Errorf("parse error %s:%v: property %q must be of type 'number'", l.filename, l.i, ticker)
 		}
 		// Entry is valid add it to the database.
-		s.content[ticker].prices.Append(on, p)
+		s.index[ticker].prices.Append(on, p)
 	}
 	return nil
 }
@@ -182,63 +192,28 @@ func Load(folder string) (*Securities, error) {
 
 // Persist section.
 
-func persistSecurity(w io.Writer, sec *Security) error {
-	// jsecurity is the object read from the file using json parser.
+func (s *Securities) persistDefinition(w io.Writer) error {
+	// jsecurity is the object to write to the file using json parser.
 	type jsecurity struct {
-		ID string `json:"id"`
+		Ticker string `json:"ticker"`
+		ID     string `json:"id"`
 		//more to come when the security definition grows.
 	}
-	js := jsecurity{
-		ID: string(sec.id),
-	}
-	data, err := json.Marshal(js)
-	if err != nil {
-		return fmt.Errorf("persist error: cannot persist Security %q definition %w", sec.ticker, err)
-	}
-	if _, err := w.Write(data); err != nil {
-		return fmt.Errorf("persist error: cannot write to file: %w", err)
-	}
 
-	return nil
-}
-
-func (s *Securities) persistDefinition(w io.Writer, tickers []string) error {
-	// We cannot use Go standard serialisation as the definition file wouldn't be stable. (it contains a map)
-	if _, err := fmt.Fprint(w, "{\n    "); err != nil {
-		return fmt.Errorf("persist error: cannot write to file: %w", err)
-	}
-
-	for i, ticker := range tickers {
-		sec, exists := s.content[ticker]
-		if !exists {
-			return fmt.Errorf("persist error: unknown ticker %q", ticker)
+	for _, sec := range s.securities {
+		js := jsecurity{
+			Ticker: sec.Ticker(),
+			ID:     string(sec.ID()),
 		}
 
-		data, err := json.Marshal(ticker)
+		data, err := json.Marshal(js)
 		if err != nil {
-			return fmt.Errorf("persist error: invalid ticker %q: %w", ticker, err)
+			return fmt.Errorf("persist error: cannot marshal security %q: %w", ticker, err)
 		}
-		if _, err := w.Write(data); err != nil {
+
+		if _, err := w.Write(append(data, '\n')); err != nil {
 			return fmt.Errorf("persist error: cannot write to file: %w", err)
 		}
-
-		if _, err := fmt.Fprint(w, ":"); err != nil {
-			return fmt.Errorf("persist error: cannot write to file: %w", err)
-		}
-
-		if err := persistSecurity(w, sec); err != nil {
-			return err
-		}
-
-		if i != len(tickers)-1 { // not last
-			if _, err := fmt.Fprint(w, ",\n    "); err != nil {
-				return fmt.Errorf("persist error: cannot write to file: %w", err)
-			}
-		}
-	}
-
-	if _, err := fmt.Fprint(w, "\n}"); err != nil {
-		return fmt.Errorf("persist error: cannot write to file: %w", err)
 	}
 	return nil
 }
@@ -282,14 +257,11 @@ func (s *Securities) Persist(folder string) error {
 	}
 	lines := make([]line, 0, 365*100) // hunderd years should be enough
 
-	// Start creating the list of tickers, in alphabetical order.
-	tickers := make([]string, 0, len(db.content))
-	histories := make([]date.History[float64], 0, len(s.content))
-	for ticker, sec := range s.content {
-		tickers = append(tickers, ticker)
+	// The s.securities slice is already sorted, so we can use it directly.
+	histories := make([]date.History[float64], 0, len(s.securities))
+	for _, sec := range s.securities {
 		histories = append(histories, sec.prices)
 	}
-	slices.Sort(tickers)
 
 	// Persist the definition file.
 	definitionFile := filepath.Join(folder, definitionFilename)
@@ -300,7 +272,7 @@ func (s *Securities) Persist(folder string) error {
 	defer f.Close()
 	log.Printf("create-definition-file name=%q", definitionFile)
 
-	if err := s.persistDefinition(f, tickers); err != nil {
+	if err := s.persistDefinition(f); err != nil {
 		return err
 	}
 	// Add a trailing line at the end of the file.
@@ -317,9 +289,9 @@ func (s *Securities) Persist(folder string) error {
 			filename: filepath.Join(folder, fmt.Sprintf("%v.jsonl", day.Year())),
 		}
 		// Append tickers that have values.
-		for _, ticker := range tickers {
-			if val, ok := s.read(ticker, day); ok {
-				l.tickers = append(l.tickers, ticker)
+		for _, sec := range s.securities {
+			if val, ok := s.read(sec.Ticker(), day); ok {
+				l.tickers = append(l.tickers, sec.Ticker())
 				l.prices = append(l.prices, val)
 			}
 		}
