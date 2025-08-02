@@ -12,13 +12,13 @@ func TestPersistLoad(t *testing.T) {
 
 	sample1 = strings.Trim(sample1, "\n\t")
 
-	db := NewDB()
-	if err := db.Import(strings.NewReader(sample1)); err != nil {
+	securities := New()
+	if err := securities.Import(strings.NewReader(sample1)); err != nil {
 		t.Fatalf("Import() has unexpected error: %v", err)
 	}
 	folder := t.TempDir()
 
-	if err := db.Persist(folder); err != nil {
+	if err := securities.Persist(folder); err != nil {
 		t.Fatalf("Persist(%q) has unexpected error: %v", folder, err)
 	}
 

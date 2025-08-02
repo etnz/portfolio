@@ -16,13 +16,13 @@ import (
 // or the forex pair.
 // there might be other thypes of securities, but they are not supported by update, yet (like privately traded assets)
 
-func (db *DB) Update() error {
+func (s *Securities) Update() error {
 
 	yesterday := date.Today().Add(-1)
 
 	var errs error
 
-	for ticker, sec := range db.content {
+	for ticker, sec := range s.content {
 		latest, _ := sec.Prices().Latest()
 		if !latest.Before(yesterday) {
 			continue

@@ -12,13 +12,13 @@ func TestImport(t *testing.T) {
 	`
 	sample1 = strings.Trim(sample1, "\n\t")
 
-	db := NewDB()
-	if err := db.Import(strings.NewReader(sample1)); err != nil {
+	securities := New()
+	if err := securities.Import(strings.NewReader(sample1)); err != nil {
 		t.Errorf("cannot import sample 1: %v", err)
 	}
 
 	sb := strings.Builder{}
-	if err := db.Export(&sb); err != nil {
+	if err := securities.Export(&sb); err != nil {
 		t.Errorf("Export() has error %v", err)
 	}
 	got := sb.String()
