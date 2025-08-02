@@ -57,7 +57,7 @@ func (db *DB) loadDefinition(filename string, r io.Reader) error {
 		// Create the real security object from the json proxy.
 		db.content[ticker] = &Security{
 			id:     ID(js.ID),
-			prices: &date.History[float64]{},
+			prices: date.History[float64]{},
 		}
 	}
 	return nil
@@ -287,7 +287,7 @@ func (db *DB) Persist(folder string) error {
 	histories := make([]date.History[float64], 0, len(db.content))
 	for ticker, sec := range db.content {
 		tickers = append(tickers, ticker)
-		histories = append(histories, *sec.prices)
+		histories = append(histories, sec.prices)
 	}
 	slices.Sort(tickers)
 
