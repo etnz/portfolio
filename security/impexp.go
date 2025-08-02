@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
+	"strings"
 
 	"github.com/etnz/portfolio/date"
 )
@@ -37,7 +39,7 @@ func (s *Securities) Import(r io.Reader) error {
 	var tickers []string
 	var dateErrors []error
 	for ticker, js := range content {
-		if _, ok := s.content[ticker]; ok {
+		if _, ok := s.index[ticker]; ok {
 			tickers = append(tickers, ticker)
 		}
 		for day := range js.History {
@@ -63,6 +65,7 @@ func (s *Securities) Import(r io.Reader) error {
 	for ticker, js := range content {
 		// Create the security.
 		sec := &Security{
+			ticker: ticker,
 			id: ID(js.ID),
 		}
 
@@ -72,8 +75,12 @@ func (s *Securities) Import(r io.Reader) error {
 			d, _ := date.Parse(day)
 			sec.prices.Append(d, value)
 		}
-		s.content[ticker] = sec
+		s.securities = append(s.securities, sec)
+		s.index[ticker] = sec
 	}
+	slices.SortFunc(s.securities, func(a, b *Security) int {
+		return strings.Compare(a.ticker, b.ticker)
+	})
 	return nil
 }
 
@@ -92,26 +99,38 @@ func (s *Securities) Export(w io.Writer) error {
 		ID      string             `json:"id"`
 		History map[string]float64 `json:"history"`
 	}
-	content := make(map[string]jsecurity)
 
-	// Append securities for each ticker
-	for ticker, sec := range s.content {
+	// Manually construct the JSON to ensure stable key order for testing.
+	if _, err := w.Write([]byte("{")); err != nil {
+		return fmt.Errorf("cannot write Security format: %w", err)
+	}
+
+	for i, sec := range s.securities {
 		// Create the json object security.
 		js := jsecurity{
 			ID:      string(sec.id),
 			History: make(map[string]float64),
 		}
 
-		// fill the json security from security
 		for day, value := range sec.prices.Values() {
-			// error has been checked before
 			js.History[day.String()] = value
 		}
-		content[ticker] = js
+
+		keyData, err := json.Marshal(sec.Ticker())
+		if err != nil {
+			return fmt.Errorf("cannot marshal ticker %q: %w", sec.Ticker(), err)
+		}
+		valueData, err := json.Marshal(js)
+		if err != nil {
+			return fmt.Errorf("cannot marshal security %q: %w", sec.Ticker(), err)
+		}
+
+		fmt.Fprintf(w, "%s:%s", string(keyData), string(valueData))
+		if i < len(s.securities)-1 {
+			fmt.Fprint(w, ",")
+		}
 	}
 
-	if err := json.NewEncoder(w).Encode(content); err != nil {
-		return fmt.Errorf("cannot write Security format: %v", err)
-	}
-	return nil
+	_, err := w.Write([]byte("}"))
+	return err
 }

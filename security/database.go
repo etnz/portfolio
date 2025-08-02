@@ -6,22 +6,28 @@ import (
 
 // Securities holds securities.
 type Securities struct {
-	content map[string]*Security
+	securities []*Security
+	index      map[string]*Security
 }
 
 // New returns a new empty database.
-func New() *Securities { return &Securities{make(map[string]*Security)} }
+func New() *Securities {
+	return &Securities{
+		securities: make([]*Security, 0),
+		index:      make(map[string]*Security),
+	}
+}
 
 func (s *Securities) Has(ticker string) bool {
-	_, ok := s.content[ticker]
+	_, ok := s.index[ticker]
 	return ok
 }
 
-func (s *Securities) Get(ticker string) *Security { return s.content[ticker] }
+func (s *Securities) Get(ticker string) *Security { return s.index[ticker] }
 
 // read a single value from the database for a given (ticker, day).
 func (s *Securities) read(ticker string, day date.Date) (float64, bool) {
-	sec, ok := s.content[ticker]
+	sec, ok := s.index[ticker]
 	if !ok {
 		return 0.0, false
 	}
