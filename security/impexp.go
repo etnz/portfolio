@@ -20,7 +20,7 @@ import (
 // A security is a single json object whose property 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
 //
 // The security history is represented as a single json object whose properties are date.Date parseable by [date] package, and value are the security price as a number.
-func (db *DB) Import(r io.Reader) error {
+func (s *Securities) Import(r io.Reader) error {
 
 	// the readable version of the format is can be summarized by a few types.
 
@@ -37,7 +37,7 @@ func (db *DB) Import(r io.Reader) error {
 	var tickers []string
 	var dateErrors []error
 	for ticker, js := range content {
-		if _, ok := db.content[ticker]; ok {
+		if _, ok := s.content[ticker]; ok {
 			tickers = append(tickers, ticker)
 		}
 		for day := range js.History {
@@ -62,7 +62,7 @@ func (db *DB) Import(r io.Reader) error {
 	// Append securities for each ticker
 	for ticker, js := range content {
 		// Create the security.
-		s := &Security{
+		sec := &Security{
 			id: ID(js.ID),
 		}
 
@@ -70,9 +70,9 @@ func (db *DB) Import(r io.Reader) error {
 		for day, value := range js.History {
 			// error has been checked before
 			d, _ := date.Parse(day)
-			s.prices.Append(d, value)
+			sec.prices.Append(d, value)
 		}
-		db.content[ticker] = s
+		s.content[ticker] = sec
 	}
 	return nil
 }
@@ -86,7 +86,7 @@ func (db *DB) Import(r io.Reader) error {
 // A security is a single json object whose property 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
 //
 // The security history is represented as a single json object whose properties are date.Date parseable by [date] package, and value are the security price as a number.
-func (db *DB) Export(w io.Writer) error {
+func (s *Securities) Export(w io.Writer) error {
 
 	type jsecurity struct {
 		ID      string             `json:"id"`
@@ -95,15 +95,15 @@ func (db *DB) Export(w io.Writer) error {
 	content := make(map[string]jsecurity)
 
 	// Append securities for each ticker
-	for ticker, s := range db.content {
+	for ticker, sec := range s.content {
 		// Create the json object security.
 		js := jsecurity{
-			ID:      string(s.id),
+			ID:      string(sec.id),
 			History: make(map[string]float64),
 		}
 
 		// fill the json security from security
-		for day, value := range s.prices.Values() {
+		for day, value := range sec.prices.Values() {
 			// error has been checked before
 			js.History[day.String()] = value
 		}

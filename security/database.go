@@ -4,24 +4,24 @@ import (
 	"github.com/etnz/portfolio/date"
 )
 
-// DB holds the all the securities data.
-type DB struct {
+// Securities holds securities.
+type Securities struct {
 	content map[string]*Security
 }
 
-// NewDB returns a new empty database.
-func NewDB() *DB { return &DB{make(map[string]*Security)} }
+// New returns a new empty database.
+func New() *Securities { return &Securities{make(map[string]*Security)} }
 
-func (db *DB) Has(ticker string) bool {
-	_, ok := db.content[ticker]
+func (s *Securities) Has(ticker string) bool {
+	_, ok := s.content[ticker]
 	return ok
 }
 
-func (db *DB) Get(ticker string) *Security { return db.content[ticker] }
+func (s *Securities) Get(ticker string) *Security { return s.content[ticker] }
 
 // read a single value from the database for a given (ticker, day).
-func (db *DB) read(ticker string, day date.Date) (float64, bool) {
-	sec, ok := db.content[ticker]
+func (s *Securities) read(ticker string, day date.Date) (float64, bool) {
+	sec, ok := s.content[ticker]
 	if !ok {
 		return 0.0, false
 	}

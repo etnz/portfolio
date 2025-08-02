@@ -19,7 +19,7 @@ const attrOn = "on"
 const securityFilesGlob = "[0-9][0-9][0-9][0-9].jsonl"
 const definitionFilename = "definition.json"
 
-// this file contains code to persist the database in a folder, in a way that is still human readable, and yet git friendly.
+// this file contains code to persist securities in a folder, in a way that is still human readable, and yet git friendly.
 // the main goal for such a database is to live on a private github repo.
 //
 // The overall strategy to Load and Persist securities is as follow:
@@ -33,7 +33,7 @@ const definitionFilename = "definition.json"
 
 // loadDefinition parses a single file containing the securities definition.
 // filename is for error message only.
-func (db *DB) loadDefinition(filename string, r io.Reader) error {
+func (s *Securities) loadDefinition(filename string, r io.Reader) error {
 	// to parse a json, we use a dedicated local struct with tag annotation.
 
 	// jsecurity is the object read from the file using json parser.
@@ -51,11 +51,11 @@ func (db *DB) loadDefinition(filename string, r io.Reader) error {
 
 	// Now load the struct we just read into the database.
 	for ticker, js := range jsecurities {
-		if db.Has(ticker) {
+		if s.Has(ticker) {
 			return fmt.Errorf("format error %q: ticker %q is already defined", filename, ticker)
 		}
 		// Create the real security object from the json proxy.
-		db.content[ticker] = &Security{
+		s.content[ticker] = &Security{
 			id:     ID(js.ID),
 			prices: date.History[float64]{},
 		}
@@ -90,7 +90,7 @@ func readLines(filenames ...string) (list []line, err error) {
 }
 
 // load a single line from the database persisted files.
-func (db *DB) loadLine(l line) error {
+func (s *Securities) loadLine(l line) error {
 
 	// Start simply ignoring empty lines.
 	if strings.TrimSpace(l.txt) == "" {
@@ -125,7 +125,7 @@ func (db *DB) loadLine(l line) error {
 			continue
 		}
 
-		if !db.Has(ticker) {
+		if !s.Has(ticker) {
 			return fmt.Errorf("parse error %s:%v: property %q must be an existing ticker", l.filename, l.i, ticker)
 		}
 
@@ -134,15 +134,15 @@ func (db *DB) loadLine(l line) error {
 			return fmt.Errorf("parse error %s:%v: property %q must be of type 'number'", l.filename, l.i, ticker)
 		}
 		// Entry is valid add it to the database.
-		db.content[ticker].prices.Append(on, p)
+		s.content[ticker].prices.Append(on, p)
 	}
 	return nil
 }
 
 // Load a database from its folder.
-func Load(folder string) (*DB, error) {
+func Load(folder string) (*Securities, error) {
 	// Creates an empty database.
-	db := NewDB()
+	db := New()
 
 	// strategy: reads the metadata file containing securities definition and ticker, then use it to load prices.
 	// then read all json files and break it into lines, and load them individually.
@@ -202,14 +202,14 @@ func persistSecurity(w io.Writer, sec *Security) error {
 	return nil
 }
 
-func (db *DB) persistDefinition(w io.Writer, tickers []string) error {
+func (s *Securities) persistDefinition(w io.Writer, tickers []string) error {
 	// We cannot use Go standard serialisation as the definition file wouldn't be stable. (it contains a map)
 	if _, err := fmt.Fprint(w, "{\n    "); err != nil {
 		return fmt.Errorf("persist error: cannot write to file: %w", err)
 	}
 
 	for i, ticker := range tickers {
-		sec, exists := db.content[ticker]
+		sec, exists := s.content[ticker]
 		if !exists {
 			return fmt.Errorf("persist error: unknown ticker %q", ticker)
 		}
@@ -271,7 +271,7 @@ func persistLine(w io.Writer, day date.Date, tickers []string, values []float64)
 	return nil
 }
 
-func (db *DB) Persist(folder string) error {
+func (s *Securities) Persist(folder string) error {
 
 	// we first generate the security price values into this list of structured items.
 	type line struct {
@@ -284,8 +284,8 @@ func (db *DB) Persist(folder string) error {
 
 	// Start creating the list of tickers, in alphabetical order.
 	tickers := make([]string, 0, len(db.content))
-	histories := make([]date.History[float64], 0, len(db.content))
-	for ticker, sec := range db.content {
+	histories := make([]date.History[float64], 0, len(s.content))
+	for ticker, sec := range s.content {
 		tickers = append(tickers, ticker)
 		histories = append(histories, sec.prices)
 	}
@@ -300,7 +300,7 @@ func (db *DB) Persist(folder string) error {
 	defer f.Close()
 	log.Printf("create-definition-file name=%q", definitionFile)
 
-	if err := db.persistDefinition(f, tickers); err != nil {
+	if err := s.persistDefinition(f, tickers); err != nil {
 		return err
 	}
 	// Add a trailing line at the end of the file.
@@ -318,7 +318,7 @@ func (db *DB) Persist(folder string) error {
 		}
 		// Append tickers that have values.
 		for _, ticker := range tickers {
-			if val, ok := db.read(ticker, day); ok {
+			if val, ok := s.read(ticker, day); ok {
 				l.tickers = append(l.tickers, ticker)
 				l.prices = append(l.prices, val)
 			}
