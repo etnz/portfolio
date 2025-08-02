@@ -10,20 +10,22 @@ import (
 	"github.com/google/subcommands"
 )
 
-// Global variable to hold all subcommands
-// This map is used to register and access subcommands by their names.
-// It allows for easy addition and retrieval of commands in the application.
-var Commands []subcommands.Command
+// Register the subcommands.
+func Register(c *subcommands.Commander) {
+	c.Register(&importInvestingCmd{}, "securities")
+	c.Register(&updateCmd{}, "securities")
 
-func init() {
-	// Register the subcommands.
-	Commands = append(Commands, subcommands.FlagsCommand())
-	Commands = append(Commands, subcommands.HelpCommand())
-	Commands = append(Commands, &importInvesting{})
-	Commands = append(Commands, &update{})
+	c.Register(&buyCmd{}, "transactions")
+	c.Register(&sellCmd{}, "transactions")
+	c.Register(&dividendCmd{}, "transactions")
+	c.Register(&depositCmd{}, "transactions")
+	c.Register(&withdrawCmd{}, "transactions")
+	c.Register(&convertCmd{}, "transactions")
+
 }
 
 var securitiesPath = flag.String("securities-path", ".security", "Path to the securities database folder")
+var portfolioFile = flag.String("portfolio-file", "transactions.jsonl", "Path to the portfolio transactions file (JSONL format)")
 
 // OpenSecurities is the central function to open the securities database.
 func OpenSecurities() (db *security.DB, err error) {

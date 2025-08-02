@@ -15,20 +15,20 @@ import (
 	"github.com/google/subcommands"
 )
 
-// importInvesting imports public security prices from investing's csv format.
-type importInvesting struct {
+// importInvestingCmd imports public security prices from investing's csv format.
+type importInvestingCmd struct {
 	file string
 }
 
-func (*importInvesting) Name() string { return "import-investing" }
-func (*importInvesting) Synopsis() string {
+func (*importInvestingCmd) Name() string { return "import-investing" }
+func (*importInvestingCmd) Synopsis() string {
 	return "import public security prices in investing.com's csv format"
 }
-func (*importInvesting) Usage() string { return "pcs import-investing <ticker>\n" }
-func (c *importInvesting) SetFlags(f *flag.FlagSet) {
+func (*importInvestingCmd) Usage() string { return "pcs import-investing <ticker>\n" }
+func (c *importInvestingCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.file, "i", "", "input file")
 }
-func (c *importInvesting) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (c *importInvestingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if f.NArg() != 1 {
 		fmt.Println("a security ticker is required as argument")
 		return subcommands.ExitUsageError
