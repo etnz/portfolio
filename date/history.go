@@ -11,6 +11,16 @@ type History[T any] struct {
 	values []T
 }
 
+// Latest returns the latest date and value in the history.
+// If the history is empty, it returns zero value.
+func (h *History[T]) Latest() (day Date, value T) {
+	last := len(h.days) - 1
+	if last < 0 {
+		return Date{}, *new(T) // return zero value of T
+	}
+	return h.days[last], h.values[last]
+}
+
 // Clear removes all items from the history.
 func (h *History[T]) Clear() {
 	h.days = h.days[:0]
