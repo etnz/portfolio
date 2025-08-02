@@ -9,12 +9,15 @@ import (
 	"time"
 
 	"github.com/etnz/portfolio/date"
-	"github.com/etnz/portfolio/transaction"
+	"github.com/etnz/portfolio"
 	"github.com/google/subcommands"
 )
 
-// appendTransaction appends a transaction to the specified portfolio file.
-func appendTransaction(filename string, tx transaction.Transaction) subcommands.ExitStatus {
+// appendTransaction appends a portfolio to the specified portfolio file.
+func appendTransaction(filename string, tx portfolio.Transaction) subcommands.ExitStatus {
+
+	// before appending the portfolio, run a validation check.
+
 	// Open the file in append mode, creating it if it doesn't exist.
 	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -23,7 +26,7 @@ func appendTransaction(filename string, tx transaction.Transaction) subcommands.
 	}
 	defer f.Close()
 
-	// Marshal the transaction to JSON.
+	// Marshal the portfolio to JSON.
 	jsonData, err := json.Marshal(tx)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating JSON: %v\n", err)
@@ -36,7 +39,7 @@ func appendTransaction(filename string, tx transaction.Transaction) subcommands.
 		return subcommands.ExitFailure
 	}
 
-	fmt.Printf("Successfully appended transaction to %s\n", filename)
+	fmt.Printf("Successfully appended portfolio to %s\n", filename)
 	return subcommands.ExitSuccess
 }
 
@@ -64,7 +67,7 @@ func (c *buyCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.security, "s", "", "Security ticker")
 	f.Float64Var(&c.quantity, "q", 0, "Number of shares")
 	f.Float64Var(&c.price, "p", 0, "Price per share")
-	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
+	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the portfolio")
 }
 
 func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -78,8 +81,8 @@ func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) s
 		return subcommands.ExitUsageError
 	}
 
-	tx := transaction.Buy{
-		Base:     transaction.Base{Command: "buy", Date: day, Memo: c.memo},
+	tx := portfolio.Buy{
+		Base:     portfolio.Base{Command: "buy", Date: day, Memo: c.memo},
 		Security: c.security,
 		Quantity: c.quantity,
 		Price:    c.price,
@@ -110,7 +113,7 @@ func (c *sellCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.security, "s", "", "Security ticker")
 	f.Float64Var(&c.quantity, "q", 0, "Number of shares, if missing all shares are sold")
 	f.Float64Var(&c.price, "p", 0, "Price per share")
-	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
+	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the portfolio")
 }
 func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if c.security == "" || c.quantity <= 0 || c.price < 0 {
@@ -123,8 +126,8 @@ func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	tx := transaction.Sell{
-		Base:     transaction.Base{Command: "sell", Date: day, Memo: c.memo},
+	tx := portfolio.Sell{
+		Base:     portfolio.Base{Command: "sell", Date: day, Memo: c.memo},
 		Security: c.security,
 		Quantity: c.quantity,
 		Price:    c.price,
@@ -167,8 +170,8 @@ func (c *dividendCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 		return subcommands.ExitUsageError
 	}
 
-	tx := transaction.Dividend{
-		Base:     transaction.Base{Command: "dividend", Date: day, Memo: c.memo},
+	tx := portfolio.Dividend{
+		Base:     portfolio.Base{Command: "dividend", Date: day, Memo: c.memo},
 		Security: c.security,
 		Amount:   c.amount,
 	}
@@ -210,8 +213,8 @@ func (c *depositCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitUsageError
 	}
 
-	tx := transaction.Deposit{
-		Base:     transaction.Base{Command: "deposit", Date: day, Memo: c.memo},
+	tx := portfolio.Deposit{
+		Base:     portfolio.Base{Command: "deposit", Date: day, Memo: c.memo},
 		Amount:   c.amount,
 		Currency: c.currency,
 	}
@@ -252,8 +255,8 @@ func (c *withdrawCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 		return subcommands.ExitUsageError
 	}
 
-	tx := transaction.Withdraw{
-		Base:     transaction.Base{Command: "withdraw", Date: day, Memo: c.memo},
+	tx := portfolio.Withdraw{
+		Base:     portfolio.Base{Command: "withdraw", Date: day, Memo: c.memo},
 		Amount:   c.amount,
 		Currency: c.currency,
 	}
@@ -289,7 +292,7 @@ func (c *convertCmd) SetFlags(f *flag.FlagSet) {
 	f.Float64Var(&c.fromAmount, "from-a", 0, "Amount of cash to convert from the source currency")
 	f.StringVar(&c.toCurrency, "to-c", "", "Destination currency code (e.g., EUR)")
 	f.Float64Var(&c.toAmount, "to-a", 0, "Amount of cash received in the destination currency")
-	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
+	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the portfolio")
 }
 
 func (c *convertCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -308,8 +311,8 @@ func (c *convertCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitUsageError
 	}
 
-	tx := transaction.Convert{
-		Base:         transaction.Base{Command: "convert", Date: day, Memo: c.memo},
+	tx := portfolio.Convert{
+		Base:         portfolio.Base{Command: "convert", Date: day, Memo: c.memo},
 		FromCurrency: c.fromCurrency,
 		FromAmount:   c.fromAmount,
 		ToCurrency:   c.toCurrency,

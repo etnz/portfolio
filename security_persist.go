@@ -1,4 +1,4 @@
-package security
+package portfolio
 
 import (
 	"bufio"
@@ -150,9 +150,9 @@ func (s *Securities) loadLine(l line) error {
 }
 
 // Load a database from its folder.
-func Load(folder string) (*Securities, error) {
+func LoadSecurities(folder string) (*Securities, error) {
 	// Creates an empty database.
-	db := New()
+	db := NewSecurities()
 
 	// strategy: reads the metadata file containing securities definition and ticker, then use it to load prices.
 	// then read all json files and break it into lines, and load them individually.

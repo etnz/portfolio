@@ -1,4 +1,4 @@
-package transaction
+package portfolio
 
 import (
 	"bufio"
@@ -99,7 +99,7 @@ type Convert struct {
 
 // Load reads a stream of JSONL data from an io.Reader, decodes each line into the
 // appropriate transaction struct, and returns a slice of transactions.
-func Load(r io.Reader) ([]Transaction, error) {
+func LoadTransactions(r io.Reader) ([]Transaction, error) {
 	var transactions []Transaction
 	scanner := bufio.NewScanner(r)
 

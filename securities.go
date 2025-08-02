@@ -1,4 +1,4 @@
-package security
+package portfolio
 
 import (
 	"github.com/etnz/portfolio/date"
@@ -10,8 +10,8 @@ type Securities struct {
 	index      map[string]*Security
 }
 
-// New returns a new empty database.
-func New() *Securities {
+// NewSecurities returns a new empty security database.
+func NewSecurities() *Securities {
 	return &Securities{
 		securities: make([]*Security, 0),
 		index:      make(map[string]*Security),
