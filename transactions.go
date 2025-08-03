@@ -50,7 +50,7 @@ func (t baseCmd) Rationale() string {
 
 // Validate checks the base command fields. It sets the date to today if it's zero.
 // It's meant to be embedded in other transaction validation methods.
-func (t *baseCmd) Validate(m *MarketData, l *Ledger) error {
+func (t *baseCmd) Validate(as *AccountingSystem) error {
 	if t.Date == (date.Date{}) {
 		t.Date = date.Today()
 	}
@@ -67,8 +67,8 @@ type secCmd struct {
 // Validate checks the security command fields. It validates the base command,
 // ensures a security ticker is present, and attempts to auto-populate the
 // currency from the security's definition if it's missing.
-func (t *secCmd) Validate(m *MarketData, l *Ledger) error {
-	if err := t.baseCmd.Validate(m, l); err != nil {
+func (t *secCmd) Validate(as *AccountingSystem) error {
+	if err := t.baseCmd.Validate(as); err != nil {
 		return err
 	}
 
@@ -77,7 +77,7 @@ func (t *secCmd) Validate(m *MarketData, l *Ledger) error {
 	}
 
 	// Quickfix to copy security currency
-	sec := m.Get(t.Security)
+	sec := as.MarketData.Get(t.Security)
 	if t.Currency == "" && sec != nil {
 		t.Currency = sec.currency
 	}
@@ -108,8 +108,8 @@ func NewBuy(day date.Date, memo, security string, quantity, price float64, curre
 // and price are positive. It also verifies that there is enough cash in the
 // corresponding currency account to cover the cost of the purchase on the
 // transaction date.
-func (t *Buy) Validate(m *MarketData, l *Ledger) error {
-	if err := t.secCmd.Validate(m, l); err != nil {
+func (t *Buy) Validate(as *AccountingSystem) error {
+	if err := t.secCmd.Validate(as); err != nil {
 		return err
 	}
 
@@ -120,7 +120,7 @@ func (t *Buy) Validate(m *MarketData, l *Ledger) error {
 		return fmt.Errorf("buy transaction price must be positive, got %f", t.Price)
 	}
 
-	cash, cost := l.CashBalance(t.Currency, t.Date), t.Quantity*t.Price
+	cash, cost := as.Ledger.CashBalance(t.Currency, t.Date), t.Quantity*t.Price
 	if cash < cost {
 		return fmt.Errorf("cannot buy for %f %s cash balance is %f %s", cost, t.Currency, cash, t.Currency)
 	}
@@ -149,13 +149,13 @@ func NewSell(day date.Date, memo, security string, quantity, price float64, curr
 // It handles the "sell all" case by resolving a quantity of 0 to the total
 // position size on the transaction date. It ensures the final quantity and
 // price are positive and that the position is sufficient to cover the sale.
-func (t *Sell) Validate(m *MarketData, l *Ledger) error {
-	if err := t.secCmd.Validate(m, l); err != nil {
+func (t *Sell) Validate(as *AccountingSystem) error {
+	if err := t.secCmd.Validate(as); err != nil {
 		return err
 	}
 	if t.Quantity == 0 {
 		// quick fix, sell all.
-		t.Quantity = l.Position(t.Security, t.Date)
+		t.Quantity = as.Ledger.Position(t.Security, t.Date)
 	}
 
 	if t.Quantity <= 0 {
@@ -166,8 +166,8 @@ func (t *Sell) Validate(m *MarketData, l *Ledger) error {
 		return fmt.Errorf("sell transaction price must be positive, got %f", t.Price)
 	}
 
-	if l.Position(t.Security, t.Date) < t.Quantity {
-		return fmt.Errorf("cannot sell %f of %s, position is only %f", t.Quantity, t.Security, l.Position(t.Security, t.Date))
+	if as.Ledger.Position(t.Security, t.Date) < t.Quantity {
+		return fmt.Errorf("cannot sell %f of %s, position is only %f", t.Quantity, t.Security, as.Ledger.Position(t.Security, t.Date))
 	}
 
 	return nil
@@ -189,8 +189,8 @@ func NewDividend(day date.Date, memo, security string, amount float64, currency 
 
 // Validate checks the Dividend transaction's fields. It ensures the dividend
 // amount is positive.
-func (t *Dividend) Validate(m *MarketData, l *Ledger) error {
-	if err := t.secCmd.Validate(m, l); err != nil {
+func (t *Dividend) Validate(as *AccountingSystem) error {
+	if err := t.secCmd.Validate(as); err != nil {
 		return err
 	}
 
@@ -218,8 +218,8 @@ func NewDeposit(day date.Date, memo, currency string, amount float64) Deposit {
 
 // Validate checks the Deposit transaction's fields. It ensures the deposit
 // amount is positive and the currency code is valid.
-func (t *Deposit) Validate(m *MarketData, l *Ledger) error {
-	if err := t.baseCmd.Validate(m, l); err != nil {
+func (t *Deposit) Validate(as *AccountingSystem) error {
+	if err := t.baseCmd.Validate(as); err != nil {
 		return err
 	}
 
@@ -253,8 +253,8 @@ func NewWithdraw(day date.Date, memo, currency string, amount float64) Withdraw 
 // Validate checks the Withdraw transaction's fields.
 // It handles a "withdraw all" case if the amount is 0, ensures the final
 // amount is positive, and verifies there is sufficient cash to cover the withdrawal.
-func (t *Withdraw) Validate(m *MarketData, l *Ledger) error {
-	if err := t.baseCmd.Validate(m, l); err != nil {
+func (t *Withdraw) Validate(as *AccountingSystem) error {
+	if err := t.baseCmd.Validate(as); err != nil {
 		return err
 	}
 
@@ -266,14 +266,14 @@ func (t *Withdraw) Validate(m *MarketData, l *Ledger) error {
 
 	if t.Amount == 0 {
 		// quick fix, cash all.
-		t.Amount = l.CashBalance(t.Currency, t.Date)
+		t.Amount = as.Ledger.CashBalance(t.Currency, t.Date)
 	}
 
 	if t.Amount <= 0 {
 		return fmt.Errorf("withdraw amount must be positive, got %f", t.Amount)
 	}
 
-	cash, cost := l.CashBalance(t.Currency, t.Date), t.Amount
+	cash, cost := as.Ledger.CashBalanace(t.Currency, t.Date), t.Amount
 	if cash < cost {
 		return fmt.Errorf("cannot withdraw for %f %s cash balance is %f %s", cost, t.Currency, cash, t.Currency)
 	}
@@ -304,8 +304,8 @@ func NewConvert(day date.Date, memo, fromCurrency string, fromAmount float64, to
 // It handles a "convert all" case if the from-amount is 0. It ensures both
 // amounts are positive, currencies are valid, and there is sufficient cash in
 // the source currency account to cover the conversion.
-func (t *Convert) Validate(m *MarketData, l *Ledger) error {
-	if err := t.baseCmd.Validate(m, l); err != nil {
+func (t *Convert) Validate(as *AccountingSystem) error {
+	if err := t.baseCmd.Validate(as); err != nil {
 		return err
 	}
 
@@ -321,7 +321,7 @@ func (t *Convert) Validate(m *MarketData, l *Ledger) error {
 
 	if t.FromAmount == 0 {
 		// quick fix, cash all.
-		t.FromAmount = l.CashBalance(t.FromCurrency, t.Date)
+		t.FromAmount = as.Ledger.CashBalance(t.FromCurrency, t.Date)
 	}
 
 	if t.FromAmount <= 0 {
@@ -329,7 +329,7 @@ func (t *Convert) Validate(m *MarketData, l *Ledger) error {
 		return fmt.Errorf("convert 'from' amount must be positive, got %f", t.FromAmount)
 	}
 
-	cash, cost := l.CashBalance(t.FromCurrency, t.Date), t.FromAmount
+	cash, cost := as.Ledger.CashBalance(t.FromCurrency, t.Date), t.FromAmount
 	if cash < cost {
 		return fmt.Errorf("cannot withdraw for %f %s cash balance is %f %s", cost, t.FromCurrency, cash, t.FromCurrency)
 	}
