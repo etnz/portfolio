@@ -135,3 +135,56 @@ func (l Ledger) SecurityTransactions(ticker string, max date.Date) iter.Seq2[int
 		}
 	}
 }
+
+// AllSecurities returns a sorted slice of unique security tickers that appear
+// in the ledger's transactions (Buy, Sell, or Dividend).
+func (l *Ledger) AllSecurities() []string {
+	tickers := make(map[string]struct{})
+	for _, tx := range l.transactions {
+		switch v := tx.(type) {
+		case Buy:
+			tickers[v.Security] = struct{}{}
+		case Sell:
+			tickers[v.Security] = struct{}{}
+		case Dividend:
+			tickers[v.Security] = struct{}{}
+		}
+	}
+
+	result := make([]string, 0, len(tickers))
+	for ticker := range tickers {
+		result = append(result, ticker)
+	}
+	sort.Strings(result)
+	return result
+}
+
+// AllCurrencies returns a sorted slice of unique currency codes that appear
+// in the ledger's transactions.
+func (l *Ledger) AllCurrencies() []string {
+	currencies := make(map[string]struct{})
+	for _, tx := range l.transactions {
+		switch v := tx.(type) {
+		case Buy:
+			currencies[v.Currency] = struct{}{}
+		case Sell:
+			currencies[v.Currency] = struct{}{}
+		case Dividend:
+			currencies[v.Currency] = struct{}{}
+		case Deposit:
+			currencies[v.Currency] = struct{}{}
+		case Withdraw:
+			currencies[v.Currency] = struct{}{}
+		case Convert:
+			currencies[v.FromCurrency] = struct{}{}
+			currencies[v.ToCurrency] = struct{}{}
+		}
+	}
+
+	result := make([]string, 0, len(currencies))
+	for currency := range currencies {
+		result = append(result, currency)
+	}
+	sort.Strings(result)
+	return result
+}

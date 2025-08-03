@@ -81,3 +81,30 @@ func (f *History[T]) Get(day Date) (T, bool) {
 	}
 	return value, false
 }
+
+// ValueAsOf returns the value on a given day, or the most recent value before it.
+// It returns the value and true if found, otherwise it returns the zero value and false.
+func (h *History[T]) ValueAsOf(day Date) (T, bool) {
+	// The days slice is sorted, so we can use binary search.
+	i, found := slices.BinarySearchFunc(h.days, day, func(d, t Date) int {
+		if d.After(t) {
+			return 1
+		}
+		if d.Before(t) {
+			return -1
+		}
+		return 0
+	})
+
+	if found {
+		return h.values[i], true
+	}
+
+	// Not found. `i` is the index where `day` would be inserted.
+	// The value we want is at `i-1`, which is the last entry before the target date.
+	if i == 0 {
+		var zero T
+		return zero, false // No date on or before the given day.
+	}
+	return h.values[i-1], true
+}

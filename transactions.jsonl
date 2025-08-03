@@ -1,3 +1,3 @@
-{"command":"buy","date":"2025-08-02","security":"NVD","quantity":123,"price":234}
-{"command":"buy","date":"2025-08-02","security":"APPL","quantity":123,"price":234}
-{"command":"buy","date":"2025-08-02","security":"APPL","quantity":123,"price":234}
+{"command":"buy","date":"2025-06-02","security":"NVD","quantity":12,"price":123,"currency":"EUR"}
+{"command":"buy","date":"2025-07-03","security":"NVD","quantity":13,"price":156,"currency":"EUR"}
+{"command":"buy","date":"2025-07-15","security":"NVD","quantity":23,"price":121,"currency":"EUR"}

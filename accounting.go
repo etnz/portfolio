@@ -1,6 +1,10 @@
 package portfolio
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/etnz/portfolio/date"
+)
 
 // AccountingSystem encapsulates all the data required for portfolio management,
 // combining transactional data with market data. It serves as a central point
@@ -53,4 +57,83 @@ func (as *AccountingSystem) Validate(tx Transaction) (Transaction, error) {
 	default:
 		return tx, fmt.Errorf("unsupported transaction type for validation: %T", tx)
 	}
+}
+
+// TotalMarketValue calculates the total value of all security positions and cash balances on a given
+// date, expressed in a single reporting currency. It uses the market data to find
+// security prices and currency exchange rates.
+func (as *AccountingSystem) TotalMarketValue(on date.Date, reportingCurrency string) (float64, error) {
+	if err := ValidateCurrency(reportingCurrency); err != nil {
+		return 0, fmt.Errorf("invalid reporting currency: %w", err)
+	}
+
+	var totalValue float64
+
+	// Calculate value of all security positions
+	for _, ticker := range as.Ledger.AllSecurities() {
+		position := as.Ledger.Position(ticker, on)
+		if position <= 0 {
+			continue
+		}
+
+		sec := as.MarketData.Get(ticker)
+		if sec == nil {
+			// This should not happen if validation is correct
+			return 0, fmt.Errorf("security %q found in ledger but not in market data", ticker)
+		}
+
+		price, ok := as.MarketData.PriceAsOf(ticker, on)
+		if !ok {
+			return 0, fmt.Errorf("could not find price for security %q as of %s", ticker, on)
+		}
+
+		positionValue := position * price
+
+		// Convert to reporting currency if necessary
+		convertedValue, err := as.convertCurrency(positionValue, sec.currency, reportingCurrency, on)
+		if err != nil {
+			return 0, err
+		}
+		totalValue += convertedValue
+	}
+
+	// Add cash balances
+	for _, currency := range as.Ledger.AllCurrencies() {
+		balance := as.Ledger.CashBalance(currency, on)
+		if balance == 0 {
+			continue
+		}
+
+		convertedBalance, err := as.convertCurrency(balance, currency, reportingCurrency, on)
+		if err != nil {
+			return 0, err
+		}
+		totalValue += convertedBalance
+	}
+
+	return totalValue, nil
+}
+
+// convertCurrency converts an amount from a source currency to a target currency as of a given date.
+func (as *AccountingSystem) convertCurrency(amount float64, fromCurrency, toCurrency string, on date.Date) (float64, error) {
+	if fromCurrency == toCurrency {
+		return amount, nil
+	}
+
+	// To convert from fromCurrency to toCurrency, we need the pair fromCurrency + toCurrency.
+	pairTicker := fromCurrency + toCurrency
+	rate, ok := as.MarketData.PriceAsOf(pairTicker, on)
+	if !ok {
+		// If the direct pair is not found, try the inverse pair.
+		inversePairTicker := toCurrency + fromCurrency
+		inverseRate, ok := as.MarketData.PriceAsOf(inversePairTicker, on)
+		if !ok {
+			return 0, fmt.Errorf("could not find exchange rate for %s to %s as of %s", fromCurrency, toCurrency, on)
+		}
+		if inverseRate == 0 {
+			return 0, fmt.Errorf("inverse exchange rate for %s is zero, cannot convert", inversePairTicker)
+		}
+		rate = 1.0 / inverseRate
+	}
+	return amount * rate, nil
 }

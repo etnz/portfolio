@@ -273,7 +273,7 @@ func (t *Withdraw) Validate(as *AccountingSystem) error {
 		return fmt.Errorf("withdraw amount must be positive, got %f", t.Amount)
 	}
 
-	cash, cost := as.Ledger.CashBalanace(t.Currency, t.Date), t.Amount
+	cash, cost := as.Ledger.CashBalance(t.Currency, t.Date), t.Amount
 	if cash < cost {
 		return fmt.Errorf("cannot withdraw for %f %s cash balance is %f %s", cost, t.Currency, cash, t.Currency)
 	}

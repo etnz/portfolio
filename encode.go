@@ -95,7 +95,7 @@ func decodeLines(filenames ...string) (list []fileLine, err error) {
 		for scanner.Scan() {
 			i++
 			txt := scanner.Text()
-			list = append(list, line{filename, i, txt})
+			list = append(list, fileLine{filename, i, txt})
 		}
 	}
 	return list, nil

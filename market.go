@@ -36,3 +36,12 @@ func (m *MarketData) read(ticker string, day date.Date) (float64, bool) {
 	}
 	return sec.prices.Get(day)
 }
+
+// PriceAsOf returns the price of a security on a given day, or the most recent price before it.
+func (m *MarketData) PriceAsOf(ticker string, day date.Date) (float64, bool) {
+	sec, ok := m.index[ticker]
+	if !ok {
+		return 0.0, false
+	}
+	return sec.prices.ValueAsOf(day)
+}

@@ -26,6 +26,8 @@ func Register(c *subcommands.Commander) {
 	c.Register(&withdrawCmd{}, "transactions")
 	c.Register(&convertCmd{}, "transactions")
 
+	c.Register(&summaryCmd{}, "analysis")
+
 }
 
 // As a CLI application, it has a very short-lived lifecycle, so it is ok to use global variables for flags.
