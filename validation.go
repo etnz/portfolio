@@ -1,6 +1,8 @@
 package portfolio
 
-// Validate 'tx' and return a copy with quick fixes apply or an error with all validation failures.
+// Validate checks a transaction for correctness and applies quick fixes where
+// applicable (e.g., resolving "sell all"). It returns the validated (and
+// potentially modified) transaction or an error detailing any validation failures.
 func Validate(market *MarketData, ledger *Ledger, tx Transaction) (ntx Transaction, err error) {
 	switch v := tx.(type) {
 	case Buy:

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const readDateFormat = "2006-1-2" // read date format
+const readDateFormat = "2006-1-2" // Permissive read date format (allows single-digit month/day).
 
 // DateFormat is the format used to represent dates as strings in ISO-8601 format.
 const DateFormat = "2006-01-02" // write date format
@@ -15,16 +15,16 @@ const DateFormat = "2006-01-02" // write date format
 const Day = 24 * time.Hour
 
 // Date represent a date with no lower than day granularity.
-type Date struct {
+type Date struct { // Date represents a date with day-level granularity.
 	y int
 	m time.Month
 	d int
 }
 
-// time return a time.Time that is a cannonical representation of that day.
+// time returns a time.Time that is a canonical representation of that day (at midnight UTC).
 func (d Date) time() time.Time { return time.Date(d.y, d.m, d.d, 0, 0, 0, 0, time.UTC) }
 
-// New returns a comparable Time to identity a single day.
+// New returns a normalized Date for the given year, month, and day.
 func New(year int, month time.Month, day int) Date {
 	d := Date{year, month, day}
 	d.y, d.m, d.d = d.time().Date()
@@ -37,7 +37,7 @@ func (d Date) Before(x Date) bool { return d.time().Before(x.time()) }
 // After reports whether the day d is after x.
 func (d Date) After(x Date) bool { return d.time().After(x.time()) }
 
-// Return the Date of today.
+// Today returns the current date.
 func Today() Date { return New(time.Now().Date()) }
 
 // Add returns a new Date with the given number of days added.
@@ -49,7 +49,7 @@ func (d Date) Year() int { return d.y }
 // String format the date in its standard format.
 func (d Date) String() string { return d.time().Format(DateFormat) }
 
-// Parse a Date in ISO-8601 format.
+// Parse parses a Date from a string. It is lenient and accepts formats like "2025-7-1".
 func Parse(str string) (Date, error) {
 	on, err := time.Parse(readDateFormat, str)
 	// We use a slightly more permisive format for read, to support 2025-7-1 instead of 2025-07-01
@@ -90,7 +90,7 @@ func (j Date) MarshalJSON() ([]byte, error) {
 var _ json.Marshaler = (*Date)(nil)
 var _ json.Unmarshaler = (*Date)(nil)
 
-// iterate returns an interator over all dates in multiple series of dates without repetition.
+// iterate returns an iterator over all unique, sorted dates from multiple series of dates.
 func iterate(series ...[]Date) iter.Seq[Date] {
 	return func(yield func(Date) bool) {
 		indexes := make([]int, len(series))
@@ -135,7 +135,7 @@ func iterate(series ...[]Date) iter.Seq[Date] {
 	}
 }
 
-// Iterate returns an interator over all dates in multiple series of dates without repetition.
+// Iterate returns an iterator over all unique, sorted dates from multiple History objects.
 func Iterate[T any](histories ...History[T]) iter.Seq[Date] {
 	dates := make([][]Date, 0, len(histories))
 	for _, h := range histories {

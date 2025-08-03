@@ -187,11 +187,11 @@ func TestCurrencyPair(t *testing.T) {
 	}
 }
 
-// TestNewPrivate is a data-driven test for the ParseID function.
+// TestNewPrivate is a data-driven test for the NewPrivate function.
 //
 // The rationale for this test is to verify that the parser correctly accepts IDs
 // that are at least 7 characters long and contain valid characters, while rejecting
-// strings that are too short, contain invalid characters, or resemble other identifier formats.
+// strings that are too short, contain invalid characters, or resemble other identifier formats (MSSI, CurrencyPair).
 func TestNewPrivate(t *testing.T) {
 	testCases := []struct {
 		name      string

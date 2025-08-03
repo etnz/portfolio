@@ -34,34 +34,39 @@ type baseCmd struct {
 }
 
 // What returns the command name for the transaction, which is used to identify the type of transaction.
-func (b baseCmd) What() CommandType {
-	return b.Command
+func (t baseCmd) What() CommandType {
+	return t.Command
 }
 
 // When returns the date of the transaction.
-func (b baseCmd) When() date.Date {
-	return b.Date
+func (t baseCmd) When() date.Date {
+	return t.Date
 }
 
 // Rationale returns the memo associated with the transaction, which can provide additional context or rationale.
-func (b baseCmd) Rationale() string {
-	return b.Memo
+func (t baseCmd) Rationale() string {
+	return t.Memo
 }
 
-func (s *baseCmd) Validate(m *MarketData, l *Ledger) error {
-	if s.Date == (date.Date{}) {
-		s.Date = date.Today()
+// Validate checks the base command fields. It sets the date to today if it's zero.
+// It's meant to be embedded in other transaction validation methods.
+func (t *baseCmd) Validate(m *MarketData, l *Ledger) error {
+	if t.Date == (date.Date{}) {
+		t.Date = date.Today()
 	}
 	return nil
 }
 
-// secCmd is a component for security based transactions (sell buy dividends)
+// secCmd is a component for security-based transactions (buy, sell, dividend).
 type secCmd struct {
 	baseCmd
 	Security string `json:"security"`
 	Currency string `json:"currency,omitempty"`
 }
 
+// Validate checks the security command fields. It validates the base command,
+// ensures a security ticker is present, and attempts to auto-populate the
+// currency from the security's definition if it's missing.
 func (t *secCmd) Validate(m *MarketData, l *Ledger) error {
 	if err := t.baseCmd.Validate(m, l); err != nil {
 		return err
@@ -99,7 +104,10 @@ func NewBuy(day date.Date, memo, security string, quantity, price float64, curre
 	}
 }
 
-// Validate performs basic validation of the Buy transaction's fields.
+// Validate checks the Buy transaction's fields. It ensures that the quantity
+// and price are positive. It also verifies that there is enough cash in the
+// corresponding currency account to cover the cost of the purchase on the
+// transaction date.
 func (t *Buy) Validate(m *MarketData, l *Ledger) error {
 	if err := t.secCmd.Validate(m, l); err != nil {
 		return err
@@ -131,14 +139,17 @@ type Sell struct {
 // Quantity to exactly 0 is interpreted as a sell all on the position.
 func NewSell(day date.Date, memo, security string, quantity, price float64, currency string) Sell {
 	return Sell{
-		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdBuy, Date: day, Memo: memo}, Security: security, Currency: currency},
+		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdSell, Date: day, Memo: memo}, Security: security, Currency: currency},
 		Quantity: quantity,
 		Price:    price,
 	}
 }
 
-// Validate performs basic validation of the Sell transaction's fields.
-func (t Sell) Validate(m *MarketData, l *Ledger) error {
+// Validate checks the Sell transaction's fields.
+// It handles the "sell all" case by resolving a quantity of 0 to the total
+// position size on the transaction date. It ensures the final quantity and
+// price are positive and that the position is sufficient to cover the sale.
+func (t *Sell) Validate(m *MarketData, l *Ledger) error {
 	if err := t.secCmd.Validate(m, l); err != nil {
 		return err
 	}
@@ -149,10 +160,14 @@ func (t Sell) Validate(m *MarketData, l *Ledger) error {
 
 	if t.Quantity <= 0 {
 		// For Sell quantity == 0 is interpreted as sell all.
-		return fmt.Errorf("sell transaction quantity must be non-negative, got %f", t.Quantity)
+		return fmt.Errorf("sell transaction quantity must be positive, got %f", t.Quantity)
 	}
 	if t.Price <= 0 {
-		return fmt.Errorf("sell transaction price must be non-negative, got %f", t.Price)
+		return fmt.Errorf("sell transaction price must be positive, got %f", t.Price)
+	}
+
+	if l.Position(t.Security, t.Date) < t.Quantity {
+		return fmt.Errorf("cannot sell %f of %s, position is only %f", t.Quantity, t.Security, l.Position(t.Security, t.Date))
 	}
 
 	return nil
@@ -167,13 +182,14 @@ type Dividend struct {
 // NewDividend creates a new Dividend transaction.
 func NewDividend(day date.Date, memo, security string, amount float64, currency string) Dividend {
 	return Dividend{
-		secCmd: secCmd{baseCmd: baseCmd{Command: CmdBuy, Date: day, Memo: memo}, Security: security, Currency: currency},
+		secCmd: secCmd{baseCmd: baseCmd{Command: CmdDividend, Date: day, Memo: memo}, Security: security, Currency: currency},
 		Amount: amount,
 	}
 }
 
-// Validate performs basic validation of the Dividend transaction's fields.
-func (t Dividend) Validate(m *MarketData, l *Ledger) error {
+// Validate checks the Dividend transaction's fields. It ensures the dividend
+// amount is positive.
+func (t *Dividend) Validate(m *MarketData, l *Ledger) error {
 	if err := t.secCmd.Validate(m, l); err != nil {
 		return err
 	}
@@ -200,8 +216,9 @@ func NewDeposit(day date.Date, memo, currency string, amount float64) Deposit {
 	}
 }
 
-// Validate performs basic validation of the Deposit transaction's fields.
-func (t Deposit) Validate(m *MarketData, l *Ledger) error {
+// Validate checks the Deposit transaction's fields. It ensures the deposit
+// amount is positive and the currency code is valid.
+func (t *Deposit) Validate(m *MarketData, l *Ledger) error {
 	if err := t.baseCmd.Validate(m, l); err != nil {
 		return err
 	}
@@ -233,8 +250,10 @@ func NewWithdraw(day date.Date, memo, currency string, amount float64) Withdraw 
 	}
 }
 
-// Validate performs basic validation of the Withdraw transaction's fields.
-func (t Withdraw) Validate(m *MarketData, l *Ledger) error {
+// Validate checks the Withdraw transaction's fields.
+// It handles a "withdraw all" case if the amount is 0, ensures the final
+// amount is positive, and verifies there is sufficient cash to cover the withdrawal.
+func (t *Withdraw) Validate(m *MarketData, l *Ledger) error {
 	if err := t.baseCmd.Validate(m, l); err != nil {
 		return err
 	}
@@ -281,8 +300,11 @@ func NewConvert(day date.Date, memo, fromCurrency string, fromAmount float64, to
 	}
 }
 
-// Validate performs basic validation of the Convert transaction's fields.
-func (t Convert) Validate(m *MarketData, l *Ledger) error {
+// Validate checks the Convert transaction's fields.
+// It handles a "convert all" case if the from-amount is 0. It ensures both
+// amounts are positive, currencies are valid, and there is sufficient cash in
+// the source currency account to cover the conversion.
+func (t *Convert) Validate(m *MarketData, l *Ledger) error {
 	if err := t.baseCmd.Validate(m, l); err != nil {
 		return err
 	}
@@ -303,8 +325,8 @@ func (t Convert) Validate(m *MarketData, l *Ledger) error {
 	}
 
 	if t.FromAmount <= 0 {
-		// from amount ==0 is as a convert all from source currency.
-		return fmt.Errorf("convert 'from' amount must be non-negative, got %f", t.FromAmount)
+		// fromAmount == 0 is interpreted as "convert all".
+		return fmt.Errorf("convert 'from' amount must be positive, got %f", t.FromAmount)
 	}
 
 	cash, cost := l.CashBalance(t.FromCurrency, t.Date), t.FromAmount

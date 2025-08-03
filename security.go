@@ -25,7 +25,7 @@ var currencyPairRegex = regexp.MustCompile(`^[A-Z]{6}$`)
 // idCharRegex checks for alphanumeric characters and space, used in Private IDs.
 var idCharRegex = regexp.MustCompile(`^[a-zA-Z0-9 ]+$`)
 
-// ID represent the unique identifier of a security. It must follow a specific format.
+// ID represents the unique identifier of a security. It must follow a specific format.
 //
 // It can have multiple different types.
 //
@@ -103,7 +103,7 @@ func NewCurrencyPair(base, quote string) (ID, error) {
 	return ID(base + quote), nil
 }
 
-// NewPrivate validates that a string is a valid ID.
+// NewPrivate creates a new private ID after validating its format.
 func NewPrivate(s string) (ID, error) {
 	// Rule 1: Must be at least 7 characters long.
 	// This also implicitly invalidates 6-character Currency Pairs.
@@ -278,22 +278,25 @@ func (id ID) String() string {
 	return string(id)
 }
 
-// Security represent a publicly or privately tradeable asset, stock, ETF, house.
+// Security represents a publicly or privately tradeable asset, such as a stock, ETF, or currency pair.
 type Security struct {
-	id       ID
-	ticker   string                // The ticker used in portfolio and human friendly persistence format.
-	currency string                // the security exchange currency.
-	prices   date.History[float64] // the price historical value.
+	id       ID                    // The unique, standardized identifier (e.g., MSSI, CurrencyPair).
+	ticker   string                // The human-friendly ticker used in the portfolio.
+	currency string                // The currency in which the security is traded.
+	prices   date.History[float64] // The historical prices of the security.
 }
 
+// ID returns the unique, standardized identifier of the security.
 func (s *Security) ID() ID {
 	return s.id
 }
 
+// Ticker returns the human-friendly ticker symbol of the security.
 func (s *Security) Ticker() string {
 	return s.ticker
 }
 
+// Prices returns a pointer to the security's price history.
 func (s *Security) Prices() *date.History[float64] {
 	return &s.prices
 }

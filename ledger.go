@@ -20,8 +20,9 @@ func NewLedger() *Ledger {
 	}
 }
 
-// Transactions iterates over transaction in their order.
+// Transactions returns an iterator that yields each transaction in its original order.
 func (l Ledger) Transactions() iter.Seq2[int, Transaction] {
+	// The returned iterator preserves the original order of transactions in the ledger.
 	return func(yield func(int, Transaction) bool) {
 		for i, tx := range l.transactions {
 			if !yield(i, tx) {
@@ -31,7 +32,7 @@ func (l Ledger) Transactions() iter.Seq2[int, Transaction] {
 	}
 }
 
-// Sort sorts the ledger by transaction date. The sort is stable, meaning
+// stableSort sorts the ledger by transaction date. The sort is stable, meaning
 // transactions on the same day maintain their original relative order.
 func (l *Ledger) stableSort() {
 	sort.SliceStable(l.transactions, func(i, j int) bool {
@@ -39,19 +40,23 @@ func (l *Ledger) stableSort() {
 	})
 }
 
-// Position computes the total quantity of a security held on a specific date.
+// Position computes the total quantity of a security held on a specific date by
+// summing up all buy and sell transactions for that security up to and including that date.
 func (l *Ledger) Position(ticker string, on date.Date) float64 {
 	var quantity float64
-	for _, tx := range l.SecurityTransactions(ticker, on) {
+	seq := l.SecurityTransactions(ticker, on)
+	seq(func(_ int, tx Transaction) bool {
 		switch v := tx.(type) {
 		case Buy:
 			quantity += v.Quantity
 		case Sell:
-			// quantity should not be turned negative for a valid portfolio.
+			// The quantity for a Sell transaction should have been resolved to a
+			// concrete value during validation. A quantity of 0 in a Sell
+			// transaction means "sell all" and is resolved before being stored.
 			quantity -= v.Quantity
-
 		}
-	}
+		return true
+	})
 	return quantity
 }
 
@@ -96,8 +101,9 @@ func (l *Ledger) CashBalance(currency string, on date.Date) float64 {
 	return balance
 }
 
-// SecurityTransactions iterates over transaction up to 'max' included of relative to security identified by its ticker.
-// Security transactions are: buy or sell or dividend.
+// SecurityTransactions returns an iterator over transactions related to a specific
+// security (Buy, Sell, Dividend) up to and including a given date.
+// The ledger must be sorted by date for this to work correctly.
 func (l Ledger) SecurityTransactions(ticker string, max date.Date) iter.Seq2[int, Transaction] {
 	return func(yield func(int, Transaction) bool) {
 		for i, tx := range l.transactions {

@@ -18,14 +18,17 @@ func NewMarketData() *MarketData {
 	}
 }
 
+// Has checks if a security with the given ticker exists in the market data.
 func (m *MarketData) Has(ticker string) bool {
 	_, ok := m.index[ticker]
 	return ok
 }
 
+// Get retrieves a security by its ticker. It returns nil if the security is not found.
 func (m *MarketData) Get(ticker string) *Security { return m.index[ticker] }
 
-// read a single value from the database for a given (ticker, day).
+// read retrieves the price for a given security ticker on a specific day.
+// It returns the price and true if found, otherwise it returns 0.0 and false.
 func (m *MarketData) read(ticker string, day date.Date) (float64, bool) {
 	sec, ok := m.index[ticker]
 	if !ok {

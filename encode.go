@@ -19,7 +19,7 @@ const attrOn = "on"
 const marketDataFilesGlob = "[0-9][0-9][0-9][0-9].jsonl"
 const definitionFilename = "definition.jsonl"
 
-// this file contains code to persist market data in a folder, in a way that is still human readable, and yet git friendly.
+// This file contains code to persist market data in a folder, in a way that is still human-readable and git-friendly.
 // the main goal for such market data is to live on a private github repo.
 //
 // The overall strategy to Encode/Decode market data is as follow:
@@ -75,21 +75,21 @@ func (m *MarketData) decodeDefinition(filename string, r io.Reader) error {
 	return nil
 }
 
-// line structures a line from a collection of files as the persistence layer represent them.
-type line struct {
+// fileLine structures a line from a collection of files as the persistence layer represent them.
+type fileLine struct {
 	filename string
 	i        int
 	txt      string
 }
 
 // decodeLines read all lines from a set of files and return them in list of structured lines.
-func decodeLines(filenames ...string) (list []line, err error) {
-	list = make([]line, 0, 100000)
+func decodeLines(filenames ...string) (list []fileLine, err error) {
+	list = make([]fileLine, 0, 100000)
 	for _, filename := range filenames {
 		i := 0
 		r, err := os.Open(filename)
 		if err != nil {
-			return nil, fmt.Errorf("cannot open %q for reading: %w", filename, err)
+			return nil, fmt.Errorf("cannot open %q for reading: %w", filename, err) //
 		}
 		scanner := bufio.NewScanner(r)
 		for scanner.Scan() {
@@ -101,8 +101,8 @@ func decodeLines(filenames ...string) (list []line, err error) {
 	return list, nil
 }
 
-// decodeLine a single line from the database persisted files.
-func decodeLine(m *MarketData, l line) error {
+// decodeLine decodes a single line from the database persisted files.
+func decodeLine(m *MarketData, l fileLine) error {
 
 	// Start simply ignoring empty lines.
 	if strings.TrimSpace(l.txt) == "" {
@@ -151,7 +151,7 @@ func decodeLine(m *MarketData, l line) error {
 	return nil
 }
 
-// DecodeMarketData reads a folder containing securities definition and prices, and returns a Market object.
+// DecodeMarketData reads a folder containing securities definition and prices, and returns a MarketData object.
 func DecodeMarketData(folder string) (*MarketData, error) {
 	// Creates an empty database.
 	m := NewMarketData()
@@ -225,7 +225,7 @@ func encodeDefinition(w io.Writer, m *MarketData) error {
 	return nil
 }
 
-// encodeLine persist a single line in a security jsonl file.
+// encodeLine persists a single line in a security jsonl file.
 // Returns bare io errors.
 func encodeLine(w io.Writer, day date.Date, tickers []string, values []float64) error {
 	// json encoder cannot be used as it would require a map, and map order is not guaranteed.

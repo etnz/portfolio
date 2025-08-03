@@ -6,6 +6,8 @@ import (
 	"sort"
 )
 
+// History stores a chronological series of values, each associated with a specific date.
+// It ensures that dates are unique and the series is always sorted.
 type History[T any] struct {
 	days   []Date
 	values []T
@@ -27,7 +29,7 @@ func (h *History[T]) Clear() {
 	h.values = h.values[:0]
 }
 
-// Len return the number of items in the history.
+// Len returns the number of items in the history.
 func (h *History[T]) Len() int { return len(h.days) }
 
 // chronological is a private implementation to make this history chronologically sorted.
@@ -40,10 +42,11 @@ func (s chronological[T]) Swap(i, j int) {
 	s.values[i], s.values[j] = s.values[j], s.values[i]
 }
 
-// sort history in chronological order.
+// sort sorts the history in chronological order.
 func (h *History[T]) sort() { sort.Sort(chronological[T]{h}) }
 
-// Append a point in the history.
+// Append adds a point to the history. If a value for the given date already
+// exists, it is overwritten. The history is kept sorted.
 func (h *History[T]) Append(on Date, q T) *History[T] {
 	if i := slices.Index(h.days, on); i >= 0 {
 		// Found a point at that exact same instant.
@@ -58,7 +61,7 @@ func (h *History[T]) Append(on Date, q T) *History[T] {
 	return h
 }
 
-// Values return an iterator over all values in the history.
+// Values returns an iterator over all date/value pairs in the history, in chronological order.
 func (h *History[T]) Values() iter.Seq2[Date, T] {
 	return func(yield func(Date, T) bool) {
 		for i, on := range h.days {

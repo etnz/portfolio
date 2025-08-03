@@ -11,8 +11,8 @@ import (
 	"github.com/etnz/portfolio/date"
 )
 
-// this file contains functions to handle the import/export format.
-// It should remain human readable, single file and be easy to merge into a database.
+// This file contains functions to handle the import/export format.
+// The format is designed to be human-readable, single-file, and easy to merge into a database.
 
 // ImportMarketData imports market data from 'r' in the import/export format.
 //

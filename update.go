@@ -17,6 +17,7 @@ import (
 // or the forex pair.
 // there might be other thypes of securities, but they are not supported by update, yet (like privately traded assets)
 
+// defaultPriceHistoryStartDate is the date from which to start fetching price history if a security has no prices yet.
 var defaultPriceHistoryStartDate = date.New(2020, 01, 01)
 
 // updateSecurityPrices attempts to fetch and update prices for a single security.
@@ -59,6 +60,10 @@ func updateSecurityPrices(sec *Security, from, to date.Date) error {
 	return nil
 }
 
+// Update iterates through all securities in the market data and fetches the latest
+// prices for each updatable security (i.e., those with an MSSI or CurrencyPair ID).
+// It fetches prices from the day after the last known price up to yesterday.
+// It returns a joined error if any updates fail.
 func (m *MarketData) Update() error {
 
 	yesterday := date.Today().Add(-1)

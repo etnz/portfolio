@@ -13,8 +13,8 @@ import (
 	"github.com/google/subcommands"
 )
 
-// Register the subcommands.
-// A main package will call Register() to allow subcommands, and Execute() on the user-selected one.
+// Register registers all the application's subcommands with the provided Commander.
+// A main package will call Register() to set up the CLI.
 func Register(c *subcommands.Commander) {
 	c.Register(&importInvestingCmd{}, "securities")
 	c.Register(&updateCmd{}, "securities")
@@ -28,12 +28,12 @@ func Register(c *subcommands.Commander) {
 
 }
 
-// as a CLI application, it has a very short lived lifecycle, so it is ok to use global vaariables.
+// As a CLI application, it has a very short-lived lifecycle, so it is ok to use global variables for flags.
 
 var securitiesPath = flag.String("securities-path", ".security", "Path to the securities database folder")
 var ledgerFile = flag.String("ledger-file", "transactions.jsonl", "Path to the ledger file containing transactions (JSONL format)")
 
-// DecodeSecurities decode securities from the app securities path folder.
+// DecodeSecurities decodes securities from the application's securities path folder.
 func DecodeSecurities() (m *portfolio.MarketData, err error) {
 	// Load the portfolio database from the specified file.
 	m, err = portfolio.DecodeMarketData(*securitiesPath)
@@ -65,7 +65,7 @@ func DecodeLedger() (*portfolio.Ledger, error) {
 	return ledger, nil
 }
 
-// EncodeMarketData encode securities into the app securities path folder.
+// EncodeMarketData encodes securities into the application's securities path folder.
 func EncodeMarketData(s *portfolio.MarketData) error {
 	// Close the portfolio database if it is not nil.
 	return portfolio.EncodeMarketData(*securitiesPath, s)

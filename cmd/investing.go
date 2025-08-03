@@ -15,14 +15,14 @@ import (
 	"github.com/google/subcommands"
 )
 
-// importInvestingCmd imports public security prices from investing's csv format.
+// importInvestingCmd imports public security prices from investing.com's CSV format.
 type importInvestingCmd struct {
 	file string
 }
 
 func (*importInvestingCmd) Name() string { return "import-investing" }
 func (*importInvestingCmd) Synopsis() string {
-	return "import public security prices in investing.com's csv format"
+	return "import public security prices from investing.com's CSV format"
 }
 func (*importInvestingCmd) Usage() string { return "pcs import-investing <ticker>\n" }
 func (c *importInvestingCmd) SetFlags(f *flag.FlagSet) {

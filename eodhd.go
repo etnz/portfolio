@@ -23,6 +23,8 @@ const eodhd_api_key = "EODHD_API_KEY"
 
 var eodhdApiFlag = flag.String("eodhd-api-key", "", "EODHD API key to use for fetching prices from EODHD.com.\n If missing it will read for the environment variable \""+eodhd_api_key+"\". You can get one at https://eodhd.com/")
 
+// eodhdApiKey retrieves the EODHD API key from the command-line flag or the environment variable.
+// It prioritizes the flag over the environment variable.
 func eodhdApiKey() string {
 	// If the flag is not set, we try to read it from the environment variable.
 	if *eodhdApiFlag == "" {
@@ -36,6 +38,9 @@ type diskCache struct {
 	base http.RoundTripper
 }
 
+// RoundTrip implements the http.RoundTripper interface. It checks for a cached
+// response on disk first. If a fresh cached response is not found, it proceeds
+// with the actual HTTP request and caches the new response if it's successful.
 func (c *diskCache) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	// get from disk
 	// diskcache implements a unique key per day, so the local tmp expires every day.
@@ -94,8 +99,8 @@ func (c *diskCache) put(key string, resp *http.Response) (err error) {
 	return err
 }
 
-// returns a client with a cache all with daily expire
-func daily() *http.Client {
+// newDailyCachingClient returns an http.Client that uses a disk cache where entries expire daily.
+func newDailyCachingClient() *http.Client {
 	client := new(http.Client)
 	client.Transport = &diskCache{http.DefaultTransport}
 	return client
@@ -121,8 +126,8 @@ func jwget(client *http.Client, addr string, data interface{}) error {
 
 // This file contains functions to access the EODHD API.
 
-// eodhdMicToCode returns a map of mic to eodhd internal code for exchange
-func eodhdMicToCode(apiKey string) (map[string]string, error) {
+// eodhdMicToExchangeCode returns a map of MIC to EODHD's internal exchange code.
+func eodhdMicToExchangeCode(apiKey string) (map[string]string, error) {
 	// https://eodhd.com/api/exchanges-list/?api_token=67adc13417e148.00145034&fmt=json
 	// we can retrive the Code by MIC success (add MIC to the security information (isin+mic))
 	// [
@@ -147,7 +152,7 @@ func eodhdMicToCode(apiKey string) (map[string]string, error) {
 	// that's the paylod
 	content := make([]Info, 0)
 	// query that endpoint at most once a day
-	if err := jwget(daily(), addr, &content); err != nil {
+	if err := jwget(newDailyCachingClient(), addr, &content); err != nil {
 		return nil, err
 	}
 	result := make(map[string]string)
@@ -195,8 +200,8 @@ func eodhdMicToCode(apiKey string) (map[string]string, error) {
 // 	return content, nil
 // }
 
-// eodhdSearch by ISIN & MIC to get the internal eodhd ticker.
-func eodhdSearch(apiKey string, isin, mic string) (ticker string, err error) {
+// eodhdSearchByISIN searches by ISIN and MIC to get the internal EODHD ticker (e.g., "AAPL.US").
+func eodhdSearchByISIN(apiKey string, isin, mic string) (ticker string, err error) {
 	// https://eodhd.com/api/search/US67066G1040?api_token=67adc13417e148.00145034&fmt=json
 	// [
 	//   {
@@ -211,7 +216,7 @@ func eodhdSearch(apiKey string, isin, mic string) (ticker string, err error) {
 	//     "previousCloseDate": "2025-02-12"
 	//   },
 
-	mic2exchange, err := eodhdMicToCode(apiKey)
+	mic2exchange, err := eodhdMicToExchangeCode(apiKey)
 	if err != nil {
 		return "", err
 	}
@@ -236,7 +241,7 @@ func eodhdSearch(apiKey string, isin, mic string) (ticker string, err error) {
 
 	// that's the payload
 	content := make([]Info, 0)
-	if err := jwget(daily(), addr, &content); err != nil {
+	if err := jwget(newDailyCachingClient(), addr, &content); err != nil {
 		return "", err
 	}
 	for _, info := range content {
@@ -254,7 +259,7 @@ func eodhdSearch(apiKey string, isin, mic string) (ticker string, err error) {
 // eodhdDailyISIN returns the daily prices for a given ISIN and MIC.
 func eodhdDailyISIN(apiKey, isin, mic string, from, to date.Date) (prices date.History[float64], err error) {
 	// find the eodhd ticker for the given isin and mic
-	ticker, err := eodhdSearch(apiKey, isin, mic)
+	ticker, err := eodhdSearchByISIN(apiKey, isin, mic)
 	if err != nil {
 		return prices, fmt.Errorf("eodhd cannot find a ticker for %s.%s: %w", isin, mic, err)
 	}
@@ -279,8 +284,8 @@ func eodhdDailyFrom(apiKey, fromCurrency, toCurrency string, from, to date.Date)
 	return close, nil
 }
 
-// eodhdDaily returns the daily prices for a given ticker.
-// returns the daily close and open prices adjusted for splits.
+// eodhdDaily returns the daily open and adjusted close prices for a given EODHD ticker.
+// The EODHD ticker format is typically "SYMBOL.EXCHANGECODE".
 func eodhdDaily(apiKey, ticker string, from, to date.Date) (open, close date.History[float64], err error) {
 	// https://eodhd.com/api/eod/NVD.F?api_token=67adc13417e148.00145034&fmt=json
 	// [
@@ -310,7 +315,7 @@ func eodhdDaily(apiKey, ticker string, from, to date.Date) (open, close date.His
 
 	// that's the payload
 	content := make([]Info, 0)
-	if err := jwget(daily(), addr, &content); err != nil {
+	if err := jwget(newDailyCachingClient(), addr, &content); err != nil {
 		return open, close, err
 	}
 
