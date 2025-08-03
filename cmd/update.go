@@ -22,7 +22,7 @@ func (c *updateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 		return subcommands.ExitUsageError
 	}
 
-	db, err := OpenSecurities()
+	db, err := DecodeSecurities()
 	if err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure
@@ -33,7 +33,7 @@ func (c *updateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 		return subcommands.ExitFailure
 	}
 
-	if err := CloseSecurities(db); err != nil {
+	if err := EncodeSecurities(db); err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure
 	}

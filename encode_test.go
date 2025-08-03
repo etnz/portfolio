@@ -96,9 +96,9 @@ func TestDecodeTransactions(t *testing.T) {
 func TestEncodeTransactions(t *testing.T) {
 	// 1. Arrange: Create test data in a deliberately unsorted order.
 	// Note that tx2 and tx3 have the same date. Their relative order must be preserved.
-	tx1 := Buy{Base: Base{Command: CmdBuy, Date: date.MustParse("2025-08-03")}, Security: "AAPL"}
-	tx2 := Deposit{Base: Base{Command: CmdDeposit, Date: date.MustParse("2025-08-01")}, Amount: 1000}
-	tx3 := Sell{Base: Base{Command: CmdSell, Date: date.MustParse("2025-08-01")}, Security: "GOOG"} // Same date as tx2
+	tx1 := NewBuy(date.MustParse("2025-08-03"), "", "AAPL", 0, 0)
+	tx2 := NewDeposit(date.MustParse("2025-08-01"), "", "", 1000)
+	tx3 := NewSell(date.MustParse("2025-08-01"), "", "GOOG", 0, 0) // Same date as tx2
 
 	transactions := []Transaction{
 		tx1, // Should be last

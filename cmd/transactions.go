@@ -7,29 +7,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/etnz/portfolio/date"
 	"github.com/etnz/portfolio"
+	"github.com/etnz/portfolio/date"
 	"github.com/google/subcommands"
 )
-
-// appendTransaction appends a transaction to the specified portfolio file.
-func appendTransaction(filename string, tx portfolio.Transaction) subcommands.ExitStatus {
-	// Open the file in append mode, creating it if it doesn't exist.
-	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error opening portfolio file %q: %v\n", filename, err)
-		return subcommands.ExitFailure
-	}
-	defer f.Close()
-
-	if err := portfolio.EncodeTransaction(f, tx); err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing to portfolio file %q: %v\n", filename, err)
-		return subcommands.ExitFailure
-	}
-
-	fmt.Printf("Successfully appended transaction to %s\n", filename)
-	return subcommands.ExitSuccess
-}
 
 // --- Buy Command ---
 
@@ -69,13 +50,7 @@ func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) s
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.Buy{
-		Base:     portfolio.Base{Command: "buy", Date: day, Memo: c.memo},
-		Security: c.security,
-		Quantity: c.quantity,
-		Price:    c.price,
-	}
-	return appendTransaction(*portfolioFile, tx)
+	return EncodeTransaction(portfolio.NewBuy(day, c.memo, c.security, c.quantity, c.price))
 }
 
 // --- Sell Command ---
@@ -114,13 +89,7 @@ func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	tx := portfolio.Sell{
-		Base:     portfolio.Base{Command: "sell", Date: day, Memo: c.memo},
-		Security: c.security,
-		Quantity: c.quantity,
-		Price:    c.price,
-	}
-	return appendTransaction(*portfolioFile, tx)
+	return EncodeTransaction(portfolio.NewSell(day, c.memo, c.security, c.quantity, c.price))
 }
 
 // --- Dividend Command ---
@@ -158,12 +127,7 @@ func (c *dividendCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.Dividend{
-		Base:     portfolio.Base{Command: "dividend", Date: day, Memo: c.memo},
-		Security: c.security,
-		Amount:   c.amount,
-	}
-	return appendTransaction(*portfolioFile, tx)
+	return EncodeTransaction(portfolio.NewDividend(day, c.memo, c.security, c.amount))
 }
 
 // --- Deposit Command ---
@@ -201,12 +165,7 @@ func (c *depositCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.Deposit{
-		Base:     portfolio.Base{Command: "deposit", Date: day, Memo: c.memo},
-		Amount:   c.amount,
-		Currency: c.currency,
-	}
-	return appendTransaction(*portfolioFile, tx)
+	return EncodeTransaction(portfolio.NewDeposit(day, c.memo, c.currency, c.amount))
 }
 
 // --- Withdraw Command ---
@@ -243,12 +202,7 @@ func (c *withdrawCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.Withdraw{
-		Base:     portfolio.Base{Command: "withdraw", Date: day, Memo: c.memo},
-		Amount:   c.amount,
-		Currency: c.currency,
-	}
-	return appendTransaction(*portfolioFile, tx)
+	return EncodeTransaction(portfolio.NewWithdraw(day, c.memo, c.currency, c.amount))
 }
 
 // --- Convert Command ---
@@ -299,12 +253,5 @@ func (c *convertCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.Convert{
-		Base:         portfolio.Base{Command: "convert", Date: day, Memo: c.memo},
-		FromCurrency: c.fromCurrency,
-		FromAmount:   c.fromAmount,
-		ToCurrency:   c.toCurrency,
-		ToAmount:     c.toAmount,
-	}
-	return appendTransaction(*portfolioFile, tx)
+	return EncodeTransaction(portfolio.NewConvert(day, c.memo, c.fromCurrency, c.fromAmount, c.toCurrency, c.toAmount))
 }

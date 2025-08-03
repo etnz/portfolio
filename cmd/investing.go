@@ -40,7 +40,7 @@ func (c *importInvestingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...in
 		return subcommands.ExitUsageError
 	}
 
-	db, err := OpenSecurities()
+	db, err := DecodeSecurities()
 	if err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure
@@ -71,7 +71,7 @@ func (c *importInvestingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...in
 		oldPrices.Append(on, price)
 	}
 
-	if err := CloseSecurities(db); err != nil {
+	if err := EncodeSecurities(db); err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure
 	}
