@@ -166,6 +166,21 @@ func LoadTransactions(r io.Reader) ([]Transaction, error) {
 	return transactions, nil
 }
 
+// EncodeTransaction marshals a single transaction to JSON and writes it to the
+// writer, followed by a newline, in JSONL format.
+func EncodeTransaction(w io.Writer, tx Transaction) error {
+	jsonData, err := json.Marshal(tx)
+	if err != nil {
+		return fmt.Errorf("failed to marshal transaction: %w", err)
+	}
+
+	// Write the JSON data followed by a newline to create the JSONL format.
+	if _, err := w.Write(append(jsonData, '\n')); err != nil {
+		return fmt.Errorf("failed to write transaction: %w", err)
+	}
+	return nil
+}
+
 // Save reorders transactions by date and persists them to an io.Writer in JSONL format.
 // The sort is stable, meaning transactions on the same day maintain their original relative order.
 func Save(w io.Writer, transactions []Transaction) error {
@@ -176,14 +191,8 @@ func Save(w io.Writer, transactions []Transaction) error {
 
 	// 2. Iterate through the sorted transactions and write each one as a JSON line.
 	for _, tx := range transactions {
-		jsonData, err := json.Marshal(tx)
-		if err != nil {
-			return err // Stop and return marshalling error
-		}
-
-		// Write the JSON data followed by a newline to create the JSONL format.
-		if _, err := w.Write(append(jsonData, '\n')); err != nil {
-			return err // Stop and return write error
+		if err := EncodeTransaction(w, tx); err != nil {
+			return err
 		}
 	}
 

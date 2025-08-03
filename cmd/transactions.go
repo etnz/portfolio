@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -13,11 +12,8 @@ import (
 	"github.com/google/subcommands"
 )
 
-// appendTransaction appends a portfolio to the specified portfolio file.
+// appendTransaction appends a transaction to the specified portfolio file.
 func appendTransaction(filename string, tx portfolio.Transaction) subcommands.ExitStatus {
-
-	// before appending the portfolio, run a validation check.
-
 	// Open the file in append mode, creating it if it doesn't exist.
 	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -26,20 +22,12 @@ func appendTransaction(filename string, tx portfolio.Transaction) subcommands.Ex
 	}
 	defer f.Close()
 
-	// Marshal the portfolio to JSON.
-	jsonData, err := json.Marshal(tx)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating JSON: %v\n", err)
-		return subcommands.ExitFailure
-	}
-
-	// Write the JSON data followed by a newline.
-	if _, err := fmt.Fprintln(f, string(jsonData)); err != nil {
+	if err := portfolio.EncodeTransaction(f, tx); err != nil {
 		fmt.Fprintf(os.Stderr, "Error writing to portfolio file %q: %v\n", filename, err)
 		return subcommands.ExitFailure
 	}
 
-	fmt.Printf("Successfully appended portfolio to %s\n", filename)
+	fmt.Printf("Successfully appended transaction to %s\n", filename)
 	return subcommands.ExitSuccess
 }
 
@@ -67,7 +55,7 @@ func (c *buyCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.security, "s", "", "Security ticker")
 	f.Float64Var(&c.quantity, "q", 0, "Number of shares")
 	f.Float64Var(&c.price, "p", 0, "Price per share")
-	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the portfolio")
+	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 }
 
 func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -113,7 +101,7 @@ func (c *sellCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.security, "s", "", "Security ticker")
 	f.Float64Var(&c.quantity, "q", 0, "Number of shares, if missing all shares are sold")
 	f.Float64Var(&c.price, "p", 0, "Price per share")
-	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the portfolio")
+	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 }
 func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if c.security == "" || c.quantity <= 0 || c.price < 0 {
@@ -292,7 +280,7 @@ func (c *convertCmd) SetFlags(f *flag.FlagSet) {
 	f.Float64Var(&c.fromAmount, "from-a", 0, "Amount of cash to convert from the source currency")
 	f.StringVar(&c.toCurrency, "to-c", "", "Destination currency code (e.g., EUR)")
 	f.Float64Var(&c.toAmount, "to-a", 0, "Amount of cash received in the destination currency")
-	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the portfolio")
+	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 }
 
 func (c *convertCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
