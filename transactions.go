@@ -1,12 +1,6 @@
 package portfolio
 
 import (
-	"bufio"
-	"encoding/json"
-	"fmt"
-	"io"
-	"sort"
-
 	"github.com/etnz/portfolio/date"
 )
 
@@ -95,106 +89,4 @@ type Convert struct {
 	FromAmount   float64 `json:"fromAmount"`
 	ToCurrency   string  `json:"toCurrency"`
 	ToAmount     float64 `json:"toAmount"`
-}
-
-// Load reads a stream of JSONL data from an io.Reader, decodes each line into the
-// appropriate transaction struct, and returns a slice of transactions.
-func LoadTransactions(r io.Reader) ([]Transaction, error) {
-	var transactions []Transaction
-	scanner := bufio.NewScanner(r)
-
-	for scanner.Scan() {
-		lineBytes := scanner.Bytes()
-		if len(lineBytes) == 0 {
-			continue // Skip empty lines
-		}
-
-		var identifier struct {
-			Command CommandType `json:"command"`
-		}
-		if err := json.Unmarshal(lineBytes, &identifier); err != nil {
-			return nil, fmt.Errorf("could not identify command in line %q: %w", string(lineBytes), err)
-		}
-
-		var decodedTx Transaction
-		var err error
-
-		switch identifier.Command {
-		case CmdBuy:
-			var tx Buy
-			err = json.Unmarshal(lineBytes, &tx)
-			decodedTx = tx
-		case CmdSell:
-			var tx Sell
-			err = json.Unmarshal(lineBytes, &tx)
-			decodedTx = tx
-		case CmdDividend:
-			var tx Dividend
-			err = json.Unmarshal(lineBytes, &tx)
-			decodedTx = tx
-		case CmdDeposit:
-			var tx Deposit
-			err = json.Unmarshal(lineBytes, &tx)
-			decodedTx = tx
-		case CmdWithdraw:
-			var tx Withdraw
-			err = json.Unmarshal(lineBytes, &tx)
-			decodedTx = tx
-		case CmdConvert:
-			var tx Convert
-			err = json.Unmarshal(lineBytes, &tx)
-			decodedTx = tx
-		default:
-			err = fmt.Errorf("unknown transaction command: %q", identifier.Command)
-		}
-
-		if err != nil {
-			return nil, err
-		}
-		transactions = append(transactions, decodedTx)
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error reading from input: %w", err)
-	}
-
-	// 1. Perform a stable sort on the slice based on the transaction date.
-	sort.SliceStable(transactions, func(i, j int) bool {
-		return transactions[i].When().Before(transactions[j].When())
-	})
-
-	return transactions, nil
-}
-
-// EncodeTransaction marshals a single transaction to JSON and writes it to the
-// writer, followed by a newline, in JSONL format.
-func EncodeTransaction(w io.Writer, tx Transaction) error {
-	jsonData, err := json.Marshal(tx)
-	if err != nil {
-		return fmt.Errorf("failed to marshal transaction: %w", err)
-	}
-
-	// Write the JSON data followed by a newline to create the JSONL format.
-	if _, err := w.Write(append(jsonData, '\n')); err != nil {
-		return fmt.Errorf("failed to write transaction: %w", err)
-	}
-	return nil
-}
-
-// Save reorders transactions by date and persists them to an io.Writer in JSONL format.
-// The sort is stable, meaning transactions on the same day maintain their original relative order.
-func Save(w io.Writer, transactions []Transaction) error {
-	// 1. Perform a stable sort on the slice based on the transaction date.
-	sort.SliceStable(transactions, func(i, j int) bool {
-		return transactions[i].When().Before(transactions[j].When())
-	})
-
-	// 2. Iterate through the sorted transactions and write each one as a JSON line.
-	for _, tx := range transactions {
-		if err := EncodeTransaction(w, tx); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

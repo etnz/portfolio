@@ -14,14 +14,14 @@ import (
 // this file contains functions to handle the import/export format.
 // It should remain human readable, single file and be easy to merge into a database.
 
-// Import securities from 'r' in the import/export format.
+// ImportSecurity imports securities from 'r' in the import/export format.
 //
 // The import format is a JSONL file, where each line is a JSON object representing a security.
 //
 // A security is a single json object whose property 'ticker' contains the security ticker, 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
 //
 // The security history is represented as a single json object whose properties are date.Date parseable by [date] package, and value are the security price as a number.
-func (s *Securities) Import(r io.Reader) error {
+func ImportSecurity(r io.Reader) (*Securities, error) {
 
 	// the readable version of the format is can be summarized by a few types.
 	type jsecurity struct {
@@ -39,36 +39,12 @@ func (s *Securities) Import(r io.Reader) error {
 		}
 		var js jsecurity
 		if err := json.Unmarshal(line, &js); err != nil {
-			return fmt.Errorf("cannot parse line for Security import format: %q: %w", string(line), err)
+			return nil, fmt.Errorf("cannot parse line for Security import format: %q: %w", string(line), err)
 		}
 		jsecurities = append(jsecurities, js)
 	}
 
-	// Check that tickers is not already present in the database.
-	var tickers []string
-	var dateErrors []error
-	for _, js := range jsecurities {
-		if _, ok := s.index[js.Ticker]; ok {
-			tickers = append(tickers, js.Ticker)
-		}
-		for day := range js.History {
-			if _, err := date.Parse(day); err != nil {
-				dateErrors = append(dateErrors, fmt.Errorf("invalid date in %q history: %w", js.Ticker, err))
-			}
-		}
-	}
-	if len(tickers) == 1 {
-		return fmt.Errorf("ticker %v is already present in the database", tickers)
-	}
-	if len(tickers) > 1 {
-		return fmt.Errorf("%v tickers %v are already present in the database", len(tickers), tickers)
-	}
-	if len(dateErrors) == 1 {
-		return dateErrors[0]
-	}
-	if len(dateErrors) > 1 {
-		return fmt.Errorf("errors parsing dates: %v", dateErrors)
-	}
+	s := NewSecurities()
 
 	// Append securities for each ticker
 	for _, js := range jsecurities {
@@ -90,17 +66,17 @@ func (s *Securities) Import(r io.Reader) error {
 	slices.SortFunc(s.securities, func(a, b *Security) int {
 		return strings.Compare(a.ticker, b.ticker)
 	})
-	return nil
+	return s, nil
 }
 
-// Export securities in database to 'w' in the import/export format.
+// ExportSecurities exports the securities to 'w' in the import/export format.
 //
 // The format is a JSONL file, where each line is a JSON object representing a security.
 //
 // A security is a single json object whose property 'ticker' contains the security ticker, 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
 //
 // The security history is represented as a single json object whose properties are date.Date parseable by [date] package, and value are the security price as a number.
-func (s *Securities) Export(w io.Writer) error {
+func ExportSecurities(w io.Writer, s *Securities) error {
 
 	type jsecurity struct {
 		Ticker  string             `json:"ticker"`

@@ -30,7 +30,7 @@ var portfolioFile = flag.String("portfolio-file", "transactions.jsonl", "Path to
 // OpenSecurities is the central function to open the securities database.
 func OpenSecurities() (db *portfolio.Securities, err error) {
 	// Load the portfolio database from the specified file.
-	db, err = portfolio.LoadSecurities(*securitiesPath)
+	db, err = portfolio.DecodeSecurities(*securitiesPath)
 	if errors.Is(err, fs.ErrNotExist) {
 		log.Println("warning, database does not exist, creating an empty database instead")
 		db, err = portfolio.NewSecurities(), nil
@@ -39,7 +39,7 @@ func OpenSecurities() (db *portfolio.Securities, err error) {
 	return
 }
 
-func CloseSecurities(db *portfolio.Securities) error {
+func CloseSecurities(s *portfolio.Securities) error {
 	// Close the portfolio database if it is not nil.
-	return db.Persist(*securitiesPath)
+	return portfolio.EncodeSecurities(*securitiesPath, s)
 }

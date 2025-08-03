@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strings"
 
 	"github.com/etnz/portfolio/date"
@@ -31,9 +32,9 @@ const definitionFilename = "definition.jsonl"
 //            Then generate each file
 //            Then using the same glob create the list of all existing files on the disk, and compute which one is to be deleted.
 
-// loadDefinition parses a single file containing the securities definition.
+// decodeDefinition parses a single file containing the securities definition.
 // filename is for error message only.
-func (s *Securities) loadDefinition(filename string, r io.Reader) error {
+func (s *Securities) decodeDefinition(filename string, r io.Reader) error {
 	// to parse a json, we use a dedicated local struct with tag annotation.
 
 	// jsecurity is the object read from the file using json parser.
@@ -80,8 +81,8 @@ type line struct {
 	txt      string
 }
 
-// readLines read all lines from a set of files and return them in list of structured lines.
-func readLines(filenames ...string) (list []line, err error) {
+// decodeLines read all lines from a set of files and return them in list of structured lines.
+func decodeLines(filenames ...string) (list []line, err error) {
 	list = make([]line, 0, 100000)
 	for _, filename := range filenames {
 		i := 0
@@ -99,8 +100,8 @@ func readLines(filenames ...string) (list []line, err error) {
 	return list, nil
 }
 
-// load a single line from the database persisted files.
-func (s *Securities) loadLine(l line) error {
+// decodeLine a single line from the database persisted files.
+func decodeLine(s *Securities, l line) error {
 
 	// Start simply ignoring empty lines.
 	if strings.TrimSpace(l.txt) == "" {
@@ -149,10 +150,10 @@ func (s *Securities) loadLine(l line) error {
 	return nil
 }
 
-// Load a database from its folder.
-func LoadSecurities(folder string) (*Securities, error) {
+// DecodeSecurities reads a folder containing securities definition and prices, and returns a Securities object.
+func DecodeSecurities(folder string) (*Securities, error) {
 	// Creates an empty database.
-	db := NewSecurities()
+	s := NewSecurities()
 
 	// strategy: reads the metadata file containing securities definition and ticker, then use it to load prices.
 	// then read all json files and break it into lines, and load them individually.
@@ -167,7 +168,7 @@ func LoadSecurities(folder string) (*Securities, error) {
 	}
 	defer f.Close()
 
-	if err := db.loadDefinition(definitionFile, f); err != nil {
+	if err := s.decodeDefinition(definitionFile, f); err != nil {
 		return nil, fmt.Errorf("load error: cannot read securities definition file: %w", err)
 	}
 
@@ -177,22 +178,25 @@ func LoadSecurities(folder string) (*Securities, error) {
 		return nil, fmt.Errorf("load error: cannot scan folder %q for security files: %w", folder, err)
 	}
 
-	lines, err := readLines(filenames...)
+	lines, err := decodeLines(filenames...)
 	if err != nil {
 		return nil, err // err is already a package error
 	}
 
 	for _, line := range lines {
-		if err := db.loadLine(line); err != nil {
+
+		if err := decodeLine(s, line); err != nil {
 			return nil, err
 		}
+
 	}
-	return db, nil
+	return s, nil
 }
 
 // Persist section.
 
-func (s *Securities) persistDefinition(w io.Writer) error {
+// encodeDefinition encodes the securities definition into a jsonl stream.
+func encodeDefinition(w io.Writer, s *Securities) error {
 	// jsecurity is the object to write to the file using json parser.
 	type jsecurity struct {
 		Ticker string `json:"ticker"`
@@ -218,9 +222,9 @@ func (s *Securities) persistDefinition(w io.Writer) error {
 	return nil
 }
 
-// PersistLine persist a single line in a security jsonl file.
+// encodeLine persist a single line in a security jsonl file.
 // Returns bare io errors.
-func persistLine(w io.Writer, day date.Date, tickers []string, values []float64) error {
+func encodeLine(w io.Writer, day date.Date, tickers []string, values []float64) error {
 	// json encoder cannot be used as it would require a map, and map order is not guaranteed.
 	// Instead fine grained formatting is done.
 
@@ -246,7 +250,8 @@ func persistLine(w io.Writer, day date.Date, tickers []string, values []float64)
 	return nil
 }
 
-func (s *Securities) Persist(folder string) error {
+// EncodeSecurities encodes the securities into a folder, creating a definition file and a set of jsonl files for each year.
+func EncodeSecurities(folder string, s *Securities) error {
 
 	// we first generate the security price values into this list of structured items.
 	type line struct {
@@ -272,7 +277,7 @@ func (s *Securities) Persist(folder string) error {
 	defer f.Close()
 	log.Printf("create-definition-file name=%q", definitionFile)
 
-	if err := s.persistDefinition(f); err != nil {
+	if err := encodeDefinition(f, s); err != nil {
 		return err
 	}
 	// Add a trailing line at the end of the file.
@@ -318,7 +323,7 @@ func (s *Securities) Persist(folder string) error {
 		}
 
 		// Write line to currentFile.
-		if err := persistLine(currentFile, l.day, l.tickers, l.prices); err != nil {
+		if err := encodeLine(currentFile, l.day, l.tickers, l.prices); err != nil {
 			return fmt.Errorf("persist error: write error on file %q: %w", currentFilename, err)
 		}
 	}
@@ -338,5 +343,107 @@ func (s *Securities) Persist(folder string) error {
 		}
 		log.Printf("delete-security-file name=%q", currentFilename)
 	}
+	return nil
+}
+
+// DecodeTransactions decodes transactions from a stream of JSONL data from an io.Reader, decodes each line into the
+// appropriate transaction struct, and returns a slice of transactions.
+func DecodeTransactions(r io.Reader) ([]Transaction, error) {
+	var transactions []Transaction
+	scanner := bufio.NewScanner(r)
+
+	for scanner.Scan() {
+		lineBytes := scanner.Bytes()
+		if len(lineBytes) == 0 {
+			continue // Skip empty lines
+		}
+
+		var identifier struct {
+			Command CommandType `json:"command"`
+		}
+		if err := json.Unmarshal(lineBytes, &identifier); err != nil {
+			return nil, fmt.Errorf("could not identify command in line %q: %w", string(lineBytes), err)
+		}
+
+		var decodedTx Transaction
+		var err error
+
+		switch identifier.Command {
+		case CmdBuy:
+			var tx Buy
+			err = json.Unmarshal(lineBytes, &tx)
+			decodedTx = tx
+		case CmdSell:
+			var tx Sell
+			err = json.Unmarshal(lineBytes, &tx)
+			decodedTx = tx
+		case CmdDividend:
+			var tx Dividend
+			err = json.Unmarshal(lineBytes, &tx)
+			decodedTx = tx
+		case CmdDeposit:
+			var tx Deposit
+			err = json.Unmarshal(lineBytes, &tx)
+			decodedTx = tx
+		case CmdWithdraw:
+			var tx Withdraw
+			err = json.Unmarshal(lineBytes, &tx)
+			decodedTx = tx
+		case CmdConvert:
+			var tx Convert
+			err = json.Unmarshal(lineBytes, &tx)
+			decodedTx = tx
+		default:
+			err = fmt.Errorf("unknown transaction command: %q", identifier.Command)
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		transactions = append(transactions, decodedTx)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading from input: %w", err)
+	}
+
+	// 1. Perform a stable sort on the slice based on the transaction date.
+	sort.SliceStable(transactions, func(i, j int) bool {
+		return transactions[i].When().Before(transactions[j].When())
+	})
+
+	return transactions, nil
+}
+
+// EncodeTransaction marshals a single transaction to JSON and writes it to the
+// writer, followed by a newline, in JSONL format.
+func EncodeTransaction(w io.Writer, tx Transaction) error {
+	jsonData, err := json.Marshal(tx)
+	if err != nil {
+		return fmt.Errorf("failed to marshal transaction: %w", err)
+	}
+
+	// Write the JSON data followed by a newline to create the JSONL format.
+	if _, err := w.Write(append(jsonData, '\n')); err != nil {
+		return fmt.Errorf("failed to write transaction: %w", err)
+	}
+	return nil
+}
+
+// EncodeTransactions reorders transactions by date and persists them to an io.Writer in JSONL format.
+// The sort is stable, meaning transactions on the same day maintain their original relative order.
+func EncodeTransactions(w io.Writer, transactions []Transaction) error {
+	// 1. Perform a stable sort on the slice based on the transaction date.
+	sort.SliceStable(transactions, func(i, j int) bool {
+		return transactions[i].When().Before(transactions[j].When())
+	})
+
+	// 2. Iterate through the sorted transactions and write each one as a JSON line.
+	for _, tx := range transactions {
+		if err := EncodeTransaction(w, tx); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
