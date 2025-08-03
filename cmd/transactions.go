@@ -46,12 +46,7 @@ func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) s
 	}
 
 	tx := portfolio.NewBuy(day, c.memo, c.security, c.quantity, c.price)
-	if err := tx.Validate(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		f.Usage()
-		return subcommands.ExitUsageError
-	}
-	return EncodeTransaction(tx)
+	return handleTransaction(tx, f)
 }
 
 // --- Sell Command ---
@@ -86,12 +81,7 @@ func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return subcommands.ExitUsageError
 	}
 	tx := portfolio.NewSell(day, c.memo, c.security, c.quantity, c.price)
-	if err := tx.Validate(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		f.Usage()
-		return subcommands.ExitUsageError
-	}
-	return EncodeTransaction(tx)
+	return handleTransaction(tx, f)
 }
 
 // --- Dividend Command ---
@@ -125,12 +115,7 @@ func (c *dividendCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 	}
 
 	tx := portfolio.NewDividend(day, c.memo, c.security, c.amount)
-	if err := tx.Validate(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		f.Usage()
-		return subcommands.ExitUsageError
-	}
-	return EncodeTransaction(tx)
+	return handleTransaction(tx, f)
 }
 
 // --- Deposit Command ---
@@ -164,12 +149,7 @@ func (c *depositCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	}
 
 	tx := portfolio.NewDeposit(day, c.memo, c.currency, c.amount)
-	if err := tx.Validate(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		f.Usage()
-		return subcommands.ExitUsageError
-	}
-	return EncodeTransaction(tx)
+	return handleTransaction(tx, f)
 }
 
 // --- Withdraw Command ---
@@ -203,12 +183,7 @@ func (c *withdrawCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 	}
 
 	tx := portfolio.NewWithdraw(day, c.memo, c.currency, c.amount)
-	if err := tx.Validate(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		f.Usage()
-		return subcommands.ExitUsageError
-	}
-	return EncodeTransaction(tx)
+	return handleTransaction(tx, f)
 }
 
 // --- Convert Command ---
@@ -251,10 +226,19 @@ func (c *convertCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	}
 
 	tx := portfolio.NewConvert(day, c.memo, c.fromCurrency, c.fromAmount, c.toCurrency, c.toAmount)
-	if err := tx.Validate(); err != nil {
+	return handleTransaction(tx, f)
+}
+
+// handleTransaction calls the core EncodeTransaction function and manages the
+// CLI feedback, printing errors or a success message and returning the
+// appropriate exit status.
+func handleTransaction(tx portfolio.Transaction, f *flag.FlagSet) subcommands.ExitStatus {
+	if err := EncodeTransaction(tx); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		f.Usage()
 		return subcommands.ExitUsageError
 	}
-	return EncodeTransaction(tx)
+
+	fmt.Printf("Successfully appended transaction to %s\n", *ledgerFile)
+	return subcommands.ExitSuccess
 }

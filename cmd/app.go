@@ -45,28 +45,56 @@ func DecodeSecurities() (m *portfolio.MarketData, err error) {
 	return
 }
 
+// DecodeLedger decodes the ledger from the application's default ledger file.
+// If the file does not exist, it returns a new empty ledger.
+func DecodeLedger() (*portfolio.Ledger, error) {
+	f, err := os.Open(*ledgerFile)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			// If the file doesn't exist, it's an empty ledger.
+			return portfolio.NewLedger(), nil
+		}
+		return nil, fmt.Errorf("could not open ledger file %q: %w", *ledgerFile, err)
+	}
+	defer f.Close()
+
+	ledger, err := portfolio.DecodeLedger(f)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode ledger file %q: %w", *ledgerFile, err)
+	}
+	return ledger, nil
+}
+
 // EncodeMarketData encode securities into the app securities path folder.
 func EncodeMarketData(s *portfolio.MarketData) error {
 	// Close the portfolio database if it is not nil.
 	return portfolio.EncodeMarketData(*securitiesPath, s)
 }
 
-// EncodeTransaction appends a single transaction into the app default portfolio file.
-func EncodeTransaction(tx portfolio.Transaction) subcommands.ExitStatus {
-	filename := *ledgerFile
-	// Open the file in append mode, creating it if it doesn't exist.
-	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+// EncodeTransaction validates a transaction against the market data and existing
+// ledger, then appends it to the ledger file.
+func EncodeTransaction(tx portfolio.Transaction) error {
+	market, err := DecodeSecurities()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error opening portfolio file %q: %v\n", filename, err)
-		return subcommands.ExitFailure
+		return fmt.Errorf("could not load securities database: %w", err)
+	}
+	ledger, err := DecodeLedger()
+	if err != nil {
+		return fmt.Errorf("could not load ledger: %w", err)
+	}
+	if err := portfolio.Validate(market, ledger, tx); err != nil {
+		return err
+	}
+
+	// Open the file in append mode, creating it if it doesn't exist.
+	f, err := os.OpenFile(*ledgerFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("error opening portfolio file %q: %w", *ledgerFile, err)
 	}
 	defer f.Close()
 
 	if err := portfolio.EncodeTransaction(f, tx); err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing to portfolio file %q: %v\n", filename, err)
-		return subcommands.ExitFailure
+		return fmt.Errorf("error writing to portfolio file %q: %w", *ledgerFile, err)
 	}
-
-	fmt.Printf("Successfully appended transaction to %s\n", filename)
-	return subcommands.ExitSuccess
+	return nil
 }

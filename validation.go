@@ -29,15 +29,17 @@ func Validate(market *MarketData, ledger *Ledger, tx Transaction) error {
 		securityTicker = v.Security
 	}
 
+	// valid security transaction do not accept empty ticker => securityTicker cannot be "" for security transactions.
+	// Therefore the following line test if it was a security transaction.
 	if securityTicker != "" {
 		if !market.Has(securityTicker) {
 			return fmt.Errorf("transaction (%s on %s) references non-existent security ticker %q", tx.What(), tx.When(), securityTicker)
 		}
 	}
+	// Step 3 (validating against transaction history) would likely be part of a
+	// Portfolio object's method that processes transactions sequentially and
+	// maintains the state of holdings, like ensuring you don't sell more shares
+	// than you own. This function provides the initial, static validation.
+	// TODO
 	return nil
 }
-
-// Step 3 (validating against transaction history) would likely be part of a
-// Portfolio object's method that processes transactions sequentially and
-// maintains the state of holdings, like ensuring you don't sell more shares
-// than you own. This function provides the initial, static validation.
