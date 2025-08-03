@@ -280,9 +280,10 @@ func (id ID) String() string {
 
 // Security represent a publicly or privately tradeable asset, stock, ETF, house.
 type Security struct {
-	id     ID
-	ticker string                // The ticker used in portfolio and human friendly persistence format.
-	prices date.History[float64] // the price historical value.
+	id       ID
+	ticker   string                // The ticker used in portfolio and human friendly persistence format.
+	currency string                // the security exchange currency.
+	prices   date.History[float64] // the price historical value.
 }
 
 func (s *Security) ID() ID {

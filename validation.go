@@ -1,45 +1,20 @@
 package portfolio
 
-import "fmt"
-
-// Validation layer is done in multiple steps:
-// 1. transactions are validated internally
-// 2. transactions are validated against the known market data for consistency
-// 3/ transactions are validated against the history of transactions.
-
-// Validate checks a ledger of transactions for internal and contextual consistency.
-// It performs two main checks:
-//  1. Calls the Validate() method on each transaction for self-validation.
-//  2. For transactions involving a security (Buy, Sell, Dividend), it ensures
-//     the security exists in the provided Market data.
-func Validate(market *MarketData, ledger *Ledger, tx Transaction) error {
-	// 1. Internal validation of the transaction itself.
-	if err := tx.Validate(); err != nil {
-		return fmt.Errorf("transaction (%s on %s) is invalid: %w", tx.What(), tx.When(), err)
-	}
-
-	// 2. Contextual validation against the securities database.
-	var securityTicker string
+// Validate 'tx' and return a copy with quick fixes apply or an error with all validation failures.
+func Validate(market *MarketData, ledger *Ledger, tx Transaction) (ntx Transaction, err error) {
 	switch v := tx.(type) {
 	case Buy:
-		securityTicker = v.Security
+		err = v.Validate(market, ledger)
 	case Sell:
-		securityTicker = v.Security
+		err = v.Validate(market, ledger)
 	case Dividend:
-		securityTicker = v.Security
+		err = v.Validate(market, ledger)
+	case Deposit:
+		err = v.Validate(market, ledger)
+	case Withdraw:
+		err = v.Validate(market, ledger)
+	case Convert:
+		err = v.Validate(market, ledger)
 	}
-
-	// valid security transaction do not accept empty ticker => securityTicker cannot be "" for security transactions.
-	// Therefore the following line test if it was a security transaction.
-	if securityTicker != "" {
-		if !market.Has(securityTicker) {
-			return fmt.Errorf("transaction (%s on %s) references non-existent security ticker %q", tx.What(), tx.When(), securityTicker)
-		}
-	}
-	// Step 3 (validating against transaction history) would likely be part of a
-	// Portfolio object's method that processes transactions sequentially and
-	// maintains the state of holdings, like ensuring you don't sell more shares
-	// than you own. This function provides the initial, static validation.
-	// TODO
-	return nil
+	return tx, err
 }

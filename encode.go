@@ -38,8 +38,9 @@ func (m *MarketData) decodeDefinition(filename string, r io.Reader) error {
 
 	// jsecurity is the object read from the file using json parser.
 	type jsecurity struct {
-		Ticker string `json:"ticker"`
-		ID     string `json:"id"`
+		Ticker   string `json:"ticker"`
+		ID       string `json:"id"`
+		Currency string `json:"currency"`
 		//more to come when the security definition grows.
 	}
 
@@ -60,9 +61,10 @@ func (m *MarketData) decodeDefinition(filename string, r io.Reader) error {
 			return fmt.Errorf("format error in %q: ticker %q is already defined", filename, js.Ticker)
 		}
 		sec := &Security{
-			ticker: js.Ticker,
-			id:     ID(js.ID),
-			prices: date.History[float64]{},
+			ticker:   js.Ticker,
+			id:       ID(js.ID),
+			currency: js.Currency,
+			prices:   date.History[float64]{},
 		}
 		m.securities = append(m.securities, sec)
 		m.index[js.Ticker] = sec
@@ -198,15 +200,17 @@ func DecodeMarketData(folder string) (*MarketData, error) {
 func encodeDefinition(w io.Writer, m *MarketData) error {
 	// jsecurity is the object to write to the file using json parser.
 	type jsecurity struct {
-		Ticker string `json:"ticker"`
-		ID     string `json:"id"`
+		Ticker   string `json:"ticker"`
+		ID       string `json:"id"`
+		Currency string `json:"currency"`
 		//more to come when the security definition grows.
 	}
 
 	for _, sec := range m.securities {
 		js := jsecurity{
-			Ticker: sec.Ticker(),
-			ID:     string(sec.ID()),
+			Ticker:   sec.Ticker(),
+			ID:       string(sec.ID()),
+			Currency: sec.currency,
 		}
 
 		data, err := json.Marshal(js)

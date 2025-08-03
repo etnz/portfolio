@@ -25,9 +25,10 @@ func ImportMarketData(r io.Reader) (*MarketData, error) {
 
 	// the readable version of the format is can be summarized by a few types.
 	type jsecurity struct {
-		Ticker  string             `json:"ticker"`
-		ID      string             `json:"id"`
-		History map[string]float64 `json:"history"`
+		Ticker   string             `json:"ticker"`
+		ID       string             `json:"id"`
+		Currency string             `json:"currency"`
+		History  map[string]float64 `json:"history"`
 	}
 
 	var jsecurities []jsecurity
@@ -50,8 +51,9 @@ func ImportMarketData(r io.Reader) (*MarketData, error) {
 	for _, js := range jsecurities {
 		// Create the security.
 		sec := &Security{
-			ticker: js.Ticker,
-			id:     ID(js.ID),
+			ticker:   js.Ticker,
+			id:       ID(js.ID),
+			currency: js.Currency,
 		}
 
 		// fill the security from json
@@ -79,17 +81,19 @@ func ImportMarketData(r io.Reader) (*MarketData, error) {
 func ExportMarketData(w io.Writer, m *MarketData) error {
 
 	type jsecurity struct {
-		Ticker  string             `json:"ticker"`
-		ID      string             `json:"id"`
-		History map[string]float64 `json:"history"`
+		Ticker   string             `json:"ticker"`
+		ID       string             `json:"id"`
+		Currency string             `json:"currency,omitempty"`
+		History  map[string]float64 `json:"history"`
 	}
 
 	for _, sec := range m.securities {
 		// Create the json object security.
 		js := jsecurity{
-			Ticker:  sec.Ticker(),
-			ID:      string(sec.id),
-			History: make(map[string]float64),
+			Ticker:   sec.Ticker(),
+			ID:       string(sec.id),
+			Currency: sec.currency,
+			History:  make(map[string]float64),
 		}
 
 		for day, value := range sec.prices.Values() {

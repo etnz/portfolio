@@ -24,7 +24,7 @@ type buyCmd struct {
 func (*buyCmd) Name() string     { return "buy" }
 func (*buyCmd) Synopsis() string { return "purchase shares to open or add to a position" }
 func (*buyCmd) Usage() string {
-	return `buy -d <date> -s <security> -q <quantity> -p <price> [-m <memo>]
+	return `buy -d <date> -s <security> -q <quantity> -p <price> [-c <currency>] [-m <memo>]
 
   Purchases shares of a security. The total cost is debited from the cash account.
 `
@@ -45,7 +45,7 @@ func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) s
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.NewBuy(day, c.memo, c.security, c.quantity, c.price)
+	tx := portfolio.NewBuy(day, c.memo, c.security, c.quantity, c.price, "")
 	return handleTransaction(tx, f)
 }
 
@@ -62,7 +62,7 @@ type sellCmd struct {
 func (*sellCmd) Name() string     { return "sell" }
 func (*sellCmd) Synopsis() string { return "sell shares to trim or close a position" }
 func (*sellCmd) Usage() string {
-	return `sell -d <date> -s <security> -q <quantity> -p <price> [-m <memo>]
+	return `sell -d <date> -s <security> -q <quantity> -p <price> [-c <currency>] [-m <memo>]
 
   Sells shares of a security. The proceeds are credited to the cash account.
 `
@@ -80,7 +80,7 @@ func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	tx := portfolio.NewSell(day, c.memo, c.security, c.quantity, c.price)
+	tx := portfolio.NewSell(day, c.memo, c.security, c.quantity, c.price, "")
 	return handleTransaction(tx, f)
 }
 
@@ -96,7 +96,7 @@ type dividendCmd struct {
 func (*dividendCmd) Name() string     { return "dividend" }
 func (*dividendCmd) Synopsis() string { return "record a dividend payment for a security" }
 func (*dividendCmd) Usage() string {
-	return `dividend -d <date> -s <security> -a <amount> [-m <memo>]
+	return `dividend -d <date> -s <security> -a <amount> [-c <currency>] [-m <memo>]
 
   Records a dividend payment. The amount is credited to the cash account.
 `
@@ -114,7 +114,7 @@ func (c *dividendCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.NewDividend(day, c.memo, c.security, c.amount)
+	tx := portfolio.NewDividend(day, c.memo, c.security, c.amount, "")
 	return handleTransaction(tx, f)
 }
 

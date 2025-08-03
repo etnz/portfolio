@@ -82,7 +82,8 @@ func EncodeTransaction(tx portfolio.Transaction) error {
 	if err != nil {
 		return fmt.Errorf("could not load ledger: %w", err)
 	}
-	if err := portfolio.Validate(market, ledger, tx); err != nil {
+	tx, err = portfolio.Validate(market, ledger, tx)
+	if err != nil {
 		return err
 	}
 
