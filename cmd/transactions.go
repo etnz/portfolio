@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/date"
@@ -191,7 +190,7 @@ func (*withdrawCmd) Usage() string {
 `
 }
 func (c *withdrawCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", time.Now().Format("2006-01-02"), "Transaction date (YYYY-MM-DD)")
+	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date (YYYY-MM-DD)")
 	f.Float64Var(&c.amount, "a", 0, "Amount of cash to withdraw")
 	f.StringVar(&c.currency, "c", "EUR", "Currency of the withdrawal (e.g., USD, EUR)")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")

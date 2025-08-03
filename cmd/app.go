@@ -1,3 +1,4 @@
+// Package cmd implements the CLI application to manage a portfolio.
 package cmd
 
 import (
@@ -13,6 +14,7 @@ import (
 )
 
 // Register the subcommands.
+// A main package will call Register() to allow subcommands, and Execute() on the user-selected one.
 func Register(c *subcommands.Commander) {
 	c.Register(&importInvestingCmd{}, "securities")
 	c.Register(&updateCmd{}, "securities")
@@ -26,11 +28,12 @@ func Register(c *subcommands.Commander) {
 
 }
 
+// as a CLI application, it has a very short lived lifecycle, so it is ok to use global vaariables.
+
 var securitiesPath = flag.String("securities-path", ".security", "Path to the securities database folder")
 var portfolioFile = flag.String("portfolio-file", "transactions.jsonl", "Path to the portfolio transactions file (JSONL format)")
 
-// DecodeSecurities is the central function to open the securities database.
-// It uses the cmd settings to decode securities from disk.
+// DecodeSecurities decode securities from the app securities path folder.
 func DecodeSecurities() (db *portfolio.Securities, err error) {
 	// Load the portfolio database from the specified file.
 	db, err = portfolio.DecodeSecurities(*securitiesPath)
@@ -42,14 +45,13 @@ func DecodeSecurities() (db *portfolio.Securities, err error) {
 	return
 }
 
-// EncodeSecurities is the central function to save the securities database.
-// It uses the cmd settings to encode securities to disk.
+// EncodeSecurities encode securities into the app securities path folder.
 func EncodeSecurities(s *portfolio.Securities) error {
 	// Close the portfolio database if it is not nil.
 	return portfolio.EncodeSecurities(*securitiesPath, s)
 }
 
-// EncodeTransaction appends a single transaction into the cmd default portfolio file.
+// EncodeTransaction appends a single transaction into the app default portfolio file.
 func EncodeTransaction(tx portfolio.Transaction) subcommands.ExitStatus {
 	filename := *portfolioFile
 	// Open the file in append mode, creating it if it doesn't exist.
