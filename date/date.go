@@ -34,6 +34,9 @@ func New(year int, month time.Month, day int) Date {
 // Before reports whether the day d is before x.
 func (d Date) Before(x Date) bool { return d.time().Before(x.time()) }
 
+// After reports whether the day d is after x.
+func (d Date) After(x Date) bool { return d.time().After(x.time()) }
+
 // Return the Date of today.
 func Today() Date { return New(time.Now().Date()) }
 
