@@ -31,29 +31,29 @@ func Register(c *subcommands.Commander) {
 // as a CLI application, it has a very short lived lifecycle, so it is ok to use global vaariables.
 
 var securitiesPath = flag.String("securities-path", ".security", "Path to the securities database folder")
-var portfolioFile = flag.String("portfolio-file", "transactions.jsonl", "Path to the portfolio transactions file (JSONL format)")
+var ledgerFile = flag.String("ledger-file", "transactions.jsonl", "Path to the ledger file containing transactions (JSONL format)")
 
 // DecodeSecurities decode securities from the app securities path folder.
-func DecodeSecurities() (m *portfolio.Market, err error) {
+func DecodeSecurities() (m *portfolio.MarketData, err error) {
 	// Load the portfolio database from the specified file.
 	m, err = portfolio.DecodeMarketData(*securitiesPath)
 	if errors.Is(err, fs.ErrNotExist) {
 		log.Println("warning, database does not exist, creating an empty database instead")
-		m, err = portfolio.NewMarket(), nil
+		m, err = portfolio.NewMarketData(), nil
 
 	}
 	return
 }
 
 // EncodeMarketData encode securities into the app securities path folder.
-func EncodeMarketData(s *portfolio.Market) error {
+func EncodeMarketData(s *portfolio.MarketData) error {
 	// Close the portfolio database if it is not nil.
 	return portfolio.EncodeMarketData(*securitiesPath, s)
 }
 
 // EncodeTransaction appends a single transaction into the app default portfolio file.
 func EncodeTransaction(tx portfolio.Transaction) subcommands.ExitStatus {
-	filename := *portfolioFile
+	filename := *ledgerFile
 	// Open the file in append mode, creating it if it doesn't exist.
 	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

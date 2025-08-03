@@ -20,7 +20,6 @@ import (
 )
 
 const eodhd_api_key = "EODHD_API_KEY"
-const EodhdApiDemoKey = "67adc13417e148.00145034"
 
 var eodhdApiFlag = flag.String("eodhd-api-key", "", "EODHD API key to use for fetching prices from EODHD.com.\n If missing it will read for the environment variable \""+eodhd_api_key+"\". You can get one at https://eodhd.com/")
 

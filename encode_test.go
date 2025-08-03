@@ -51,7 +51,7 @@ func TestEncodeDecodeMarketData(t *testing.T) {
 
 }
 
-func TestDecodeTransactions(t *testing.T) {
+func TestDecodeLedger(t *testing.T) {
 	// A multi-line string representing a JSONL stream with all command types
 	jsonlStream := `
 {"command":"buy","date":"2025-08-01","security":"AAPL","quantity":10,"price":195.5}
@@ -63,17 +63,17 @@ func TestDecodeTransactions(t *testing.T) {
 `
 	reader := strings.NewReader(jsonlStream)
 
-	transactions, err := DecodeTransactions(reader)
+	ledger, err := DecodeLedger(reader)
 
 	// 1. Check for unexpected errors
 	if err != nil {
-		t.Fatalf("Load() returned an unexpected error: %v", err)
+		t.Fatalf("DecodeLedger() returned an unexpected error: %v", err)
 	}
 
 	// 2. Check the number of transactions decoded
 	expectedCount := 6
-	if len(transactions) != expectedCount {
-		t.Fatalf("Load() decoded wrong number of transactions. Got: %d, want: %d", len(transactions), expectedCount)
+	if len(ledger.transactions) != expectedCount {
+		t.Fatalf("DecodeLedger() decoded wrong number of transactions. Got: %d, want: %d", len(ledger.transactions), expectedCount)
 	}
 
 	// 3. Check the type of each decoded transaction
@@ -86,24 +86,26 @@ func TestDecodeTransactions(t *testing.T) {
 		reflect.TypeOf(Convert{}),
 	}
 
-	for i, tx := range transactions {
+	for i, tx := range ledger.Transactions() {
 		if reflect.TypeOf(tx) != expectedTypes[i] {
 			t.Errorf("Transaction %d has wrong type. Got: %T, want: %v", i+1, tx, expectedTypes[i])
 		}
 	}
 }
 
-func TestEncodeTransactions(t *testing.T) {
+func TestEncodeLedger(t *testing.T) {
 	// 1. Arrange: Create test data in a deliberately unsorted order.
 	// Note that tx2 and tx3 have the same date. Their relative order must be preserved.
 	tx1 := NewBuy(date.MustParse("2025-08-03"), "", "AAPL", 0, 0)
 	tx2 := NewDeposit(date.MustParse("2025-08-01"), "", "", 1000)
 	tx3 := NewSell(date.MustParse("2025-08-01"), "", "GOOG", 0, 0) // Same date as tx2
 
-	transactions := []Transaction{
-		tx1, // Should be last
-		tx2, // Should be first
-		tx3, // Should be second (stable sort)
+	ledger := &Ledger{
+		transactions: []Transaction{
+			tx1, // Should be last
+			tx2, // Should be first
+			tx3, // Should be second (stable sort)
+		},
 	}
 
 	// Manually sort the transactions to build the expected output string.
@@ -118,21 +120,21 @@ func TestEncodeTransactions(t *testing.T) {
 	var buffer bytes.Buffer
 
 	// 2. Act: Call the Save function.
-	err := EncodeTransactions(&buffer, transactions)
+	err := EncodeLedger(&buffer, ledger)
 
 	// 3. Assert: Check the results.
 	if err != nil {
-		t.Fatalf("Save() returned an unexpected error: %v", err)
+		t.Fatalf("EncodeLedger() returned an unexpected error: %v", err)
 	}
 
 	if got := buffer.String(); got != expectedOutput.String() {
-		t.Errorf("Save() produced incorrect output.\nGot:\n%s\nWant:\n%s", got, expectedOutput.String())
+		t.Errorf("EncodeLedger() produced incorrect output.\nGot:\n%s\nWant:\n%s", got, expectedOutput.String())
 	}
 }
 
-// TestEncodeDecodeTransactions verifies that loading an unsorted JSONL file and immediately
+// TestEncodeDecodeLedger verifies that loading an unsorted JSONL file and immediately
 // saving it results in a correctly and stably sorted file.
-func TestEncodeDecodeTransactions(t *testing.T) {
+func TestEncodeDecodeLedger(t *testing.T) {
 	// 1. Arrange: Define a long, unsorted list of transactions.
 	// Note the two transactions on 2025-08-05 are in a specific order.
 	unsortedJSONL := `
@@ -163,15 +165,15 @@ func TestEncodeDecodeTransactions(t *testing.T) {
 
 	// 2. Act: Load the unsorted data, then save it to a new buffer.
 	reader := strings.NewReader(unsortedJSONL)
-	transactions, err := DecodeTransactions(reader)
+	ledger, err := DecodeLedger(reader)
 	if err != nil {
-		t.Fatalf("Load() failed unexpectedly: %v", err)
+		t.Fatalf("DecodeLedger() failed unexpectedly: %v", err)
 	}
 
 	var savedBuffer bytes.Buffer
-	err = EncodeTransactions(&savedBuffer, transactions)
+	err = EncodeLedger(&savedBuffer, ledger)
 	if err != nil {
-		t.Fatalf("Save() failed unexpectedly: %v", err)
+		t.Fatalf("EncodeLedger() failed unexpectedly: %v", err)
 	}
 
 	// 3. Assert: Compare the saved result with the expected sorted output.
@@ -180,6 +182,6 @@ func TestEncodeDecodeTransactions(t *testing.T) {
 	want := strings.TrimSpace(expectedSortedJSONL)
 
 	if got != want {
-		t.Errorf("Load/Save cycle produced incorrect output.\nGot:\n%s\n\nWant:\n%s", got, want)
+		t.Errorf("Decode/Encode cycle produced incorrect output.\nGot:\n%s\n\nWant:\n%s", got, want)
 	}
 }

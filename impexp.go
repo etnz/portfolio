@@ -21,7 +21,7 @@ import (
 // A security is a single json object whose property 'ticker' contains the security ticker, 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
 //
 // The security history is represented as a single json object whose properties are date.Date parseable by [date] package, and value are the security price as a number.
-func ImportMarketData(r io.Reader) (*Market, error) {
+func ImportMarketData(r io.Reader) (*MarketData, error) {
 
 	// the readable version of the format is can be summarized by a few types.
 	type jsecurity struct {
@@ -44,7 +44,7 @@ func ImportMarketData(r io.Reader) (*Market, error) {
 		jsecurities = append(jsecurities, js)
 	}
 
-	m := NewMarket()
+	m := NewMarketData()
 
 	// Append securities for each ticker
 	for _, js := range jsecurities {
@@ -76,7 +76,7 @@ func ImportMarketData(r io.Reader) (*Market, error) {
 // A security is a single json object whose property 'ticker' contains the security ticker, 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
 //
 // The security history is represented as a single json object whose properties are date.Date parseable by [date] package, and value are the security price as a number.
-func ExportMarketData(w io.Writer, m *Market) error {
+func ExportMarketData(w io.Writer, m *MarketData) error {
 
 	type jsecurity struct {
 		Ticker  string             `json:"ticker"`

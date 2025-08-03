@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/etnz/portfolio/date"
@@ -34,7 +33,7 @@ const definitionFilename = "definition.jsonl"
 
 // decodeDefinition parses a single file containing the securities definition.
 // filename is for error message only.
-func (m *Market) decodeDefinition(filename string, r io.Reader) error {
+func (m *MarketData) decodeDefinition(filename string, r io.Reader) error {
 	// to parse a json, we use a dedicated local struct with tag annotation.
 
 	// jsecurity is the object read from the file using json parser.
@@ -101,7 +100,7 @@ func decodeLines(filenames ...string) (list []line, err error) {
 }
 
 // decodeLine a single line from the database persisted files.
-func decodeLine(m *Market, l line) error {
+func decodeLine(m *MarketData, l line) error {
 
 	// Start simply ignoring empty lines.
 	if strings.TrimSpace(l.txt) == "" {
@@ -151,9 +150,9 @@ func decodeLine(m *Market, l line) error {
 }
 
 // DecodeMarketData reads a folder containing securities definition and prices, and returns a Market object.
-func DecodeMarketData(folder string) (*Market, error) {
+func DecodeMarketData(folder string) (*MarketData, error) {
 	// Creates an empty database.
-	m := NewMarket()
+	m := NewMarketData()
 
 	// strategy: reads the metadata file containing securities definition and ticker, then uses it to load prices.
 	// then read all json files and break it into lines, and load them individually.
@@ -196,7 +195,7 @@ func DecodeMarketData(folder string) (*Market, error) {
 // Persist section.
 
 // encodeDefinition encodes the securities definition into a jsonl stream.
-func encodeDefinition(w io.Writer, m *Market) error {
+func encodeDefinition(w io.Writer, m *MarketData) error {
 	// jsecurity is the object to write to the file using json parser.
 	type jsecurity struct {
 		Ticker string `json:"ticker"`
@@ -251,7 +250,7 @@ func encodeLine(w io.Writer, day date.Date, tickers []string, values []float64) 
 }
 
 // EncodeMarketData encodes the market data into a folder, creating a definition file and a set of jsonl files for each year.
-func EncodeMarketData(folder string, m *Market) error {
+func EncodeMarketData(folder string, m *MarketData) error {
 
 	// we first generate the security price values into this list of structured items.
 	type line struct {
@@ -346,10 +345,10 @@ func EncodeMarketData(folder string, m *Market) error {
 	return nil
 }
 
-// DecodeTransactions decodes transactions from a stream of JSONL data from an io.Reader, decodes each line into the
-// appropriate transaction struct, and returns a slice of transactions.
-func DecodeTransactions(r io.Reader) ([]Transaction, error) {
-	var transactions []Transaction
+// DecodeLedger decodes transactions from a stream of JSONL data from an io.Reader,
+// decodes each line into the appropriate transaction struct, and returns a sorted Ledger.
+func DecodeLedger(r io.Reader) (*Ledger, error) {
+	ledger := NewLedger()
 	scanner := bufio.NewScanner(r)
 
 	for scanner.Scan() {
@@ -400,19 +399,17 @@ func DecodeTransactions(r io.Reader) ([]Transaction, error) {
 		if err != nil {
 			return nil, err
 		}
-		transactions = append(transactions, decodedTx)
+		ledger.transactions = append(ledger.transactions, decodedTx)
 	}
 
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("error reading from input: %w", err)
 	}
 
-	// 1. Perform a stable sort on the slice based on the transaction date.
-	sort.SliceStable(transactions, func(i, j int) bool {
-		return transactions[i].When().Before(transactions[j].When())
-	})
+	// Perform a stable sort on the ledger based on the transaction date.
+	ledger.stableSort()
 
-	return transactions, nil
+	return ledger, nil
 }
 
 // EncodeTransaction marshals a single transaction to JSON and writes it to the
@@ -430,16 +427,14 @@ func EncodeTransaction(w io.Writer, tx Transaction) error {
 	return nil
 }
 
-// EncodeTransactions reorders transactions by date and persists them to an io.Writer in JSONL format.
+// EncodeLedger reorders transactions by date and persists them to an io.Writer in JSONL format.
 // The sort is stable, meaning transactions on the same day maintain their original relative order.
-func EncodeTransactions(w io.Writer, transactions []Transaction) error {
-	// 1. Perform a stable sort on the slice based on the transaction date.
-	sort.SliceStable(transactions, func(i, j int) bool {
-		return transactions[i].When().Before(transactions[j].When())
-	})
+func EncodeLedger(w io.Writer, ledger *Ledger) error {
+	// Perform a stable sort on the ledger based on the transaction date to ensure order.
+	ledger.stableSort()
 
 	// 2. Iterate through the sorted transactions and write each one as a JSON line.
-	for _, tx := range transactions {
+	for _, tx := range ledger.transactions {
 		if err := EncodeTransaction(w, tx); err != nil {
 			return err
 		}

@@ -6,6 +6,8 @@ import (
 	"github.com/etnz/portfolio/date"
 )
 
+const EodhdApiDemoKey = "67adc13417e148.00145034"
+
 func Test_eodhdDailyFrom(t *testing.T) {
 
 	_, prices, err := eodhdDaily(EodhdApiDemoKey, "MCD.US", date.Today().Add(-10), date.Today().Add(-1))

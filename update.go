@@ -59,7 +59,7 @@ func updateSecurityPrices(sec *Security, from, to date.Date) error {
 	return nil
 }
 
-func (m *Market) Update() error {
+func (m *MarketData) Update() error {
 
 	yesterday := date.Today().Add(-1)
 	origin := defaultPriceHistoryStartDate
