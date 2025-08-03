@@ -111,6 +111,11 @@ func (t *Buy) Validate(m *MarketData, l *Ledger) error {
 	if t.Price <= 0 {
 		return fmt.Errorf("buy transaction price must be positive, got %f", t.Price)
 	}
+
+	cash, cost := l.CashBalance(t.Currency, t.Date), t.Quantity*t.Price
+	if cash < cost {
+		return fmt.Errorf("cannot buy for %f %s cash balance is %f %s", cost, t.Currency, cash, t.Currency)
+	}
 	return nil
 }
 
@@ -137,8 +142,12 @@ func (t Sell) Validate(m *MarketData, l *Ledger) error {
 	if err := t.secCmd.Validate(m, l); err != nil {
 		return err
 	}
+	if t.Quantity == 0 {
+		// quick fix, sell all.
+		t.Quantity = l.Position(t.Security, t.Date)
+	}
 
-	if t.Quantity < 0 {
+	if t.Quantity <= 0 {
 		// For Sell quantity == 0 is interpreted as sell all.
 		return fmt.Errorf("sell transaction quantity must be non-negative, got %f", t.Quantity)
 	}
@@ -230,18 +239,27 @@ func (t Withdraw) Validate(m *MarketData, l *Ledger) error {
 		return err
 	}
 
-	if t.Amount <= 0 {
-		return fmt.Errorf("withdraw amount must be positive, got %f", t.Amount)
-	}
 	if t.Currency != "" {
 		if err := ValidateCurrency(t.Currency); err != nil {
 			return fmt.Errorf("invalid currency for withdraw: %w", err)
 		}
 	}
+
+	if t.Amount == 0 {
+		// quick fix, cash all.
+		t.Amount = l.CashBalance(t.Currency, t.Date)
+	}
+
+	if t.Amount <= 0 {
+		return fmt.Errorf("withdraw amount must be positive, got %f", t.Amount)
+	}
+
+	cash, cost := l.CashBalance(t.Currency, t.Date), t.Amount
+	if cash < cost {
+		return fmt.Errorf("cannot withdraw for %f %s cash balance is %f %s", cost, t.Currency, cash, t.Currency)
+	}
 	return nil
 }
-
-// TODO buy withdraw and convert should NOT lead to negative value
 
 // Convert represents an internal currency conversion.
 type Convert struct {
@@ -275,12 +293,23 @@ func (t Convert) Validate(m *MarketData, l *Ledger) error {
 	if err := ValidateCurrency(t.ToCurrency); err != nil {
 		return fmt.Errorf("invalid 'to' currency: %w", err)
 	}
-	if t.FromAmount < 0 {
+	if t.ToAmount <= 0 {
+		return fmt.Errorf("convert 'to' amount must be positive, got %f", t.ToAmount)
+	}
+
+	if t.FromAmount == 0 {
+		// quick fix, cash all.
+		t.FromAmount = l.CashBalance(t.FromCurrency, t.Date)
+	}
+
+	if t.FromAmount <= 0 {
 		// from amount ==0 is as a convert all from source currency.
 		return fmt.Errorf("convert 'from' amount must be non-negative, got %f", t.FromAmount)
 	}
-	if t.ToAmount <= 0 {
-		return fmt.Errorf("convert 'to' amount must be positive, got %f", t.ToAmount)
+
+	cash, cost := l.CashBalance(t.FromCurrency, t.Date), t.FromAmount
+	if cash < cost {
+		return fmt.Errorf("cannot withdraw for %f %s cash balance is %f %s", cost, t.FromCurrency, cash, t.FromCurrency)
 	}
 
 	return nil
