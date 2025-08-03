@@ -34,21 +34,21 @@ var securitiesPath = flag.String("securities-path", ".security", "Path to the se
 var portfolioFile = flag.String("portfolio-file", "transactions.jsonl", "Path to the portfolio transactions file (JSONL format)")
 
 // DecodeSecurities decode securities from the app securities path folder.
-func DecodeSecurities() (db *portfolio.Securities, err error) {
+func DecodeSecurities() (m *portfolio.Market, err error) {
 	// Load the portfolio database from the specified file.
-	db, err = portfolio.DecodeSecurities(*securitiesPath)
+	m, err = portfolio.DecodeMarketData(*securitiesPath)
 	if errors.Is(err, fs.ErrNotExist) {
 		log.Println("warning, database does not exist, creating an empty database instead")
-		db, err = portfolio.NewSecurities(), nil
+		m, err = portfolio.NewMarket(), nil
 
 	}
 	return
 }
 
-// EncodeSecurities encode securities into the app securities path folder.
-func EncodeSecurities(s *portfolio.Securities) error {
+// EncodeMarketData encode securities into the app securities path folder.
+func EncodeMarketData(s *portfolio.Market) error {
 	// Close the portfolio database if it is not nil.
-	return portfolio.EncodeSecurities(*securitiesPath, s)
+	return portfolio.EncodeMarketData(*securitiesPath, s)
 }
 
 // EncodeTransaction appends a single transaction into the app default portfolio file.

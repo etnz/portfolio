@@ -33,7 +33,7 @@ func (c *updateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 		return subcommands.ExitFailure
 	}
 
-	if err := EncodeSecurities(db); err != nil {
+	if err := EncodeMarketData(db); err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure
 	}

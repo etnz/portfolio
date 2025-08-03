@@ -3,5 +3,5 @@
 //
 // It includes functionalities for:
 //   - Managing transactions such as buying, selling, dividends, deposits, and withdrawals.
-//   - Maintaining a database of securities.
+//   - Maintaining market data for securities.
 package portfolio

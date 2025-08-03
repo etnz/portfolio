@@ -17,24 +17,24 @@ import (
 )
 
 const attrOn = "on"
-const securityFilesGlob = "[0-9][0-9][0-9][0-9].jsonl"
+const marketDataFilesGlob = "[0-9][0-9][0-9][0-9].jsonl"
 const definitionFilename = "definition.jsonl"
 
-// this file contains code to persist securities in a folder, in a way that is still human readable, and yet git friendly.
-// the main goal for such a database is to live on a private github repo.
+// this file contains code to persist market data in a folder, in a way that is still human readable, and yet git friendly.
+// the main goal for such market data is to live on a private github repo.
 //
-// The overall strategy to Load and Persist securities is as follow:
-//   Load: read all files with a glob into a list of lines (with metadata like filename and line number)
+// The overall strategy to Encode/Decode market data is as follow:
+//   Decode: read all files with a glob into a list of lines (with metadata like filename and line number)
 //         Then parse each json line and add append it to the database.
 //
-//   Persist: create a list of tickers in alphabetical order
-//            Then scan all days for ticker's value, and append them to the list of structured lines, including the filename.
-//            Then generate each file
-//            Then using the same glob create the list of all existing files on the disk, and compute which one is to be deleted.
+//   Encode: create a list of tickers in alphabetical order.
+//            Then scan all days for a ticker's value, and append them to the list of structured lines, including the filename.
+//            Then generate each file.
+//            Then using the same glob, create the list of all existing files on the disk, and compute which one is to be deleted.
 
 // decodeDefinition parses a single file containing the securities definition.
 // filename is for error message only.
-func (s *Securities) decodeDefinition(filename string, r io.Reader) error {
+func (m *Market) decodeDefinition(filename string, r io.Reader) error {
 	// to parse a json, we use a dedicated local struct with tag annotation.
 
 	// jsecurity is the object read from the file using json parser.
@@ -57,7 +57,7 @@ func (s *Securities) decodeDefinition(filename string, r io.Reader) error {
 			return fmt.Errorf("format error in %q on line %q: %w", filename, string(line), err)
 		}
 
-		if s.Has(js.Ticker) {
+		if m.Has(js.Ticker) {
 			return fmt.Errorf("format error in %q: ticker %q is already defined", filename, js.Ticker)
 		}
 		sec := &Security{
@@ -65,10 +65,10 @@ func (s *Securities) decodeDefinition(filename string, r io.Reader) error {
 			id:     ID(js.ID),
 			prices: date.History[float64]{},
 		}
-		s.securities = append(s.securities, sec)
-		s.index[js.Ticker] = sec
+		m.securities = append(m.securities, sec)
+		m.index[js.Ticker] = sec
 	}
-	slices.SortFunc(s.securities, func(a, b *Security) int {
+	slices.SortFunc(m.securities, func(a, b *Security) int {
 		return strings.Compare(a.ticker, b.ticker)
 	})
 	return nil
@@ -101,7 +101,7 @@ func decodeLines(filenames ...string) (list []line, err error) {
 }
 
 // decodeLine a single line from the database persisted files.
-func decodeLine(s *Securities, l line) error {
+func decodeLine(m *Market, l line) error {
 
 	// Start simply ignoring empty lines.
 	if strings.TrimSpace(l.txt) == "" {
@@ -136,7 +136,7 @@ func decodeLine(s *Securities, l line) error {
 			continue
 		}
 
-		if !s.Has(ticker) {
+		if !m.Has(ticker) {
 			return fmt.Errorf("parse error %s:%v: property %q must be an existing ticker", l.filename, l.i, ticker)
 		}
 
@@ -145,17 +145,17 @@ func decodeLine(s *Securities, l line) error {
 			return fmt.Errorf("parse error %s:%v: property %q must be of type 'number'", l.filename, l.i, ticker)
 		}
 		// Entry is valid add it to the database.
-		s.index[ticker].prices.Append(on, p)
+		m.index[ticker].prices.Append(on, p)
 	}
 	return nil
 }
 
-// DecodeSecurities reads a folder containing securities definition and prices, and returns a Securities object.
-func DecodeSecurities(folder string) (*Securities, error) {
+// DecodeMarketData reads a folder containing securities definition and prices, and returns a Market object.
+func DecodeMarketData(folder string) (*Market, error) {
 	// Creates an empty database.
-	s := NewSecurities()
+	m := NewMarket()
 
-	// strategy: reads the metadata file containing securities definition and ticker, then use it to load prices.
+	// strategy: reads the metadata file containing securities definition and ticker, then uses it to load prices.
 	// then read all json files and break it into lines, and load them individually.
 
 	definitionFile := filepath.Join(folder, definitionFilename)
@@ -164,18 +164,18 @@ func DecodeSecurities(folder string) (*Securities, error) {
 		if os.IsNotExist(err) {
 			fmt.Println("does not exists", err)
 		}
-		return nil, fmt.Errorf("load error: cannot open securities file %q: %w", definitionFile, err)
+		return nil, fmt.Errorf("load error: cannot open market definition file %q: %w", definitionFile, err)
 	}
 	defer f.Close()
 
-	if err := s.decodeDefinition(definitionFile, f); err != nil {
-		return nil, fmt.Errorf("load error: cannot read securities definition file: %w", err)
+	if err := m.decodeDefinition(definitionFile, f); err != nil {
+		return nil, fmt.Errorf("load error: cannot read market definition file: %w", err)
 	}
 
 	// Use global to find all the files that are part of the db.
-	filenames, err := filepath.Glob(filepath.Join(folder, securityFilesGlob))
+	filenames, err := filepath.Glob(filepath.Join(folder, marketDataFilesGlob))
 	if err != nil {
-		return nil, fmt.Errorf("load error: cannot scan folder %q for security files: %w", folder, err)
+		return nil, fmt.Errorf("load error: cannot scan folder %q for market data files: %w", folder, err)
 	}
 
 	lines, err := decodeLines(filenames...)
@@ -185,18 +185,18 @@ func DecodeSecurities(folder string) (*Securities, error) {
 
 	for _, line := range lines {
 
-		if err := decodeLine(s, line); err != nil {
+		if err := decodeLine(m, line); err != nil {
 			return nil, err
 		}
 
 	}
-	return s, nil
+	return m, nil
 }
 
 // Persist section.
 
 // encodeDefinition encodes the securities definition into a jsonl stream.
-func encodeDefinition(w io.Writer, s *Securities) error {
+func encodeDefinition(w io.Writer, m *Market) error {
 	// jsecurity is the object to write to the file using json parser.
 	type jsecurity struct {
 		Ticker string `json:"ticker"`
@@ -204,7 +204,7 @@ func encodeDefinition(w io.Writer, s *Securities) error {
 		//more to come when the security definition grows.
 	}
 
-	for _, sec := range s.securities {
+	for _, sec := range m.securities {
 		js := jsecurity{
 			Ticker: sec.Ticker(),
 			ID:     string(sec.ID()),
@@ -250,8 +250,8 @@ func encodeLine(w io.Writer, day date.Date, tickers []string, values []float64) 
 	return nil
 }
 
-// EncodeSecurities encodes the securities into a folder, creating a definition file and a set of jsonl files for each year.
-func EncodeSecurities(folder string, s *Securities) error {
+// EncodeMarketData encodes the market data into a folder, creating a definition file and a set of jsonl files for each year.
+func EncodeMarketData(folder string, m *Market) error {
 
 	// we first generate the security price values into this list of structured items.
 	type line struct {
@@ -262,9 +262,9 @@ func EncodeSecurities(folder string, s *Securities) error {
 	}
 	lines := make([]line, 0, 365*100) // hunderd years should be enough
 
-	// The s.securities slice is already sorted, so we can use it directly.
-	histories := make([]date.History[float64], 0, len(s.securities))
-	for _, sec := range s.securities {
+	// The m.securities slice is already sorted, so we can use it directly.
+	histories := make([]date.History[float64], 0, len(m.securities))
+	for _, sec := range m.securities {
 		histories = append(histories, sec.prices)
 	}
 
@@ -275,9 +275,9 @@ func EncodeSecurities(folder string, s *Securities) error {
 		return fmt.Errorf("persist error: cannot create file %q: %w", definitionFile, err)
 	}
 	defer f.Close()
-	log.Printf("create-definition-file name=%q", definitionFile)
+	log.Printf("create-market-definition-file name=%q", definitionFile)
 
-	if err := encodeDefinition(f, s); err != nil {
+	if err := encodeDefinition(f, m); err != nil {
 		return err
 	}
 	// Add a trailing line at the end of the file.
@@ -294,8 +294,8 @@ func EncodeSecurities(folder string, s *Securities) error {
 			filename: filepath.Join(folder, fmt.Sprintf("%v.jsonl", day.Year())),
 		}
 		// Append tickers that have values.
-		for _, sec := range s.securities {
-			if val, ok := s.read(sec.Ticker(), day); ok {
+		for _, sec := range m.securities {
+			if val, ok := m.read(sec.Ticker(), day); ok {
 				l.tickers = append(l.tickers, sec.Ticker())
 				l.prices = append(l.prices, val)
 			}
@@ -319,7 +319,7 @@ func EncodeSecurities(folder string, s *Securities) error {
 			}
 			createdFiles[currentFilename] = struct{}{} // Append this file to the list of created ones.
 			defer currentFile.Close()
-			log.Printf("create-security-file name=%q", currentFilename)
+			log.Printf("create-market-data-file name=%q", currentFilename)
 		}
 
 		// Write line to currentFile.
@@ -330,18 +330,18 @@ func EncodeSecurities(folder string, s *Securities) error {
 
 	// Delete extraneous files.
 
-	filenames, err := filepath.Glob(filepath.Join(folder, securityFilesGlob))
+	filenames, err := filepath.Glob(filepath.Join(folder, marketDataFilesGlob))
 	if err != nil {
-		return fmt.Errorf("persist error: cannot scan folder %q for security files to be deleted: %w", folder, err)
+		return fmt.Errorf("persist error: cannot scan folder %q for market data files to be deleted: %w", folder, err)
 	}
 	for _, filename := range filenames {
 		if _, ok := createdFiles[filename]; ok {
 			continue // skip created ones
 		}
 		if err := os.Remove(filename); err != nil {
-			return fmt.Errorf("persist error: cannot delete %q file: %w", filename, err)
+			return fmt.Errorf("persist error: cannot delete file %q: %w", filename, err)
 		}
-		log.Printf("delete-security-file name=%q", currentFilename)
+		log.Printf("delete-market-data-file name=%q", filename)
 	}
 	return nil
 }

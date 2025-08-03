@@ -2,6 +2,7 @@ package portfolio
 
 import (
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/etnz/portfolio/date"
@@ -16,58 +17,78 @@ import (
 // or the forex pair.
 // there might be other thypes of securities, but they are not supported by update, yet (like privately traded assets)
 
-func (s *Securities) Update() error {
+var defaultPriceHistoryStartDate = date.New(2020, 01, 01)
+
+// updateSecurityPrices attempts to fetch and update prices for a single security.
+func updateSecurityPrices(sec *Security, from, to date.Date) error {
+	apiKey := eodhdApiKey()
+	if apiKey == "" {
+		return errors.New("EODHD API key is not set. Use -eodhd-api-key flag or EODHD_API_KEY environment variable")
+	}
+
+	var prices date.History[float64]
+	var err error
+
+	// Determine security type and fetch prices accordingly.
+	if isin, mic, mssiErr := sec.ID().MSSI(); mssiErr == nil {
+		// This is an MSSI security.
+		prices, err = eodhdDailyISIN(apiKey, isin, mic, from, to)
+		if err != nil {
+			return fmt.Errorf("failed to get prices for MSSI %s (%s): %w", sec.Ticker(), sec.ID(), err)
+		}
+	} else if base, quote, cpErr := sec.ID().CurrencyPair(); cpErr == nil {
+		// This is a CurrencyPair.
+		prices, err = eodhdDailyFrom(apiKey, base, quote, from, to)
+		if err != nil {
+			return fmt.Errorf("failed to get prices for CurrencyPair %s (%s): %w", sec.Ticker(), sec.ID(), err)
+		}
+	} else {
+		// This is a private or unsupported security type for updates.
+		return nil // Not an error, just nothing to do.
+	}
+
+	if prices.Len() == 0 {
+		log.Printf("no new prices found for security %q (%v) between %s and %s", sec.Ticker(), sec.ID(), from, to)
+		return nil
+	}
+
+	// Append all new prices to the security.
+	for day, price := range prices.Values() {
+		sec.Prices().Append(day, price)
+	}
+	return nil
+}
+
+func (m *Market) Update() error {
 
 	yesterday := date.Today().Add(-1)
+	origin := defaultPriceHistoryStartDate
 
 	var errs error
 
-	for _, sec := range s.securities {
+	for _, sec := range m.securities {
 		latest, _ := sec.Prices().Latest()
+
+		// If we already have yesterday's price, we are up-to-date.
 		if !latest.Before(yesterday) {
 			continue
-		} // we already have the latest price, so we skip this security.
-
-		origin := date.New(2020, 1, 1) // the default starting date for securities that have no data yet.
-		if latest.Before(origin) {
-			latest = origin // we use the default starting date.
 		}
 
-		// the prices we are going to get from the EODHD API.
-		var prices date.History[float64]
-
-		isin, mic, err := sec.ID().MSSI()
-		if err == nil {
-			// this is an MSSI security that should be available at EODHD.
-
-			prices, err = eodhdDailyISIN(eodhdApiKey(), isin, mic, latest.Add(1), yesterday)
-			if err != nil {
-				// if we cannot get the prices, we just skip this security.
-				// but we log the error.
-				errs = errors.Join(errs, err)
-				continue
-			}
-		}
-		base, quote, err := sec.ID().CurrencyPair()
-		if err == nil {
-			// this is a forex pair that should be available at EODHD.
-			prices, err = eodhdDailyFrom(eodhdApiKey(), base, quote, latest.Add(1), yesterday)
-			if err != nil {
-				// if we cannot get the prices, we just skip this security.
-				// but we log the error.
-				errs = errors.Join(errs, err)
-				continue
-			}
+		// Determine the start date for fetching new prices.
+		// If no prices exist, use the default origin. Otherwise, start from the day after the latest price.
+		fetchFrom := origin
+		if !latest.Before(origin) {
+			fetchFrom = latest.Add(1)
 		}
 
-		// prices now contains the price updates.
-
-		if prices.Len() == 0 {
-			log.Printf("no prices found for security %q (%v) between %s and %s", sec.Ticker(), sec.ID(), latest.Add(1).String(), yesterday.String())
+		// Don't try to fetch from the future.
+		if !fetchFrom.Before(yesterday) {
+			continue
 		}
-		//append all prices to the security.
-		for day, price := range prices.Values() {
-			sec.Prices().Append(day, price)
+
+		if err := updateSecurityPrices(sec, fetchFrom, yesterday); err != nil {
+			errs = errors.Join(errs, err)
+			continue
 		}
 	}
 	return errs

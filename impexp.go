@@ -14,14 +14,14 @@ import (
 // this file contains functions to handle the import/export format.
 // It should remain human readable, single file and be easy to merge into a database.
 
-// ImportSecurity imports securities from 'r' in the import/export format.
+// ImportMarketData imports market data from 'r' in the import/export format.
 //
 // The import format is a JSONL file, where each line is a JSON object representing a security.
 //
 // A security is a single json object whose property 'ticker' contains the security ticker, 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
 //
 // The security history is represented as a single json object whose properties are date.Date parseable by [date] package, and value are the security price as a number.
-func ImportSecurity(r io.Reader) (*Securities, error) {
+func ImportMarketData(r io.Reader) (*Market, error) {
 
 	// the readable version of the format is can be summarized by a few types.
 	type jsecurity struct {
@@ -44,7 +44,7 @@ func ImportSecurity(r io.Reader) (*Securities, error) {
 		jsecurities = append(jsecurities, js)
 	}
 
-	s := NewSecurities()
+	m := NewMarket()
 
 	// Append securities for each ticker
 	for _, js := range jsecurities {
@@ -60,23 +60,23 @@ func ImportSecurity(r io.Reader) (*Securities, error) {
 			d, _ := date.Parse(day)
 			sec.prices.Append(d, value)
 		}
-		s.securities = append(s.securities, sec)
-		s.index[sec.ticker] = sec
+		m.securities = append(m.securities, sec)
+		m.index[sec.ticker] = sec
 	}
-	slices.SortFunc(s.securities, func(a, b *Security) int {
+	slices.SortFunc(m.securities, func(a, b *Security) int {
 		return strings.Compare(a.ticker, b.ticker)
 	})
-	return s, nil
+	return m, nil
 }
 
-// ExportSecurities exports the securities to 'w' in the import/export format.
+// ExportMarketData exports the market data to 'w' in the import/export format.
 //
 // The format is a JSONL file, where each line is a JSON object representing a security.
 //
 // A security is a single json object whose property 'ticker' contains the security ticker, 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
 //
 // The security history is represented as a single json object whose properties are date.Date parseable by [date] package, and value are the security price as a number.
-func ExportSecurities(w io.Writer, s *Securities) error {
+func ExportMarketData(w io.Writer, m *Market) error {
 
 	type jsecurity struct {
 		Ticker  string             `json:"ticker"`
@@ -84,7 +84,7 @@ func ExportSecurities(w io.Writer, s *Securities) error {
 		History map[string]float64 `json:"history"`
 	}
 
-	for _, sec := range s.securities {
+	for _, sec := range m.securities {
 		// Create the json object security.
 		js := jsecurity{
 			Ticker:  sec.Ticker(),

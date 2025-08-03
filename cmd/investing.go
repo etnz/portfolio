@@ -71,7 +71,7 @@ func (c *importInvestingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...in
 		oldPrices.Append(on, price)
 	}
 
-	if err := EncodeSecurities(db); err != nil {
+	if err := EncodeMarketData(db); err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure
 	}
