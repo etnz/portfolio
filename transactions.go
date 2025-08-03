@@ -24,6 +24,7 @@ type Transaction interface {
 	What() CommandType // Returns the command type of the transaction
 	When() date.Date   // Returns the date of the transaction
 	Rationale() string // Returns the memo or rationale for the transaction
+	Validate() error   // Validates the transaction for internal consistency
 }
 
 // baseCmd contains fields common to all transaction types.

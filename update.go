@@ -36,8 +36,10 @@ func (s *Securities) Update() error {
 		// the prices we are going to get from the EODHD API.
 		var prices date.History[float64]
 
-		if isin, mic, err := sec.ID().MSSI(); err == nil {
+		isin, mic, err := sec.ID().MSSI()
+		if err == nil {
 			// this is an MSSI security that should be available at EODHD.
+
 			prices, err = eodhdDailyISIN(eodhdApiKey(), isin, mic, latest.Add(1), yesterday)
 			if err != nil {
 				// if we cannot get the prices, we just skip this security.
@@ -45,7 +47,9 @@ func (s *Securities) Update() error {
 				errs = errors.Join(errs, err)
 				continue
 			}
-		} else if base, quote, err := sec.ID().CurrencyPair(); err == nil {
+		}
+		base, quote, err := sec.ID().CurrencyPair()
+		if err == nil {
 			// this is a forex pair that should be available at EODHD.
 			prices, err = eodhdDailyFrom(eodhdApiKey(), base, quote, latest.Add(1), yesterday)
 			if err != nil {

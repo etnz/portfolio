@@ -15,7 +15,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/etnz/portfolio/date"
 )
@@ -161,20 +160,6 @@ func eodhdMicToCode(apiKey string) (map[string]string, error) {
 	return result, nil
 }
 
-var (
-	micToCodeCache map[string]string
-	micToCodeErr   error
-	micToCodeOnce  sync.Once
-)
-
-// getMicToCodeMap fetches the MIC-to-Code mapping from EODHD, caching the result.
-func getMicToCodeMap(apiKey string) (map[string]string, error) {
-	micToCodeOnce.Do(func() {
-		micToCodeCache, micToCodeErr = eodhdMicToCode(apiKey)
-	})
-	return micToCodeCache, micToCodeErr
-}
-
 // type SearchResult struct {
 // 	Code              string
 // 	MIC               []string
@@ -227,7 +212,7 @@ func eodhdSearch(apiKey string, isin, mic string) (ticker string, err error) {
 	//     "previousCloseDate": "2025-02-12"
 	//   },
 
-	mic2exchange, err := getMicToCodeMap(apiKey)
+	mic2exchange, err := eodhdMicToCode(apiKey)
 	if err != nil {
 		return "", err
 	}
