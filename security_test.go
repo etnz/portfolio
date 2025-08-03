@@ -58,6 +58,33 @@ func TestValidateMIC(t *testing.T) {
 	}
 }
 
+func TestValidateCurrency(t *testing.T) {
+	testCases := []struct {
+		name      string
+		code      string
+		expectErr bool
+	}{
+		{"Valid USD", "USD", false},
+		{"Valid EUR", "EUR", false},
+		{"Invalid Length (Short)", "US", true},
+		{"Invalid Length (Long)", "USDE", true},
+		{"Invalid Character (number)", "US1", true},
+		{"Invalid Case (lowercase)", "usd", true},
+		{"Empty String", "", true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateCurrency(tc.code)
+			hasErr := err != nil
+
+			if hasErr != tc.expectErr {
+				t.Errorf("ValidateCurrency(%q) returned error: %v, want error: %v", tc.code, err, tc.expectErr)
+			}
+		})
+	}
+}
+
 func TestMSSI(t *testing.T) {
 	testCases := []struct {
 		name       string

@@ -94,11 +94,11 @@ func NewMSSI(isin, mic string) (ID, error) {
 
 // NewCurrencyPair creates a new CurrencyPair from a base and quote currency code after validation.
 func NewCurrencyPair(base, quote string) (ID, error) {
-	if !currencyCodeRegex.MatchString(base) {
-		return "", fmt.Errorf("invalid base currency format: must be 3 uppercase letters, got %q", base)
+	if err := ValidateCurrency(base); err != nil {
+		return "", fmt.Errorf("invalid base currency: %w", err)
 	}
-	if !currencyCodeRegex.MatchString(quote) {
-		return "", fmt.Errorf("invalid quote currency format: must be 3 uppercase letters, got %q", quote)
+	if err := ValidateCurrency(quote); err != nil {
+		return "", fmt.Errorf("invalid quote currency: %w", err)
 	}
 	return ID(base + quote), nil
 }
@@ -189,6 +189,14 @@ func ValidateMIC(mic string) error {
 	}
 
 	// If all checks pass, the MIC format is valid
+	return nil
+}
+
+// ValidateCurrency checks if a string is a validly formatted ISO 4217 currency code.
+func ValidateCurrency(code string) error {
+	if !currencyCodeRegex.MatchString(code) {
+		return fmt.Errorf("invalid currency format: must be 3 uppercase letters, got %q", code)
+	}
 	return nil
 }
 

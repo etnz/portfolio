@@ -40,17 +40,19 @@ func (c *buyCmd) SetFlags(f *flag.FlagSet) {
 }
 
 func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.security == "" || c.quantity <= 0 || c.price <= 0 {
-		f.Usage()
-		return subcommands.ExitUsageError
-	}
 	day, err := date.Parse(c.date) // Validate date format
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
 
-	return EncodeTransaction(portfolio.NewBuy(day, c.memo, c.security, c.quantity, c.price))
+	tx := portfolio.NewBuy(day, c.memo, c.security, c.quantity, c.price)
+	if err := tx.Validate(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		f.Usage()
+		return subcommands.ExitUsageError
+	}
+	return EncodeTransaction(tx)
 }
 
 // --- Sell Command ---
@@ -79,17 +81,18 @@ func (c *sellCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 }
 func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.security == "" || c.quantity <= 0 || c.price < 0 {
-		f.Usage()
-		return subcommands.ExitUsageError
-	}
-
 	day, err := date.Parse(c.date) // Validate date format
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	return EncodeTransaction(portfolio.NewSell(day, c.memo, c.security, c.quantity, c.price))
+	tx := portfolio.NewSell(day, c.memo, c.security, c.quantity, c.price)
+	if err := tx.Validate(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		f.Usage()
+		return subcommands.ExitUsageError
+	}
+	return EncodeTransaction(tx)
 }
 
 // --- Dividend Command ---
@@ -116,18 +119,19 @@ func (c *dividendCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
 }
 func (c *dividendCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.security == "" || c.amount <= 0 {
-		f.Usage()
-		return subcommands.ExitUsageError
-	}
-
 	day, err := date.Parse(c.date) // Validate date format
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
 
-	return EncodeTransaction(portfolio.NewDividend(day, c.memo, c.security, c.amount))
+	tx := portfolio.NewDividend(day, c.memo, c.security, c.amount)
+	if err := tx.Validate(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		f.Usage()
+		return subcommands.ExitUsageError
+	}
+	return EncodeTransaction(tx)
 }
 
 // --- Deposit Command ---
@@ -154,18 +158,19 @@ func (c *depositCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
 }
 func (c *depositCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.amount <= 0 {
-		f.Usage()
-		return subcommands.ExitUsageError
-	}
-
 	day, err := date.Parse(c.date) // Validate date format
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
 
-	return EncodeTransaction(portfolio.NewDeposit(day, c.memo, c.currency, c.amount))
+	tx := portfolio.NewDeposit(day, c.memo, c.currency, c.amount)
+	if err := tx.Validate(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		f.Usage()
+		return subcommands.ExitUsageError
+	}
+	return EncodeTransaction(tx)
 }
 
 // --- Withdraw Command ---
@@ -192,17 +197,19 @@ func (c *withdrawCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
 }
 func (c *withdrawCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.amount <= 0 {
-		f.Usage()
-		return subcommands.ExitUsageError
-	}
 	day, err := date.Parse(c.date) // Validate date format
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
 
-	return EncodeTransaction(portfolio.NewWithdraw(day, c.memo, c.currency, c.amount))
+	tx := portfolio.NewWithdraw(day, c.memo, c.currency, c.amount)
+	if err := tx.Validate(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		f.Usage()
+		return subcommands.ExitUsageError
+	}
+	return EncodeTransaction(tx)
 }
 
 // --- Convert Command ---
@@ -238,20 +245,17 @@ func (c *convertCmd) SetFlags(f *flag.FlagSet) {
 }
 
 func (c *convertCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.fromCurrency == "" || c.toCurrency == "" || c.fromAmount <= 0 || c.toAmount <= 0 {
-		f.Usage()
-		return subcommands.ExitUsageError
-	}
-	if c.fromCurrency == c.toCurrency {
-		fmt.Fprintln(os.Stderr, "Error: from and to currencies cannot be the same.")
-		return subcommands.ExitUsageError
-	}
-
 	day, err := date.Parse(c.date) // Validate date format
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
 
-	return EncodeTransaction(portfolio.NewConvert(day, c.memo, c.fromCurrency, c.fromAmount, c.toCurrency, c.toAmount))
+	tx := portfolio.NewConvert(day, c.memo, c.fromCurrency, c.fromAmount, c.toCurrency, c.toAmount)
+	if err := tx.Validate(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		f.Usage()
+		return subcommands.ExitUsageError
+	}
+	return EncodeTransaction(tx)
 }

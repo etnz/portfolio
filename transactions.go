@@ -1,6 +1,9 @@
 package portfolio
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/etnz/portfolio/date"
 )
 
@@ -63,6 +66,20 @@ func NewBuy(day date.Date, memo, security string, quantity, price float64) Buy {
 	}
 }
 
+// Validate performs basic validation of the Buy transaction's fields.
+func (t Buy) Validate() error {
+	if t.Security == "" {
+		return errors.New("buy transaction requires a security")
+	}
+	if t.Quantity <= 0 {
+		return fmt.Errorf("buy transaction quantity must be positive, got %f", t.Quantity)
+	}
+	if t.Price <= 0 {
+		return fmt.Errorf("buy transaction price must be positive, got %f", t.Price)
+	}
+	return nil
+}
+
 // Sell represents a sell transaction.
 type Sell struct {
 	baseCmd
@@ -72,6 +89,8 @@ type Sell struct {
 }
 
 // NewSell creates a new Sell transaction.
+//
+// Quantity to exactly 0 is interpreted as a sell all on the position.
 func NewSell(day date.Date, memo, security string, quantity, price float64) Sell {
 	return Sell{
 		baseCmd:  baseCmd{Command: CmdSell, Date: day, Memo: memo},
@@ -79,6 +98,21 @@ func NewSell(day date.Date, memo, security string, quantity, price float64) Sell
 		Quantity: quantity,
 		Price:    price,
 	}
+}
+
+// Validate performs basic validation of the Sell transaction's fields.
+func (t Sell) Validate() error {
+	if t.Security == "" {
+		return errors.New("sell transaction requires a security")
+	}
+	if t.Quantity < 0 {
+		// For Sell quantity == 0 is interpreted as sell all.
+		return fmt.Errorf("sell transaction quantity must be non-negative, got %f", t.Quantity)
+	}
+	if t.Price < 0 {
+		return fmt.Errorf("sell transaction price must be non-negative, got %f", t.Price)
+	}
+	return nil
 }
 
 // Dividend represents a dividend payment.
@@ -97,6 +131,17 @@ func NewDividend(day date.Date, memo, security string, amount float64) Dividend 
 	}
 }
 
+// Validate performs basic validation of the Dividend transaction's fields.
+func (t Dividend) Validate() error {
+	if t.Security == "" {
+		return errors.New("dividend transaction requires a security")
+	}
+	if t.Amount <= 0 {
+		return fmt.Errorf("dividend amount must be positive, got %f", t.Amount)
+	}
+	return nil
+}
+
 // Deposit represents a cash deposit.
 type Deposit struct {
 	baseCmd
@@ -113,6 +158,19 @@ func NewDeposit(day date.Date, memo, currency string, amount float64) Deposit {
 	}
 }
 
+// Validate performs basic validation of the Deposit transaction's fields.
+func (t Deposit) Validate() error {
+	if t.Amount <= 0 {
+		return fmt.Errorf("deposit amount must be positive, got %f", t.Amount)
+	}
+	if t.Currency != "" {
+		if err := ValidateCurrency(t.Currency); err != nil {
+			return fmt.Errorf("invalid currency for deposit: %w", err)
+		}
+	}
+	return nil
+}
+
 // Withdraw represents a cash withdrawal.
 type Withdraw struct {
 	baseCmd
@@ -127,6 +185,19 @@ func NewWithdraw(day date.Date, memo, currency string, amount float64) Withdraw 
 		Amount:   amount,
 		Currency: currency,
 	}
+}
+
+// Validate performs basic validation of the Withdraw transaction's fields.
+func (t Withdraw) Validate() error {
+	if t.Amount <= 0 {
+		return fmt.Errorf("withdraw amount must be positive, got %f", t.Amount)
+	}
+	if t.Currency != "" {
+		if err := ValidateCurrency(t.Currency); err != nil {
+			return fmt.Errorf("invalid currency for withdraw: %w", err)
+		}
+	}
+	return nil
 }
 
 // Convert represents an internal currency conversion.
@@ -147,4 +218,25 @@ func NewConvert(day date.Date, memo, fromCurrency string, fromAmount float64, to
 		ToCurrency:   toCurrency,
 		ToAmount:     toAmount,
 	}
+}
+
+// Validate performs basic validation of the Convert transaction's fields.
+func (t Convert) Validate() error {
+	if err := ValidateCurrency(t.FromCurrency); err != nil {
+		return fmt.Errorf("invalid 'from' currency: %w", err)
+	}
+	if err := ValidateCurrency(t.ToCurrency); err != nil {
+		return fmt.Errorf("invalid 'to' currency: %w", err)
+	}
+	if t.FromAmount < 0 {
+		// from amount ==0 is as a convert all from source currency.
+		return fmt.Errorf("convert 'from' amount must be non-negative, got %f", t.FromAmount)
+	}
+	if t.ToAmount <= 0 {
+		return fmt.Errorf("convert 'to' amount must be positive, got %f", t.ToAmount)
+	}
+	if t.FromCurrency == t.ToCurrency {
+		return errors.New("from and to currencies cannot be the same")
+	}
+	return nil
 }
