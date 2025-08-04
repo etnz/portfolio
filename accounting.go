@@ -37,14 +37,21 @@ type Summary struct {
 type AccountingSystem struct {
 	Ledger     *Ledger
 	MarketData *MarketData
+	ReportingCurrency string
 }
 
 // NewAccountingSystem creates a new accounting system from a ledger and market data.
-func NewAccountingSystem(ledger *Ledger, marketData *MarketData) *AccountingSystem {
-	return &AccountingSystem{
-		Ledger:     ledger,
-		MarketData: marketData,
+func NewAccountingSystem(ledger *Ledger, marketData *MarketData, reportingCurrency string) (*AccountingSystem, error) {
+	if reportingCurrency != "" {
+		if err := ValidateCurrency(reportingCurrency); err != nil {
+			return nil, fmt.Errorf("invalid reporting currency: %w", err)
+		}
 	}
+	return &AccountingSystem{
+		Ledger:            ledger,
+		MarketData:        marketData,
+		ReportingCurrency: reportingCurrency,
+	}, nil
 }
 
 // Validate checks a transaction for correctness and applies quick fixes where
@@ -82,9 +89,9 @@ func (as *AccountingSystem) Validate(tx Transaction) (Transaction, error) {
 // TotalMarketValue calculates the total value of all security positions and cash balances on a given
 // date, expressed in a single reporting currency. It uses the market data to find
 // security prices and currency exchange rates.
-func (as *AccountingSystem) TotalMarketValue(on date.Date, reportingCurrency string) (float64, error) {
-	if err := ValidateCurrency(reportingCurrency); err != nil {
-		return 0, fmt.Errorf("invalid reporting currency: %w", err)
+func (as *AccountingSystem) TotalMarketValue(on date.Date) (float64, error) {
+	if as.ReportingCurrency == "" {
+		return 0, fmt.Errorf("reporting currency is not set in accounting system")
 	}
 
 	var totalValue float64
@@ -110,7 +117,7 @@ func (as *AccountingSystem) TotalMarketValue(on date.Date, reportingCurrency str
 		positionValue := position * price
 
 		// Convert to reporting currency if necessary
-		convertedValue, err := as.convertCurrency(positionValue, sec.currency, reportingCurrency, on)
+		convertedValue, err := as.convertCurrency(positionValue, sec.currency, as.ReportingCurrency, on)
 		if err != nil {
 			return 0, err
 		}
@@ -124,7 +131,7 @@ func (as *AccountingSystem) TotalMarketValue(on date.Date, reportingCurrency str
 			continue
 		}
 
-		convertedBalance, err := as.convertCurrency(balance, currency, reportingCurrency, on)
+		convertedBalance, err := as.convertCurrency(balance, currency, as.ReportingCurrency, on)
 		if err != nil {
 			return 0, err
 		}
@@ -132,6 +139,32 @@ func (as *AccountingSystem) TotalMarketValue(on date.Date, reportingCurrency str
 	}
 
 	return totalValue, nil
+}
+
+// CostBasis calculates the total net cash invested in the portfolio, converted to
+// the reporting currency as of a specific date. It iterates through all
+// currencies in the ledger, calculates their individual cost basis, and converts
+// each to the reporting currency.
+func (as *AccountingSystem) CostBasis(on date.Date) (float64, error) {
+	if as.ReportingCurrency == "" {
+		return 0, fmt.Errorf("reporting currency is not set in accounting system")
+	}
+
+	var totalCostBasis float64
+	for _, currency := range as.Ledger.AllCurrencies() {
+		basis := as.Ledger.CostBasis(currency, on)
+		if basis == 0 {
+			continue
+		}
+
+		convertedAmount, err := as.convertCurrency(basis, currency, as.ReportingCurrency, on)
+		if err != nil {
+			return 0, fmt.Errorf("could not convert cost basis for currency %s: %w", currency, err)
+		}
+		totalCostBasis += convertedAmount
+	}
+
+	return totalCostBasis, nil
 }
 
 // convertCurrency converts an amount from a source currency to a target currency as of a given date.

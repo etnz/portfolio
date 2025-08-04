@@ -188,3 +188,27 @@ func (l *Ledger) AllCurrencies() []string {
 	sort.Strings(result)
 	return result
 }
+ 
+// CostBasis computes the net cash invested for a specific currency up to a given date.
+// It iterates through all transactions, summing Deposits and subtracting Withdrawals
+// for the given currency up to and including 'on'.
+func (l *Ledger) CostBasis(currency string, on date.Date) float64 {
+	var basis float64
+	for _, tx := range l.transactions {
+		if tx.When().After(on) {
+			// The ledger is sorted by date, so it's safe to break.
+			break
+		}
+		switch v := tx.(type) {
+		case Deposit:
+			if v.Currency == currency {
+				basis += v.Amount
+			}
+		case Withdraw:
+			if v.Currency == currency {
+				basis -= v.Amount
+			}
+		}
+	}
+	return basis
+}

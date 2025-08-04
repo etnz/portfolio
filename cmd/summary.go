@@ -49,9 +49,13 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitFailure
 	}
 
-	as := portfolio.NewAccountingSystem(ledger, market)
+	as, err := portfolio.NewAccountingSystem(ledger, market, c.currency)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating accounting system: %v\n", err)
+		return subcommands.ExitFailure
+	}
 
-	totalValue, err := as.TotalMarketValue(on, c.currency)
+	totalValue, err := as.TotalMarketValue(on)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error calculating portfolio value: %v\n", err)
 		return subcommands.ExitFailure
