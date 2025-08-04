@@ -10,6 +10,8 @@ import (
 // CommandType is a typed string for identifying transaction commands.
 type CommandType string
 
+func (c CommandType) IsCashFlow() bool { return c == CmdDeposit || c == CmdWithdraw }
+
 // Command types used for identifying transactions.
 const (
 	CmdBuy      CommandType = "buy"

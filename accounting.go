@@ -35,8 +35,8 @@ type Summary struct {
 // (the repository of security information and prices), it provides the complete
 // context needed for most portfolio operations.
 type AccountingSystem struct {
-	Ledger     *Ledger
-	MarketData *MarketData
+	Ledger            *Ledger
+	MarketData        *MarketData
 	ReportingCurrency string
 }
 
@@ -97,7 +97,7 @@ func (as *AccountingSystem) TotalMarketValue(on date.Date) (float64, error) {
 	var totalValue float64
 
 	// Calculate value of all security positions
-	for _, ticker := range as.Ledger.AllSecurities() {
+	for ticker := range as.Ledger.AllSecurities() {
 		position := as.Ledger.Position(ticker, on)
 		if position <= 0 {
 			continue
@@ -125,7 +125,7 @@ func (as *AccountingSystem) TotalMarketValue(on date.Date) (float64, error) {
 	}
 
 	// Add cash balances
-	for _, currency := range as.Ledger.AllCurrencies() {
+	for currency := range as.Ledger.AllCurrencies() {
 		balance := as.Ledger.CashBalance(currency, on)
 		if balance == 0 {
 			continue
@@ -139,32 +139,6 @@ func (as *AccountingSystem) TotalMarketValue(on date.Date) (float64, error) {
 	}
 
 	return totalValue, nil
-}
-
-// CostBasis calculates the total net cash invested in the portfolio, converted to
-// the reporting currency as of a specific date. It iterates through all
-// currencies in the ledger, calculates their individual cost basis, and converts
-// each to the reporting currency.
-func (as *AccountingSystem) CostBasis(on date.Date) (float64, error) {
-	if as.ReportingCurrency == "" {
-		return 0, fmt.Errorf("reporting currency is not set in accounting system")
-	}
-
-	var totalCostBasis float64
-	for _, currency := range as.Ledger.AllCurrencies() {
-		basis := as.Ledger.CostBasis(currency, on)
-		if basis == 0 {
-			continue
-		}
-
-		convertedAmount, err := as.convertCurrency(basis, currency, as.ReportingCurrency, on)
-		if err != nil {
-			return 0, fmt.Errorf("could not convert cost basis for currency %s: %w", currency, err)
-		}
-		totalCostBasis += convertedAmount
-	}
-
-	return totalCostBasis, nil
 }
 
 // convertCurrency converts an amount from a source currency to a target currency as of a given date.
@@ -189,4 +163,47 @@ func (as *AccountingSystem) convertCurrency(amount float64, fromCurrency, toCurr
 		rate = 1.0 / inverseRate
 	}
 	return amount * rate, nil
+}
+
+// CostBasis calculates the total net cash invested in the portfolio as of a
+// specific date. It provides a stable cost basis by converting each cash flow
+// (Deposit/Withdraw) to the reporting currency using the exchange rate on the
+// day of the transaction. This method correctly separates investment performance
+// from currency fluctuations.
+func (as *AccountingSystem) CostBasis(on date.Date) (float64, error) {
+	if as.ReportingCurrency == "" {
+		return 0, fmt.Errorf("reporting currency is not set in accounting system")
+	}
+
+	var totalCostBasis float64
+
+	for _, tx := range as.Ledger.Transactions() {
+		if tx.When().After(on) {
+			// The ledger is sorted, so we can stop iterating.
+			break
+		}
+		if !tx.What().IsCashFlow() {
+			continue
+		}
+
+		var amount float64
+		var currency string
+
+		switch v := tx.(type) {
+		case Deposit:
+			amount = v.Amount
+			currency = v.Currency
+		case Withdraw:
+			amount = -v.Amount // Use negative amount for withdrawal
+			currency = v.Currency
+		}
+
+		convertedAmount, err := as.convertCurrency(amount, currency, as.ReportingCurrency, tx.When())
+		if err != nil {
+			return 0, fmt.Errorf("could not convert cost basis for transaction on %s: %w", tx.When(), err)
+		}
+		totalCostBasis += convertedAmount
+
+	}
+	return totalCostBasis, nil
 }

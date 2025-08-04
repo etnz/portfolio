@@ -44,8 +44,7 @@ func (l *Ledger) stableSort() {
 // summing up all buy and sell transactions for that security up to and including that date.
 func (l *Ledger) Position(ticker string, on date.Date) float64 {
 	var quantity float64
-	seq := l.SecurityTransactions(ticker, on)
-	seq(func(_ int, tx Transaction) bool {
+	for _, tx := range l.SecurityTransactions(ticker, on) {
 		switch v := tx.(type) {
 		case Buy:
 			quantity += v.Quantity
@@ -55,8 +54,7 @@ func (l *Ledger) Position(ticker string, on date.Date) float64 {
 			// transaction means "sell all" and is resolved before being stored.
 			quantity -= v.Quantity
 		}
-		return true
-	})
+	}
 	return quantity
 }
 
@@ -136,79 +134,73 @@ func (l Ledger) SecurityTransactions(ticker string, max date.Date) iter.Seq2[int
 	}
 }
 
-// AllSecurities returns a sorted slice of unique security tickers that appear
-// in the ledger's transactions (Buy, Sell, or Dividend).
-func (l *Ledger) AllSecurities() []string {
-	tickers := make(map[string]struct{})
-	for _, tx := range l.transactions {
-		switch v := tx.(type) {
-		case Buy:
-			tickers[v.Security] = struct{}{}
-		case Sell:
-			tickers[v.Security] = struct{}{}
-		case Dividend:
-			tickers[v.Security] = struct{}{}
+// AllSecurities iterates over security tickers that appear
+// in the ledger's transactions (Buy, Sell, or Dividend) without repetition.
+func (l *Ledger) AllSecurities() iter.Seq[string] {
+	return func(yield func(string) bool) {
+		visitedTickers := make(map[string]struct{})
+		for _, tx := range l.transactions {
+			var security string
+			switch v := tx.(type) {
+			case Buy:
+				security = v.Security
+			case Sell:
+				security = v.Security
+			case Dividend:
+				security = v.Security
+			}
+			if _, visited := visitedTickers[security]; !visited {
+				visitedTickers[security] = struct{}{}
+				if !yield(security) {
+					return
+				}
+			}
 		}
 	}
-
-	result := make([]string, 0, len(tickers))
-	for ticker := range tickers {
-		result = append(result, ticker)
-	}
-	sort.Strings(result)
-	return result
 }
 
-// AllCurrencies returns a sorted slice of unique currency codes that appear
+// AllCurrencies iterates over all currencies that appear in the ledger.
 // in the ledger's transactions.
-func (l *Ledger) AllCurrencies() []string {
-	currencies := make(map[string]struct{})
-	for _, tx := range l.transactions {
-		switch v := tx.(type) {
-		case Buy:
-			currencies[v.Currency] = struct{}{}
-		case Sell:
-			currencies[v.Currency] = struct{}{}
-		case Dividend:
-			currencies[v.Currency] = struct{}{}
-		case Deposit:
-			currencies[v.Currency] = struct{}{}
-		case Withdraw:
-			currencies[v.Currency] = struct{}{}
-		case Convert:
-			currencies[v.FromCurrency] = struct{}{}
-			currencies[v.ToCurrency] = struct{}{}
-		}
-	}
-
-	result := make([]string, 0, len(currencies))
-	for currency := range currencies {
-		result = append(result, currency)
-	}
-	sort.Strings(result)
-	return result
-}
- 
-// CostBasis computes the net cash invested for a specific currency up to a given date.
-// It iterates through all transactions, summing Deposits and subtracting Withdrawals
-// for the given currency up to and including 'on'.
-func (l *Ledger) CostBasis(currency string, on date.Date) float64 {
-	var basis float64
-	for _, tx := range l.transactions {
-		if tx.When().After(on) {
-			// The ledger is sorted by date, so it's safe to break.
-			break
-		}
-		switch v := tx.(type) {
-		case Deposit:
-			if v.Currency == currency {
-				basis += v.Amount
+func (l *Ledger) AllCurrencies() iter.Seq[string] {
+	return func(yield func(string) bool) {
+		visitedCurrencies := make(map[string]struct{})
+		visit := func(currency string) bool {
+			if _, visited := visitedCurrencies[currency]; !visited {
+				visitedCurrencies[currency] = struct{}{}
+				return yield(currency)
 			}
-		case Withdraw:
-			if v.Currency == currency {
-				basis -= v.Amount
+			return false
+		}
+		for _, tx := range l.transactions {
+			switch v := tx.(type) {
+			case Buy:
+				if !visit(v.Currency) {
+					return
+				}
+			case Sell:
+				if !visit(v.Currency) {
+					return
+				}
+			case Dividend:
+				if !visit(v.Currency) {
+					return
+				}
+			case Deposit:
+				if !visit(v.Currency) {
+					return
+				}
+			case Withdraw:
+				if !visit(v.Currency) {
+					return
+				}
+			case Convert:
+				if !visit(v.FromCurrency) {
+					return
+				}
+				if !visit(v.ToCurrency) {
+					return
+				}
 			}
 		}
 	}
-	return basis
 }
