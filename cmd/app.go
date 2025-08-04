@@ -84,7 +84,12 @@ func EncodeTransaction(tx portfolio.Transaction) error {
 		return fmt.Errorf("could not load ledger: %w", err)
 	}
 
-	as := portfolio.NewAccountingSystem(ledger, market)
+	// For validation, a reporting currency is not needed. We pass an empty string.
+	as, err := portfolio.NewAccountingSystem(ledger, market, "")
+	if err != nil {
+		// This error is unexpected here since we pass an empty currency.
+		return fmt.Errorf("could not create accounting system: %w", err)
+	}
 	tx, err = as.Validate(tx)
 	if err != nil {
 		return err
