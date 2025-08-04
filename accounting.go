@@ -60,27 +60,24 @@ func NewAccountingSystem(ledger *Ledger, marketData *MarketData, reportingCurren
 // potentially modified) transaction or an error detailing any validation failures.
 func (as *AccountingSystem) Validate(tx Transaction) (Transaction, error) {
 	var err error
-	// The type switch creates a copy (v) of the transaction struct.
-	// We must call Validate on a pointer to this copy (&v) to allow modifications.
-	// We then return the (potentially modified) copy.
 	switch v := tx.(type) {
 	case Buy:
-		err = (&v).Validate(as)
+		err =v.Validate(as)
 		return v, err
 	case Sell:
-		err = (&v).Validate(as)
+		err =v.Validate(as)
 		return v, err
 	case Dividend:
-		err = (&v).Validate(as)
+		err =v.Validate(as)
 		return v, err
 	case Deposit:
-		err = (&v).Validate(as)
+		err =v.Validate(as)
 		return v, err
 	case Withdraw:
-		err = (&v).Validate(as)
+		err =v.Validate(as)
 		return v, err
 	case Convert:
-		err = (&v).Validate(as)
+		err =v.Validate(as)
 		return v, err
 	default:
 		return tx, fmt.Errorf("unsupported transaction type for validation: %T", tx)
