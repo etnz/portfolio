@@ -36,15 +36,14 @@ var securitiesPath = flag.String("securities-path", ".security", "Path to the se
 var ledgerFile = flag.String("ledger-file", "transactions.jsonl", "Path to the ledger file containing transactions (JSONL format)")
 
 // DecodeSecurities decodes securities from the application's securities path folder.
-func DecodeSecurities() (m *portfolio.MarketData, err error) {
+func DecodeSecurities() (*portfolio.MarketData, error) {
 	// Load the portfolio database from the specified file.
-	m, err = portfolio.DecodeMarketData(*securitiesPath)
+	m, err := portfolio.DecodeMarketData(*securitiesPath)
 	if errors.Is(err, fs.ErrNotExist) {
 		log.Println("warning, database does not exist, creating an empty database instead")
-		m, err = portfolio.NewMarketData(), nil
-
+		return portfolio.NewMarketData(), nil
 	}
-	return
+	return m, err
 }
 
 // DecodeLedger decodes the ledger from the application's default ledger file.
