@@ -3,6 +3,7 @@ package portfolio
 import (
 	"fmt"
 
+	"time"
 	"github.com/etnz/portfolio/date"
 )
 
@@ -141,6 +142,76 @@ func (as *AccountingSystem) TotalMarketValue(on date.Date) (float64, error) {
 	return totalValue, nil
 }
 
+// calculatePeriodPerformance is a helper to compute the return for a given period.
+func (as *AccountingSystem) calculatePeriodPerformance(currentTMV float64, periodStartDate date.Date) (Performance, error) {
+	// The value at the start of the period is the value at the end of the day before.
+	startValueDate := periodStartDate.Add(-1)
+
+	startValue, err := as.TotalMarketValue(startValueDate)
+	if err != nil {
+		return Performance{}, fmt.Errorf("could not get start value for date %s: %w", startValueDate, err)
+	}
+
+	if startValue == 0 {
+		// Avoid division by zero. If start value was 0, return is not meaningful.
+		return Performance{StartValue: 0, Return: 0}, nil
+	}
+
+	// Simple return calculation. This doesn't account for cash flows during the period.
+	perfReturn := (currentTMV - startValue) / startValue
+	return Performance{StartValue: startValue, Return: perfReturn}, nil
+}
+
+// NewSummary calculates and returns a comprehensive summary of the portfolio's
+// state and performance on a given date.
+func (as *AccountingSystem) NewSummary(on date.Date) (*Summary, error) {
+	if as.ReportingCurrency == "" {
+		return nil, fmt.Errorf("reporting currency is not set in accounting system")
+	}
+
+	summary := &Summary{
+		Date:              on,
+		ReportingCurrency: as.ReportingCurrency,
+	}
+
+	// 1. Calculate current total market value
+	currentTMV, err := as.TotalMarketValue(on)
+	if err != nil {
+		return nil, fmt.Errorf("could not calculate summary: %w", err)
+	}
+	summary.TotalMarketValue = currentTMV
+
+	// 2. Calculate performance for each period
+	if summary.Daily, err = as.calculatePeriodPerformance(currentTMV, on); err != nil {
+		return nil, fmt.Errorf("failed to calculate daily performance: %w", err)
+	}
+	if summary.WTD, err = as.calculatePeriodPerformance(currentTMV, date.StartOfWeek(on)); err != nil {
+		return nil, fmt.Errorf("failed to calculate WTD performance: %w", err)
+	}
+	if summary.MTD, err = as.calculatePeriodPerformance(currentTMV, date.StartOfMonth(on)); err != nil {
+		return nil, fmt.Errorf("failed to calculate MTD performance: %w", err)
+	}
+	if summary.QTD, err = as.calculatePeriodPerformance(currentTMV, date.StartOfQuarter(on)); err != nil {
+		return nil, fmt.Errorf("failed to calculate QTD performance: %w", err)
+	}
+	if summary.YTD, err = as.calculatePeriodPerformance(currentTMV, date.StartOfYear(on)); err != nil {
+		return nil, fmt.Errorf("failed to calculate YTD performance: %w", err)
+	}
+
+	// 3. Calculate performance since inception
+	inceptionCostBasis, err := as.CostBasis(on)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate inception performance: %w", err)
+	}
+	summary.Inception.StartValue = inceptionCostBasis
+	if inceptionCostBasis != 0 {
+		summary.Inception.Return = (currentTMV - inceptionCostBasis) / inceptionCostBasis
+	}
+
+	return summary, nil
+}
+}
+
 // convertCurrency converts an amount from a source currency to a target currency as of a given date.
 func (as *AccountingSystem) convertCurrency(amount float64, fromCurrency, toCurrency string, on date.Date) (float64, error) {
 	if fromCurrency == toCurrency {
@@ -166,7 +237,8 @@ func (as *AccountingSystem) convertCurrency(amount float64, fromCurrency, toCurr
 }
 
 // CostBasis calculates the total net cash invested in the portfolio as of a
-// specific date. It provides a stable cost basis by converting each cash flow
+// specific date.
+// It provides a stable cost basis by converting each cash flow
 // (Deposit/Withdraw) to the reporting currency using the exchange rate on the
 // day of the transaction. This method correctly separates investment performance
 // from currency fluctuations.
