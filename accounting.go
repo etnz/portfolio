@@ -6,6 +6,26 @@ import (
 	"github.com/etnz/portfolio/date"
 )
 
+// Performance holds the starting value and the calculated return for a specific period.
+type Performance struct {
+	StartValue float64
+	Return     float64 // Return is a ratio (e.g., 0.05 for 5%)
+}
+
+// Summary provides a comprehensive, at-a-glance overview of the portfolio's
+// state and performance on a given date.
+type Summary struct {
+	Date              date.Date
+	ReportingCurrency string
+	TotalMarketValue  float64
+	Daily             Performance
+	WTD               Performance // Week-to-Date
+	MTD               Performance // Month-to-Date
+	QTD               Performance // Quarter-to-Date
+	YTD               Performance // Year-to-Date
+	Inception         Performance
+}
+
 // AccountingSystem encapsulates all the data required for portfolio management,
 // combining transactional data with market data. It serves as a central point
 // of access for querying portfolio state, such as positions and cash balances,
