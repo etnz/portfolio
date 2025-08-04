@@ -9,6 +9,8 @@ import (
 )
 
 // Ledger represents a list of transactions.
+//
+// In a Ledger transactions are always in chronological order.
 type Ledger struct {
 	transactions []Transaction
 }

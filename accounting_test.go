@@ -1,6 +1,7 @@
 package portfolio
 
 import (
+	"math"
 	"reflect"
 	"testing"
 	"time"
@@ -93,6 +94,76 @@ func TestAccountingSystem_CostBasis(t *testing.T) {
 				t.Errorf("CostBasis() = %v, want %v", gotCostBasis, tc.wantCostBasis)
 			}
 		})
+	}
+}
+
+// setupPerformanceTest creates a ledger and market data for performance calculation tests.
+func setupPerformanceTest(t *testing.T) (*Ledger, *MarketData, *AccountingSystem) {
+	t.Helper()
+
+	ledger := &Ledger{
+		transactions: []Transaction{
+			NewDeposit(date.New(2025, time.January, 1), "", "USD", 10000),
+			NewBuy(date.New(2025, time.January, 1), "", "TICK", 100, 100, "USD"),
+			NewDeposit(date.New(2025, time.January, 15), "", "USD", 1100),
+		},
+	}
+	ledger.stableSort()
+
+	marketData := NewMarketData()
+	id, err := NewPrivate("TICK Private Equity")
+	if err != nil {
+		t.Fatalf("NewPrivate() failed: %v", err)
+	}
+	tick := &Security{ticker: "TICK", id: id, currency: "USD"}
+	tick.prices.Append(date.New(2025, time.January, 1), 100.0)
+	tick.prices.Append(date.New(2025, time.January, 15), 110.0)
+	tick.prices.Append(date.New(2025, time.January, 31), 120.0)
+	marketData.securities = append(marketData.securities, tick)
+	marketData.index["TICK"] = tick
+
+	as, err := NewAccountingSystem(ledger, marketData, "USD")
+	if err != nil {
+		t.Fatalf("NewAccountingSystem() failed: %v", err)
+	}
+	return ledger, marketData, as
+}
+
+func TestAccountingSystem_CalculatePeriodPerformance(t *testing.T) {
+	_, _, as := setupPerformanceTest(t)
+
+	startDate := date.New(2025, time.January, 1)
+	endDate := date.New(2025, time.January, 31)
+
+	perf, err := as.calculatePeriodPerformance(startDate, endDate)
+	if err != nil {
+		t.Fatalf("calculatePeriodPerformance() returned unexpected error: %v", err)
+	}
+
+	// Expected start value is TMV on Dec 31, 2024, which is 0.
+	if perf.StartValue != 0 {
+		t.Errorf("perf.StartValue = %v, want %v", perf.StartValue, 0)
+	}
+
+	// Expected return calculation:
+	// Start Value (V0) = 0
+	// Day 1 (Jan 1): Deposit 10k, Buy 100 TICK @ 100.
+	//   V1_after_cf = 100 * 100 = 10000. CF1 = 10000. V1_before_cf = 0.
+	//   Since V0 is 0, first period return is not calculated. V_last = 10000.
+	// Day 15 (Jan 15): Deposit 1.1k. TICK price is 110.
+	//   V2_after_cf = (100 * 110) + 1100 = 12100. CF2 = 1100. V2_before_cf = 11000.
+	//   HPR2 = (11000 - 10000) / 10000 = 0.1.
+	//   LinkedReturn = 1 * (1 + 0.1) = 1.1. V_last = 12100.
+	// Day 31 (Jan 31): End of period. TICK price is 120.
+	//   V3 = (100 * 120) + 1100 = 13100. No CF.
+	//   HPR3 = (13100 - 12100) / 12100 = 1000 / 12100 = 0.0826446...
+	//   LinkedReturn = 1.1 * (1 + 1000/12100) = 1.1 * (13100/12100) = 1.190909...
+	// TWR = 1.190909... - 1 = 0.190909...
+	const wantReturn = (1.1 * (13100.0 / 12100.0)) - 1.0
+	const tolerance = 1e-9
+
+	if math.Abs(perf.Return-wantReturn) > tolerance {
+		t.Errorf("perf.Return = %v, want %v", perf.Return, wantReturn)
 	}
 }
 

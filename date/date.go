@@ -148,7 +148,7 @@ func iterate(series ...[]Date) iter.Seq[Date] {
 }
 
 // Iterate returns an iterator over all unique, sorted dates from multiple History objects.
-func Iterate[T any](histories ...History[T]) iter.Seq[Date] {
+func Iterate[T float32 | float64](histories ...History[T]) iter.Seq[Date] {
 	dates := make([][]Date, 0, len(histories))
 	for _, h := range histories {
 		dates = append(dates, h.days)

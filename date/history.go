@@ -8,7 +8,7 @@ import (
 
 // History stores a chronological series of values, each associated with a specific date.
 // It ensures that dates are unique and the series is always sorted.
-type History[T any] struct {
+type History[T float32 | float64 | string] struct {
 	days   []Date
 	values []T
 }
@@ -33,7 +33,7 @@ func (h *History[T]) Clear() {
 func (h *History[T]) Len() int { return len(h.days) }
 
 // chronological is a private implementation to make this history chronologically sorted.
-type chronological[T any] struct{ *History[T] }
+type chronological[T float32 | float64 | string] struct{ *History[T] }
 
 func (s chronological[T]) Less(i, j int) bool { return s.days[i].time().Before(s.days[j].time()) }
 
@@ -45,18 +45,34 @@ func (s chronological[T]) Swap(i, j int) {
 // sort sorts the history in chronological order.
 func (h *History[T]) sort() { sort.Sort(chronological[T]{h}) }
 
-// Append adds a point to the history. If a value for the given date already
-// exists, it is overwritten. The history is kept sorted.
+// Append adds a point to the history.
+//
+// Existing value at that date are overwritten.
 func (h *History[T]) Append(on Date, q T) *History[T] {
 	if i := slices.Index(h.days, on); i >= 0 {
 		// Found a point at that exact same instant.
 		// We choose to replace, because it will give higher priority to the last data
 		h.values[i] = q
 		return h
-	} else {
-		// We need to increase the memory first.
-		h.days, h.values = append(h.days, on), append(h.values, q)
 	}
+	// We need to increase the memory first.
+	h.days, h.values = append(h.days, on), append(h.values, q)
+	h.sort()
+	return h
+}
+
+// AppendAdd adds a point to the history.
+//
+// Existing value is added.
+func (h *History[T]) AppendAdd(on Date, q T) *History[T] {
+	if i := slices.Index(h.days, on); i >= 0 {
+		// Found a point at that exact same instant.
+		// We choose to replace, because it will give higher priority to the last data
+		h.values[i] += q
+		return h
+	}
+	// We need to increase the memory first.
+	h.days, h.values = append(h.days, on), append(h.values, q)
 	h.sort()
 	return h
 }

@@ -3,8 +3,6 @@ package portfolio
 import (
 	"fmt"
 
-	"sort"
-
 	"github.com/etnz/portfolio/date"
 )
 
@@ -142,9 +140,10 @@ func (as *AccountingSystem) TotalMarketValue(on date.Date) (float64, error) {
 
 // getCashFlows retrieves all cash flow transactions (deposits and withdrawals)
 // within a given date range and returns them as a map of date to the total
-// net flow amount in the reporting currency for that date.
-func (as *AccountingSystem) getCashFlows(start, end date.Date) (map[date.Date]float64, error) {
-	flows := make(map[date.Date]float64)
+// net flow amount in the reporting currency for that date. The transactions are
+// assumed to be in chronological order.
+func (as *AccountingSystem) getCashFlows(start, end date.Date) (date.History[float64], error) {
+	var flows date.History[float64]
 	for _, tx := range as.Ledger.transactions {
 		txDate := tx.When()
 		if txDate.Before(start) {
@@ -175,9 +174,9 @@ func (as *AccountingSystem) getCashFlows(start, end date.Date) (map[date.Date]fl
 
 		convertedAmount, err := as.convertCurrency(amount, currency, as.ReportingCurrency, txDate)
 		if err != nil {
-			return nil, fmt.Errorf("could not convert cash flow on %s: %w", txDate, err)
+			return date.History[float64]{}, fmt.Errorf("could not convert cash flow on %s: %w", txDate, err)
 		}
-		flows[txDate] += convertedAmount
+		flows.AppendAdd(txDate, convertedAmount)
 	}
 	return flows, nil
 }
@@ -199,32 +198,21 @@ func (as *AccountingSystem) calculatePeriodPerformance(startDate, endDate date.D
 		return Performance{}, fmt.Errorf("failed to get cash flows for TWR: %w", err)
 	}
 
-	// 2. Create a sorted, unique list of valuation dates.
-	// These are the dates of cash flows and the period end date.
-	valuationDatesMap := make(map[date.Date]struct{})
-	for d := range cashFlows {
-		valuationDatesMap[d] = struct{}{}
+	if last, _ := cashFlows.Latest(); last != endDate {
+		cashFlows.Append(endDate, 0)
 	}
-	valuationDatesMap[endDate] = struct{}{}
-
-	valuationDates := make([]date.Date, 0, len(valuationDatesMap))
-	for d := range valuationDatesMap {
-		valuationDates = append(valuationDates, d)
-	}
-	sort.Slice(valuationDates, func(i, j int) bool { return valuationDates[i].Before(valuationDates[j]) })
 
 	// 3. Geometrically link the Holding Period Return (HPR) of each sub-period.
 	linkedReturn := 1.0
 	lastValue := startValue
 
 	// Iterate through each valuation date, which marks the end of a sub-period.
-	for _, d := range valuationDates {
+	for d, cashFlowOnDate := range cashFlows.Values() {
 		valueAfterCF, err := as.TotalMarketValue(d)
 		if err != nil {
 			return Performance{}, fmt.Errorf("could not get market value for date %s: %w", d, err)
 		}
 
-		cashFlowOnDate := cashFlows[d]
 		valueBeforeCF := valueAfterCF - cashFlowOnDate
 
 		if lastValue != 0 {
