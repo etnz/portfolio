@@ -87,7 +87,7 @@ func (m *MarketData) Update() error {
 		}
 
 		// Don't try to fetch from the future.
-		if !fetchFrom.Before(yesterday) {
+		if fetchFrom.After(yesterday) {
 			continue
 		}
 
