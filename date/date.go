@@ -40,6 +40,11 @@ func New(year int, month time.Month, day int) Date {
 	return d
 }
 
+// Format returns a textual representation of the date value formatted according to the layout defined by the argument.
+//
+//	See the documentation for the [time.Format].
+func (d Date) Format(format string) string { return d.time().Format(format) }
+
 // Before reports whether the day d is before x.
 func (d Date) Before(x Date) bool { return d.time().Before(x.time()) }
 
