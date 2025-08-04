@@ -27,6 +27,8 @@ func (d Date) Month() time.Month { return d.time().Month() }
 // Weekday returns the day of the week for the date.
 func (d Date) Weekday() time.Weekday { return d.time().Weekday() }
 
+// ISOWeek returns the ISO 8601 year and week number in which d occurs.
+func (d Date) ISOWeek() (year, week int) { return d.time().ISOWeek() }
 
 // time returns a time.Time that is a canonical representation of that day (at midnight UTC).
 func (d Date) time() time.Time { return time.Date(d.y, d.m, d.d, 0, 0, 0, 0, time.UTC) }
@@ -52,6 +54,9 @@ func (d Date) Add(i int) Date { return New(d.y, d.m, d.d+i) }
 
 // Year returns current year.
 func (d Date) Year() int { return d.y }
+
+// Day returns current day of the month.
+func (d Date) Day() int { return d.d }
 
 // String format the date in its standard format.
 func (d Date) String() string { return d.time().Format(DateFormat) }

@@ -1,6 +1,7 @@
 package portfolio
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -29,7 +30,7 @@ func setupCostBasisTest(t *testing.T) (*Ledger, *MarketData, *AccountingSystem) 
 	// USDEUR security for exchange rates
 	usdeur := &Security{ticker: "USDEUR", id: "USDEUR", currency: "EUR"}
 	usdeur.prices.Append(date.New(2025, time.January, 10), 0.90) // Rate on day of first USD deposit
-	usdeur.prices.Append(date.New(2025, time.March, 20), 0.92)  // Rate on day of USD withdrawal
+	usdeur.prices.Append(date.New(2025, time.March, 20), 0.92)   // Rate on day of USD withdrawal
 	marketData.securities = append(marketData.securities, usdeur)
 	marketData.index["USDEUR"] = usdeur
 
