@@ -3,6 +3,8 @@ package portfolio
 import (
 	"fmt"
 
+	"sort"
+
 	"github.com/etnz/portfolio/date"
 )
 
@@ -138,24 +140,102 @@ func (as *AccountingSystem) TotalMarketValue(on date.Date) (float64, error) {
 	return totalValue, nil
 }
 
-// calculatePeriodPerformance is a helper to compute the return for a given period.
-func (as *AccountingSystem) calculatePeriodPerformance(currentTMV float64, periodStartDate date.Date) (Performance, error) {
-	// The value at the start of the period is the value at the end of the day before.
-	startValueDate := periodStartDate.Add(-1)
+// getCashFlows retrieves all cash flow transactions (deposits and withdrawals)
+// within a given date range and returns them as a map of date to the total
+// net flow amount in the reporting currency for that date.
+func (as *AccountingSystem) getCashFlows(start, end date.Date) (map[date.Date]float64, error) {
+	flows := make(map[date.Date]float64)
+	for _, tx := range as.Ledger.transactions {
+		txDate := tx.When()
+		if txDate.Before(start) {
+			continue
+		}
+		if txDate.After(end) {
+			break // The ledger is sorted, so we can stop.
+		}
 
+		if !tx.What().IsCashFlow() {
+			continue
+		}
+
+		var amount float64
+		var currency string
+
+		switch v := tx.(type) {
+		case Deposit:
+			amount = v.Amount
+			currency = v.Currency
+		case Withdraw:
+			amount = -v.Amount
+			currency = v.Currency
+		default:
+			// This path is unreachable due to the IsCashFlow check.
+			continue
+		}
+
+		convertedAmount, err := as.convertCurrency(amount, currency, as.ReportingCurrency, txDate)
+		if err != nil {
+			return nil, fmt.Errorf("could not convert cash flow on %s: %w", txDate, err)
+		}
+		flows[txDate] += convertedAmount
+	}
+	return flows, nil
+}
+
+// calculatePeriodPerformance computes the Time-Weighted Return (TWR) for a given period.
+// TWR measures the compound growth rate of a portfolio, removing the distorting
+// effects of cash flows. This is the standard for comparing investment manager performance.
+func (as *AccountingSystem) calculatePeriodPerformance(startDate, endDate date.Date) (Performance, error) {
+	// The value at the start of the period is the value at the end of the day before.
+	startValueDate := startDate.Add(-1)
 	startValue, err := as.TotalMarketValue(startValueDate)
 	if err != nil {
 		return Performance{}, fmt.Errorf("could not get start value for date %s: %w", startValueDate, err)
 	}
 
-	if startValue == 0 {
-		// Avoid division by zero. If start value was 0, return is not meaningful.
-		return Performance{StartValue: 0, Return: 0}, nil
+	// 1. Get all cash flows within the period.
+	cashFlows, err := as.getCashFlows(startDate, endDate)
+	if err != nil {
+		return Performance{}, fmt.Errorf("failed to get cash flows for TWR: %w", err)
 	}
 
-	// Simple return calculation. This doesn't account for cash flows during the period.
-	perfReturn := (currentTMV - startValue) / startValue
-	return Performance{StartValue: startValue, Return: perfReturn}, nil
+	// 2. Create a sorted, unique list of valuation dates.
+	// These are the dates of cash flows and the period end date.
+	valuationDatesMap := make(map[date.Date]struct{})
+	for d := range cashFlows {
+		valuationDatesMap[d] = struct{}{}
+	}
+	valuationDatesMap[endDate] = struct{}{}
+
+	valuationDates := make([]date.Date, 0, len(valuationDatesMap))
+	for d := range valuationDatesMap {
+		valuationDates = append(valuationDates, d)
+	}
+	sort.Slice(valuationDates, func(i, j int) bool { return valuationDates[i].Before(valuationDates[j]) })
+
+	// 3. Geometrically link the Holding Period Return (HPR) of each sub-period.
+	linkedReturn := 1.0
+	lastValue := startValue
+
+	// Iterate through each valuation date, which marks the end of a sub-period.
+	for _, d := range valuationDates {
+		valueAfterCF, err := as.TotalMarketValue(d)
+		if err != nil {
+			return Performance{}, fmt.Errorf("could not get market value for date %s: %w", d, err)
+		}
+
+		cashFlowOnDate := cashFlows[d]
+		valueBeforeCF := valueAfterCF - cashFlowOnDate
+
+		if lastValue != 0 {
+			hpr := (valueBeforeCF - lastValue) / lastValue
+			linkedReturn *= (1.0 + hpr)
+		}
+		lastValue = valueAfterCF
+	}
+
+	twr := linkedReturn - 1.0
+	return Performance{StartValue: startValue, Return: twr}, nil
 }
 
 // NewSummary calculates and returns a comprehensive summary of the portfolio's
@@ -178,30 +258,31 @@ func (as *AccountingSystem) NewSummary(on date.Date) (*Summary, error) {
 	summary.TotalMarketValue = currentTMV
 
 	// 2. Calculate performance for each period
-	if summary.Daily, err = as.calculatePeriodPerformance(currentTMV, on); err != nil {
+	if summary.Daily, err = as.calculatePeriodPerformance(on, on); err != nil {
 		return nil, fmt.Errorf("failed to calculate daily performance: %w", err)
 	}
-	if summary.WTD, err = as.calculatePeriodPerformance(currentTMV, date.StartOfWeek(on)); err != nil {
+	if summary.WTD, err = as.calculatePeriodPerformance(date.StartOfWeek(on), on); err != nil {
 		return nil, fmt.Errorf("failed to calculate WTD performance: %w", err)
 	}
-	if summary.MTD, err = as.calculatePeriodPerformance(currentTMV, date.StartOfMonth(on)); err != nil {
+	if summary.MTD, err = as.calculatePeriodPerformance(date.StartOfMonth(on), on); err != nil {
 		return nil, fmt.Errorf("failed to calculate MTD performance: %w", err)
 	}
-	if summary.QTD, err = as.calculatePeriodPerformance(currentTMV, date.StartOfQuarter(on)); err != nil {
+	if summary.QTD, err = as.calculatePeriodPerformance(date.StartOfQuarter(on), on); err != nil {
 		return nil, fmt.Errorf("failed to calculate QTD performance: %w", err)
 	}
-	if summary.YTD, err = as.calculatePeriodPerformance(currentTMV, date.StartOfYear(on)); err != nil {
+	if summary.YTD, err = as.calculatePeriodPerformance(date.StartOfYear(on), on); err != nil {
 		return nil, fmt.Errorf("failed to calculate YTD performance: %w", err)
 	}
 
 	// 3. Calculate performance since inception
-	inceptionCostBasis, err := as.CostBasis(on)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate inception performance: %w", err)
+	var inceptionDate date.Date
+	if len(as.Ledger.transactions) > 0 {
+		inceptionDate = as.Ledger.transactions[0].When()
+	} else {
+		inceptionDate = on
 	}
-	summary.Inception.StartValue = inceptionCostBasis
-	if inceptionCostBasis != 0 {
-		summary.Inception.Return = (currentTMV - inceptionCostBasis) / inceptionCostBasis
+	if summary.Inception, err = as.calculatePeriodPerformance(inceptionDate, on); err != nil {
+		return nil, fmt.Errorf("failed to calculate inception performance: %w", err)
 	}
 
 	return summary, nil
