@@ -55,15 +55,40 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitFailure
 	}
 
-	totalValue, err := as.TotalMarketValue(on)
+	summary, err := as.NewSummary(on)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error calculating portfolio value: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error calculating portfolio summary: %v\n", err)
 		return subcommands.ExitFailure
 	}
 
-	fmt.Printf("Portfolio Summary on %s\n", on)
-	fmt.Println("---------------------------------")
-	fmt.Printf("Total Market Value: %.2f %s\n", totalValue, c.currency)
+	// Helper to format performance percentages
+	formatPerf := func(p portfolio.Performance) string {
+		if p.StartValue == 0 {
+			return "N/A"
+		}
+		return fmt.Sprintf("%+.2f%%", p.Return*100)
+	}
+
+	_, week := summary.Date.ISOWeek()
+	quarter := (summary.Date.Month()-1)/3 + 1
+
+	dayLabel := fmt.Sprintf("Day %d:", summary.Date.Day())
+	weekLabel := fmt.Sprintf("Week %d:", week)
+	monthLabel := fmt.Sprintf("%s:", summary.Date.Month())
+	quarterLabel := fmt.Sprintf("Q%d:", quarter)
+	yearLabel := fmt.Sprintf("%d:", summary.Date.Year())
+
+	fmt.Printf("Portfolio Summary on %s\n", summary.Date)
+	fmt.Println("-------------------------------------------")
+	fmt.Printf("Total Market Value: %.2f %s\n", summary.TotalMarketValue, summary.ReportingCurrency)
+	fmt.Println()
+	fmt.Println("Performance:")
+	fmt.Printf("  %-11s %10s\n", dayLabel, formatPerf(summary.Daily))
+	fmt.Printf("  %-11s %10s\n", weekLabel, formatPerf(summary.WTD))
+	fmt.Printf("  %-11s %10s\n", monthLabel, formatPerf(summary.MTD))
+	fmt.Printf("  %-11s %10s\n", quarterLabel, formatPerf(summary.QTD))
+	fmt.Printf("  %-11s %10s\n", yearLabel, formatPerf(summary.YTD))
+	fmt.Printf("  %-11s %10s\n", "Inception:", formatPerf(summary.Inception))
 
 	return subcommands.ExitSuccess
 }

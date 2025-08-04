@@ -3,7 +3,6 @@ package portfolio
 import (
 	"fmt"
 
-	"time"
 	"github.com/etnz/portfolio/date"
 )
 
@@ -62,22 +61,22 @@ func (as *AccountingSystem) Validate(tx Transaction) (Transaction, error) {
 	var err error
 	switch v := tx.(type) {
 	case Buy:
-		err =v.Validate(as)
+		err = v.Validate(as)
 		return v, err
 	case Sell:
-		err =v.Validate(as)
+		err = v.Validate(as)
 		return v, err
 	case Dividend:
-		err =v.Validate(as)
+		err = v.Validate(as)
 		return v, err
 	case Deposit:
-		err =v.Validate(as)
+		err = v.Validate(as)
 		return v, err
 	case Withdraw:
-		err =v.Validate(as)
+		err = v.Validate(as)
 		return v, err
 	case Convert:
-		err =v.Validate(as)
+		err = v.Validate(as)
 		return v, err
 	default:
 		return tx, fmt.Errorf("unsupported transaction type for validation: %T", tx)
@@ -206,7 +205,6 @@ func (as *AccountingSystem) NewSummary(on date.Date) (*Summary, error) {
 	}
 
 	return summary, nil
-}
 }
 
 // convertCurrency converts an amount from a source currency to a target currency as of a given date.
