@@ -21,6 +21,13 @@ type Date struct { // Date represents a date with day-level granularity.
 	d int
 }
 
+// Month returns the month of the date.
+func (d Date) Month() time.Month { return d.time().Month() }
+
+// Weekday returns the day of the week for the date.
+func (d Date) Weekday() time.Weekday { return d.time().Weekday() }
+
+
 // time returns a time.Time that is a canonical representation of that day (at midnight UTC).
 func (d Date) time() time.Time { return time.Date(d.y, d.m, d.d, 0, 0, 0, 0, time.UTC) }
 
