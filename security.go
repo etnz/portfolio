@@ -295,16 +295,20 @@ func NewSecurity(id ID, ticker, currency string) *Security {
 }
 
 // ID returns the unique, standardized identifier of the security.
-func (s *Security) ID() ID {
+func (s Security) ID() ID {
 	return s.id
 }
 
 // Ticker returns the human-friendly ticker symbol of the security.
-func (s *Security) Ticker() string {
+func (s Security) Ticker() string {
 	return s.ticker
 }
 
 // Prices returns a pointer to the security's price history.
-func (s *Security) Prices() *date.History[float64] {
+func (s Security) Prices() *date.History[float64] {
 	return &s.prices
+}
+
+func (s Security) Currency() string {
+	return s.currency
 }

@@ -30,6 +30,7 @@ func Register(c *subcommands.Commander) {
 	c.Register(&convertCmd{}, "transactions")
 
 	c.Register(&summaryCmd{}, "analysis")
+	c.Register(&holdingCmd{}, "analysis")
 
 }
 

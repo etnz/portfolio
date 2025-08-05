@@ -24,6 +24,7 @@ type AmundiTransactionFile struct {
 // AmundiOperation represents a single high-level operation, which can contain multiple instructions.
 type AmundiOperation struct {
 	Memo         string              `json:"libelleCommunication"`
+	Id           string              `json:"idOpeInd"`
 	Type         string              `json:"type"`
 	DateDemand   date.Date           `json:"dateDeLaDemande"`
 	DateCompta   date.Date           `json:"dateComptabilisation"`
@@ -90,7 +91,15 @@ func (c *importAmundiCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...inter
 
 	ledger := portfolio.NewLedger()
 
+	// there might be repetitions in the operations (due to paging in API)
+	operationsDone := make(map[string]struct{})
+
 	for _, op := range amundiFile.Operations {
+		if _, done := operationsDone[op.Id]; done {
+			// skip already processed operations
+			continue
+		}
+		operationsDone[op.Id] = struct{}{} // mark as treated
 		txs, err := parseAmundiOperation(op)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: skipping operation (memo: %q): %v\n", op.Memo, err)
@@ -141,15 +150,18 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 				instructionIds[inst.Id] = struct{}{}
 				memo := strings.Join([]string{inst.Id, inst.Dispositif, memo, inst.FundName}, ": ")
 				sellTx := portfolio.NewSell(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price, currency)
-				transactions = append(transactions, sellTx)
+				// record the associated withdrawal
+				withdrawTx := portfolio.NewWithdraw(inst.DateVL, memo, currency, inst.Amount)
+				transactions = append(transactions, sellTx, withdrawTx)
+
 			}
 		}
-		for _, reg := range op.Reglements {
-			if reg.Type == "VIROUT" {
-				withdrawTx := portfolio.NewWithdraw(op.DateCompta, memo, currency, reg.Amount)
-				transactions = append(transactions, withdrawTx)
-			}
-		}
+		// for _, reg := range op.Reglements {
+		// 	if reg.Type == "VIROUT" {
+		// 		withdrawTx := portfolio.NewWithdraw(op.DateCompta, memo, currency, reg.Amount)
+		// 		transactions = append(transactions, withdrawTx)
+		// 	}
+		// }
 
 	case "SOUS": // Versement, Participation, Intéressement
 		var totalAmount float64
