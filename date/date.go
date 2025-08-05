@@ -71,6 +71,10 @@ func Parse(str string) (Date, error) {
 	on, err := time.Parse(readDateFormat, str)
 	// We use a slightly more permisive format for read, to support 2025-7-1 instead of 2025-07-01
 	if err != nil {
+		// try the long format
+		on, err = time.Parse("2006-01-02T15:04:05.000-0700", str)
+	}
+	if err != nil {
 		return Date{}, fmt.Errorf("invalid date %q want format %q: %w", str, readDateFormat, err)
 	}
 	return Date(New(on.Date())), nil
