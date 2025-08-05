@@ -54,6 +54,10 @@ type AmundiReglement struct {
 }
 
 // --- import-amundi Command ---
+// this url to get some saving accounts (worker saving)
+// https://epargnant.amundi-ee.com/api/individu/operations?metier=ESR&flagFiltrageWebSalarie=true&flagInfoOC=Y&filtreStatutModeExclusion=false&flagRu=true&offset=0&limit=100
+// this one for the other type (assurance)
+// https://epargnant.amundi-ee.com/api/individu/operations?metier=ASSU&offset=0&flagFiltrageWebSalarie=true&flagInfoOC=Y&filtreStatutModeExclusion=false&flagRu=true&limit=100
 
 type importAmundiCmd struct{}
 
@@ -63,8 +67,10 @@ func (*importAmundiCmd) Synopsis() string {
 }
 func (*importAmundiCmd) Usage() string {
 	return `import-amundi <amundi_transactions.json>:
-  Reads a complex Amundi JSON file and outputs transactions in the standard JSONL format to stdout.
+  Reads Amundi;s JSON file for transactions and outputs transactions in the standard JSONL format to stdout.
   Example: portfolio import-amundi /path/to/amundi_transactions.json > transactions.jsonl
+
+  Translation cannot be perfect, use with care and review the output.
 `
 }
 
@@ -156,12 +162,6 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 
 			}
 		}
-		// for _, reg := range op.Reglements {
-		// 	if reg.Type == "VIROUT" {
-		// 		withdrawTx := portfolio.NewWithdraw(op.DateCompta, memo, currency, reg.Amount)
-		// 		transactions = append(transactions, withdrawTx)
-		// 	}
-		// }
 
 	case "SOUS": // Versement, Participation, Intéressement
 		var totalAmount float64
