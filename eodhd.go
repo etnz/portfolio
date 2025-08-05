@@ -309,7 +309,7 @@ func eodhdDaily(apiKey, ticker string, from, to date.Date) (open, close date.His
 	addr := fmt.Sprintf("https://eodhd.com/api/eod/%s?fmt=json&api_token=%s&from=%s&to=%s", ticker, apiKey, from, to)
 	type Info struct {
 		Date  date.Date `json:"date"`
-		Close float64   `json:"adjusted_close"`
+		Close float64   `json:"close"`
 		Open  float64   `json:"open"`
 	}
 

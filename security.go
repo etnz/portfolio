@@ -23,7 +23,7 @@ var currencyCodeRegex = regexp.MustCompile(`^[A-Z]{3}$`)
 var currencyPairRegex = regexp.MustCompile(`^[A-Z]{6}$`)
 
 // idCharRegex checks for alphanumeric characters and space, used in Private IDs.
-var idCharRegex = regexp.MustCompile(`^[a-zA-Z0-9 ]+$`)
+var idCharRegex = regexp.MustCompile(`^[a-zA-Z0-9 -]+$`)
 
 // ID represents the unique identifier of a security. It must follow a specific format.
 //
@@ -286,17 +286,29 @@ type Security struct {
 	prices   date.History[float64] // The historical prices of the security.
 }
 
+func NewSecurity(id ID, ticker, currency string) *Security {
+	return &Security{
+		id:       id,
+		ticker:   ticker,
+		currency: currency,
+	}
+}
+
 // ID returns the unique, standardized identifier of the security.
-func (s *Security) ID() ID {
+func (s Security) ID() ID {
 	return s.id
 }
 
 // Ticker returns the human-friendly ticker symbol of the security.
-func (s *Security) Ticker() string {
+func (s Security) Ticker() string {
 	return s.ticker
 }
 
 // Prices returns a pointer to the security's price history.
-func (s *Security) Prices() *date.History[float64] {
+func (s Security) Prices() *date.History[float64] {
 	return &s.prices
+}
+
+func (s Security) Currency() string {
+	return s.currency
 }

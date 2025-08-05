@@ -10,6 +10,11 @@ type MarketData struct {
 	index      map[string]*Security
 }
 
+func (m *MarketData) Add(sec *Security) {
+	m.securities = append(m.securities, sec)
+	m.index[sec.ticker] = sec
+}
+
 // NewMarketData returns a new empty market data.
 func NewMarketData() *MarketData {
 	return &MarketData{

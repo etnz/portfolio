@@ -12,6 +12,15 @@
             "program": "pcs/main.go",
             "args": ["-securities-path=/tmp/me", "import-investing", "-i", "nvda.csv", "NVD"],
             "cwd": "${workspaceFolder}",
+        },
+        {
+            "name": "amundi",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "pcs/main.go",
+            "args": ["-ledger-file=~/amundi/ledger.jsonl", "-securities-path=~/amundi/.security/", "import-amundi", "/home/codespace/amundi/amundi_transactions.json"],
+            "cwd": "${workspaceFolder}",
         }
     ]
 }

@@ -22,6 +22,12 @@ func NewLedger() *Ledger {
 	}
 }
 
+// Append appends transactions to this ledger.
+func (l *Ledger) Append(txs ...Transaction) {
+	l.transactions = append(l.transactions, txs...)
+	l.stableSort() // Ensure the ledger remains sorted after appending
+}
+
 // Transactions returns an iterator that yields each transaction in its original order.
 func (l Ledger) Transactions() iter.Seq2[int, Transaction] {
 	// The returned iterator preserves the original order of transactions in the ledger.

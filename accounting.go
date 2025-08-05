@@ -114,7 +114,7 @@ func (as *AccountingSystem) TotalMarketValue(on date.Date) (float64, error) {
 		positionValue := position * price
 
 		// Convert to reporting currency if necessary
-		convertedValue, err := as.convertCurrency(positionValue, sec.currency, as.ReportingCurrency, on)
+		convertedValue, err := as.ConvertCurrency(positionValue, sec.currency, as.ReportingCurrency, on)
 		if err != nil {
 			return 0, err
 		}
@@ -128,7 +128,7 @@ func (as *AccountingSystem) TotalMarketValue(on date.Date) (float64, error) {
 			continue
 		}
 
-		convertedBalance, err := as.convertCurrency(balance, currency, as.ReportingCurrency, on)
+		convertedBalance, err := as.ConvertCurrency(balance, currency, as.ReportingCurrency, on)
 		if err != nil {
 			return 0, err
 		}
@@ -172,7 +172,7 @@ func (as *AccountingSystem) getCashFlows(start, end date.Date) (date.History[flo
 			continue
 		}
 
-		convertedAmount, err := as.convertCurrency(amount, currency, as.ReportingCurrency, txDate)
+		convertedAmount, err := as.ConvertCurrency(amount, currency, as.ReportingCurrency, txDate)
 		if err != nil {
 			return date.History[float64]{}, fmt.Errorf("could not convert cash flow on %s: %w", txDate, err)
 		}
@@ -276,8 +276,8 @@ func (as *AccountingSystem) NewSummary(on date.Date) (*Summary, error) {
 	return summary, nil
 }
 
-// convertCurrency converts an amount from a source currency to a target currency as of a given date.
-func (as *AccountingSystem) convertCurrency(amount float64, fromCurrency, toCurrency string, on date.Date) (float64, error) {
+// ConvertCurrency converts an amount from a source currency to a target currency as of a given date.
+func (as *AccountingSystem) ConvertCurrency(amount float64, fromCurrency, toCurrency string, on date.Date) (float64, error) {
 	if fromCurrency == toCurrency {
 		return amount, nil
 	}
@@ -334,7 +334,7 @@ func (as *AccountingSystem) CostBasis(on date.Date) (float64, error) {
 			currency = v.Currency
 		}
 
-		convertedAmount, err := as.convertCurrency(amount, currency, as.ReportingCurrency, tx.When())
+		convertedAmount, err := as.ConvertCurrency(amount, currency, as.ReportingCurrency, tx.When())
 		if err != nil {
 			return 0, fmt.Errorf("could not convert cost basis for transaction on %s: %w", tx.When(), err)
 		}

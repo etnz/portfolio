@@ -19,6 +19,9 @@ func Register(c *subcommands.Commander) {
 	c.Register(&importInvestingCmd{}, "securities")
 	c.Register(&updateCmd{}, "securities")
 
+	c.Register(&updateAmundiCmd{}, "amundi")
+	c.Register(&importAmundiCmd{}, "amundi")
+
 	c.Register(&buyCmd{}, "transactions")
 	c.Register(&sellCmd{}, "transactions")
 	c.Register(&dividendCmd{}, "transactions")
@@ -27,6 +30,7 @@ func Register(c *subcommands.Commander) {
 	c.Register(&convertCmd{}, "transactions")
 
 	c.Register(&summaryCmd{}, "analysis")
+	c.Register(&holdingCmd{}, "analysis")
 
 }
 
