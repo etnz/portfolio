@@ -270,3 +270,18 @@ func TestParseID(t *testing.T) {
 		})
 	}
 }
+
+func TestMarketData_Prices_NonExistentID(t *testing.T) {
+	m := NewMarketData()
+	id := ID("NONEXISTENT")
+
+	// Verify that the Prices() iterator does not panic on missing security.
+	c := 0
+	for range m.Prices(id) {
+		c++
+	}
+
+	if c != 0 {
+		t.Errorf("Prices() for a non-existent ID should return a nil iterator, but it did not")
+	}
+}
