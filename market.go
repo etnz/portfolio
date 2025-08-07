@@ -55,10 +55,9 @@ func (m *MarketData) Append(id ID, day date.Date, price float64) bool {
 
 // Values return a iterator on date and prices for the given ID (or nil)
 func (m *MarketData) Prices(id ID) iter.Seq2[date.Date, float64] {
-	// TODO(AI): add unit test for the case id does not exists.
 	prices, ok := m.prices[id]
 	if !ok {
-		return nil
+		return func(yield func(date.Date, float64) bool) {}
 	}
 	return prices.Values()
 
