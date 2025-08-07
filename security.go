@@ -6,8 +6,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/etnz/portfolio/date"
 )
 
 // isinRegex checks for the basic structure: 2 letters, 9 alphanumeric, 1 digit.
@@ -308,17 +306,16 @@ func (id ID) String() string {
 
 // Security represents a publicly or privately tradeable asset, such as a stock, ETF, or currency pair.
 type Security struct {
-	id       ID                    // The unique, standardized identifier (e.g., MSSI, CurrencyPair).
-	ticker   string                // The human-friendly ticker used in the portfolio.
-	currency string                // The currency in which the security is traded.
-	prices   date.History[float64] // The historical prices of the security.
+	id       ID     // The unique, standardized identifier (e.g., MSSI, CurrencyPair).
+	ticker   string // The human-friendly ticker used in the portfolio.
+	currency string // The currency in which the security is traded.
 }
 
 func NewSecurity(id ID, ticker, currency string) *Security {
 	return &Security{
 		id:       id,
 		ticker:   ticker,
-		currency: currency,
+		currency: currency, // prices are initialized in MarketData
 	}
 }
 
@@ -330,11 +327,6 @@ func (s Security) ID() ID {
 // Ticker returns the human-friendly ticker symbol of the security.
 func (s Security) Ticker() string {
 	return s.ticker
-}
-
-// Prices returns a pointer to the security's price history.
-func (s Security) Prices() *date.History[float64] {
-	return &s.prices
 }
 
 func (s Security) Currency() string {

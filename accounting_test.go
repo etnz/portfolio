@@ -32,14 +32,14 @@ func setupCostBasisTest(t *testing.T) (*Ledger, *MarketData, *AccountingSystem) 
 	marketData := NewMarketData()
 	// USDEUR security for exchange rates
 	usdeur := &Security{ticker: "USDEUR", id: "USDEUR", currency: "EUR"}
-	usdeur.prices.Append(date.New(2025, time.January, 10), 0.90) // Rate on day of first USD deposit
-	usdeur.prices.Append(date.New(2025, time.March, 20), 0.92)   // Rate on day of USD withdrawal
 	marketData.Add(usdeur)
+	marketData.Append("USDEUR", date.New(2025, time.January, 10), 0.90) // Rate on day of first USD deposit
+	marketData.Append("USDEUR", date.New(2025, time.March, 20), 0.92)   // Rate on day of USD withdrawal
 
 	// GBPEUR security for exchange rates
 	gbpeur := &Security{ticker: "GBPEUR", id: "GBPEUR", currency: "EUR"}
-	gbpeur.prices.Append(date.New(2025, time.February, 15), 1.15) // Rate on day of GBP deposit
 	marketData.Add(gbpeur)
+	marketData.Append("GBPEUR", date.New(2025, time.February, 15), 1.15) // Rate on day of GBP deposit
 
 	// Create the accounting system with EUR as the reporting currency.
 	as, err := NewAccountingSystem(ledger, marketData, "EUR")
@@ -119,10 +119,10 @@ func setupPerformanceTest(t *testing.T) (*Ledger, *MarketData, *AccountingSystem
 	marketData := NewMarketData()
 
 	tick := &Security{ticker: "TICK", id: id, currency: "USD"}
-	tick.prices.Append(date.New(2025, time.January, 1), 100.0)
-	tick.prices.Append(date.New(2025, time.January, 15), 110.0)
-	tick.prices.Append(date.New(2025, time.January, 31), 120.0)
 	marketData.Add(tick)
+	marketData.Append(id, date.New(2025, time.January, 1), 100.0)
+	marketData.Append(id, date.New(2025, time.January, 15), 110.0)
+	marketData.Append(id, date.New(2025, time.January, 31), 120.0)
 
 	as, err := NewAccountingSystem(ledger, marketData, "USD")
 	if err != nil {

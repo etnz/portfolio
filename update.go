@@ -9,37 +9,30 @@ import (
 )
 
 // This file contains functions to update the database with latest prices.
-// updatable are:
-// - security available at EODHD. If the security has currently no data, a default starting date is used.
-// - forex pairs.
-//
-// In order to figure that out, the security.ID is used to identify the security ISIN and MIC where applicable,
-// or the forex pair.
-// there might be other thypes of securities, but they are not supported by update, yet (like privately traded assets)
 
 // defaultPriceHistoryStartDate is the date from which to start fetching price history if a security has no prices yet.
 var defaultPriceHistoryStartDate = date.New(2020, 01, 01)
 
 // updateSecurityPrices attempts to fetch and update prices for a single security.
-func updateSecurityPrices(sec *Security, from, to date.Date) error {
+func updateSecurityPrices(sec *Security, prices *date.History[float64], from, to date.Date) error {
 	apiKey := eodhdApiKey()
 	if apiKey == "" {
 		return errors.New("EODHD API key is not set. Use -eodhd-api-key flag or EODHD_API_KEY environment variable")
 	}
 
-	var prices date.History[float64]
+	var newPrices date.History[float64]
 	var err error
 
 	// Determine security type and fetch prices accordingly.
 	if isin, mic, mssiErr := sec.ID().MSSI(); mssiErr == nil {
 		// This is an MSSI security.
-		prices, err = eodhdDailyISIN(apiKey, isin, mic, from, to)
+		newPrices, err = eodhdDailyISIN(apiKey, isin, mic, from, to)
 		if err != nil {
 			return fmt.Errorf("failed to get prices for MSSI %s (%s): %w", sec.Ticker(), sec.ID(), err)
 		}
 	} else if base, quote, cpErr := sec.ID().CurrencyPair(); cpErr == nil {
 		// This is a CurrencyPair.
-		prices, err = eodhdDailyFrom(apiKey, base, quote, from, to)
+		newPrices, err = eodhdDailyFrom(apiKey, base, quote, from, to)
 		if err != nil {
 			return fmt.Errorf("failed to get prices for CurrencyPair %s (%s): %w", sec.Ticker(), sec.ID(), err)
 		}
@@ -48,14 +41,14 @@ func updateSecurityPrices(sec *Security, from, to date.Date) error {
 		return nil // Not an error, just nothing to do.
 	}
 
-	if prices.Len() == 0 {
+	if newPrices.Len() == 0 {
 		log.Printf("no new prices found for security %q (%v) between %s and %s", sec.Ticker(), sec.ID(), from, to)
 		return nil
 	}
 
 	// Append all new prices to the security.
-	for day, price := range prices.Values() {
-		sec.Prices().Append(day, price)
+	for day, price := range newPrices.Values() {
+		prices.Append(day, price)
 	}
 	return nil
 }
@@ -71,8 +64,9 @@ func (m *MarketData) Update() error {
 
 	var errs error
 
-	for _, sec := range m.securities {
-		latest, _ := sec.Prices().Latest()
+	for id, prices := range m.prices {
+		latest, _ := prices.Latest()
+		sec := m.Get(id)
 
 		// If we already have yesterday's price, we are up-to-date.
 		if !latest.Before(yesterday) {
@@ -91,7 +85,7 @@ func (m *MarketData) Update() error {
 			continue
 		}
 
-		if err := updateSecurityPrices(sec, fetchFrom, yesterday); err != nil {
+		if err := updateSecurityPrices(sec, prices, fetchFrom, yesterday); err != nil {
 			errs = errors.Join(errs, err)
 			continue
 		}
