@@ -164,42 +164,6 @@ func eodhdMicToExchangeCode(apiKey string) (map[string]string, error) {
 	return result, nil
 }
 
-// type SearchResult struct {
-// 	Code              string
-// 	MIC               []string
-// 	Exchange          string
-// 	Name              string
-// 	Currency          string
-// 	Type              string
-// 	Country           string
-// 	ISIN              string
-// 	PreviousClose     float64 `json:"previousClose"`
-// 	PreviousCloseDate string  `json:"previousCloseDate"`
-// }
-
-// func (pf *Portfolio) Search(query string) (results []SearchResult, err error) {
-// 	addr := fmt.Sprintf("https://eodhd.com/api/search/%s?fmt=json&api_token=%s", url.PathEscape(query), pf.eodhdAPIKey)
-
-// 	// that's the payload
-// 	content := make([]SearchResult, 0)
-// 	if err := jwget(new(http.Client), addr, &content); err != nil {
-// 		return nil, err
-// 	}
-
-// 	mic2exchange, err := eodhdMicToCode(pf.eodhdAPIKey)
-// 	if err != nil {
-// 		return content, err
-// 	}
-// 	exchange2mic := make(map[string][]string)
-// 	for k, v := range mic2exchange {
-// 		exchange2mic[v] = append(exchange2mic[v], k)
-// 	}
-// 	for i := range content {
-// 		content[i].MIC = exchange2mic[content[i].Exchange]
-// 	}
-// 	return content, nil
-// }
-
 // eodhdSearchByISIN searches by ISIN and MIC to get the internal EODHD ticker (e.g., "AAPL.US").
 func eodhdSearchByISIN(apiKey string, isin, mic string) (ticker string, err error) {
 	// https://eodhd.com/api/search/US67066G1040?api_token=67adc13417e148.00145034&fmt=json
@@ -324,4 +288,50 @@ func eodhdDaily(apiKey, ticker string, from, to date.Date) (open, close date.His
 		open.Append(info.Date, info.Open)
 	}
 	return
+}
+
+// SearchResult matches the structure of a single item in the EODHD search API response.
+type SearchResult struct {
+	Code              string    `json:"Code"`
+	Exchange          string    `json:"Exchange"`
+	Name              string    `json:"Name"`
+	Type              string    `json:"Type"`
+	Country           string    `json:"Country"`
+	Currency          string    `json:"Currency"`
+	ISIN              string    `json:"ISIN"`
+	PreviousClose     float64   `json:"previousClose"`
+	PreviousCloseDate date.Date `json:"previousCloseDate"`
+	MIC               string    `json:"-"` // Populated by Search, not from API directly.
+}
+
+// Search searches for securities via EOD Historical Data API.
+func Search(searchTerm string) ([]SearchResult, error) {
+	apiKey := eodhdApiKey()
+	apiURL := fmt.Sprintf("https://eodhistoricaldata.com/api/search/%s?api_token=%s&fmt=json", url.PathEscape(searchTerm), url.QueryEscape(apiKey))
+
+	var results []SearchResult
+	if err := jwget(newDailyCachingClient(), apiURL, &results); err != nil {
+		return nil, err
+	}
+	// Search results reference an exchange code that could match multiple MIC (only for the US apparently).
+	mic2Exchange, err := eodhdMicToExchangeCode(apiKey)
+	if err != nil {
+		return nil, err
+	}
+	// Reverse the map.
+	exchange2mic := make(map[string][]string)
+	for k, v := range mic2Exchange {
+		exchange2mic[v] = append(exchange2mic[v], k)
+	}
+
+	// Now we fully rebuild the search result list with potentially different MIC
+	newResults := make([]SearchResult, 0, len(results))
+	for _, result := range results {
+		for _, mic := range exchange2mic[result.Exchange] {
+			r := result
+			r.MIC = mic
+			newResults = append(newResults, r)
+		}
+	}
+	return newResults, nil
 }

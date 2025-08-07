@@ -124,6 +124,34 @@ func NewPrivate(s string) (ID, error) {
 	return ID(s), nil
 }
 
+// ParseID attempts to parse a string into a valid ID by trying MSSI,
+// CurrencyPair, and Private formats in order. If all parsing attempts fail,
+// it returns a compound error detailing the reasons for each failure.
+func ParseID(s string) (ID, error) {
+	id := ID(s)
+
+	// Try parsing as MSSI
+	_, _, errMSSI := id.MSSI()
+	if errMSSI == nil {
+		return id, nil
+	}
+
+	// Try parsing as CurrencyPair
+	_, _, errCP := id.CurrencyPair()
+	if errCP == nil {
+		return id, nil
+	}
+
+	// Try parsing as Private
+	_, errPrivate := NewPrivate(s)
+	if errPrivate == nil {
+		return id, nil
+	}
+
+	// If all fail, return a compound error.
+	return "", errors.Join(errMSSI, errCP, errPrivate)
+}
+
 // ValidateISIN checks if a string is a validly formatted ISIN.
 // It returns nil if valid, or a descriptive error if invalid.
 func ValidateISIN(isin string) error {
