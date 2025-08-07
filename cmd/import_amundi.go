@@ -141,11 +141,11 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 			}
 			if inst.Indicator == "Source" {
 				instructionIds[inst.Id] = struct{}{}
-				sellTx := portfolio.NewSell(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price, currency)
+				sellTx := portfolio.NewSell(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price)
 				transactions = append(transactions, sellTx)
 			} else if inst.Indicator == "Cible" {
 				instructionIds[inst.Id] = struct{}{}
-				buyTx := portfolio.NewBuy(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price, currency)
+				buyTx := portfolio.NewBuy(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price)
 				transactions = append(transactions, buyTx)
 			}
 		}
@@ -155,7 +155,7 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 			if inst.Type == "RACH_TIT" {
 				instructionIds[inst.Id] = struct{}{}
 				memo := strings.Join([]string{inst.Id, inst.Dispositif, memo, inst.FundName}, ": ")
-				sellTx := portfolio.NewSell(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price, currency)
+				sellTx := portfolio.NewSell(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price)
 				// record the associated withdrawal
 				withdrawTx := portfolio.NewWithdraw(inst.DateVL, memo, currency, inst.Amount)
 				transactions = append(transactions, sellTx, withdrawTx)
@@ -178,7 +178,7 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 			if inst.Type == "SOUS_MTT" {
 				instructionIds[inst.Id] = struct{}{}
 				totalAmount += inst.Amount // accumulate buy amounts to create a global deposit after
-				buyTx := portfolio.NewBuy(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price, currency)
+				buyTx := portfolio.NewBuy(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price)
 				transactions = append(transactions, buyTx)
 			}
 		}
@@ -201,7 +201,7 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 				totalAmount += inst.Amount
 			} else if inst.Indicator == "Cible" {
 				instructionIds[inst.Id] = struct{}{}
-				buyTx := portfolio.NewBuy(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price, currency)
+				buyTx := portfolio.NewBuy(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price)
 				transactions = append(transactions, buyTx)
 			}
 		}

@@ -97,9 +97,9 @@ func TestDecodeLedger(t *testing.T) {
 func TestEncodeLedger(t *testing.T) {
 	// 1. Arrange: Create test data in a deliberately unsorted order.
 	// Note that tx2 and tx3 have the same date. Their relative order must be preserved.
-	tx1 := NewBuy(date.New(2025, time.August, 3), "", "AAPL", 0, 0, "USD")
+	tx1 := NewBuy(date.New(2025, time.August, 3), "", "AAPL", 0, 0)
 	tx2 := NewDeposit(date.New(2025, time.August, 1), "", "", 1000)
-	tx3 := NewSell(date.New(2025, time.August, 1), "", "GOOG", 0, 0, "EUR") // Same date as tx2
+	tx3 := NewSell(date.New(2025, time.August, 1), "", "GOOG", 0, 0) // Same date as tx2
 
 	ledger := &Ledger{
 		transactions: []Transaction{
