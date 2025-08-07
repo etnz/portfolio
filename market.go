@@ -1,66 +1,81 @@
 package portfolio
 
 import (
+	"iter"
+
 	"github.com/etnz/portfolio/date"
 )
 
-// MarketData holds market data for a set of securities.
+// MarketData holds all the market data, including security definitions and their price histories.
 type MarketData struct {
-	securities  []*Security
-	indexTicker map[string]*Security
-	indexID     map[ID]*Security
+	securities map[ID]*Security
+	tickers    map[string]ID
+	prices     map[ID]*date.History[float64]
 }
 
-// Resolve the market data ticker to its ID.
-//
-// If missing return the zero value.
-func (m *MarketData) Resolve(ticker string) ID {
-	sec, ok := m.indexTicker[ticker]
-	if !ok || sec == nil {
-		return ""
-	}
-	return sec.ID()
-}
-
-func (m *MarketData) Add(sec *Security) {
-	m.securities = append(m.securities, sec)
-	m.indexTicker[sec.ticker] = sec
-	m.indexID[sec.ID()] = sec
-}
-
-// NewMarketData returns a new empty market data.
+// NewMarketData creates an empty MarketData store.
 func NewMarketData() *MarketData {
 	return &MarketData{
-		securities:  make([]*Security, 0),
-		indexTicker: make(map[string]*Security),
-		indexID:     make(map[ID]*Security),
+		securities: make(map[ID]*Security),
+		tickers:    make(map[string]ID),
+		prices:     make(map[ID]*date.History[float64]),
 	}
+}
+
+// Add adds a security to the market data. It also initializes an empty price history for it.
+func (m *MarketData) Add(s *Security) {
+	m.securities[s.ID()] = s
+	m.tickers[s.Ticker()] = s.ID()
+	m.prices[s.ID()] = &date.History[float64]{}
+}
+
+// Get retrieves a security by its ID. It returns nil if the security is not found.
+func (m *MarketData) Get(id ID) *Security { return m.securities[id] }
+
+// Resolve converts a ticker to a security ID.
+func (m *MarketData) Resolve(ticker string) ID {
+	return m.tickers[ticker]
+}
+
+// PriceAsOf returns the price of a security on a given date.
+func (m *MarketData) PriceAsOf(id ID, on date.Date) (float64, bool) {
+	if prices, ok := m.prices[id]; ok {
+		return prices.ValueAsOf(on)
+	}
+	return 0, false
+}
+
+func (m *MarketData) Append(id ID, day date.Date, price float64) bool {
+	if prices, ok := m.prices[id]; ok {
+		prices.Append(day, price)
+		return true
+	}
+	return false
+}
+
+// Values return a iterator on date and prices for the given ID (or nil)
+func (m *MarketData) Prices(id ID) iter.Seq2[date.Date, float64] {
+	// TODO(AI): add unit test for the case id does not exists.
+	prices, ok := m.prices[id]
+	if !ok {
+		return nil
+	}
+	return prices.Values()
+
 }
 
 // Has checks if a security with the given ticker exists in the market data.
 func (m *MarketData) Has(ticker string) bool {
-	_, ok := m.indexTicker[ticker]
+	_, ok := m.tickers[ticker]
 	return ok
 }
 
-// Get retrieves a security by its ticker. It returns nil if the security is not found.
-func (m *MarketData) Get(id ID) *Security { return m.indexID[id] }
-
-// read retrieves the price for a given security ticker on a specific day.
+// read retrieves the price for a given security on a specific day.
 // It returns the price and true if found, otherwise it returns 0.0 and false.
-func (m *MarketData) read(ticker string, day date.Date) (float64, bool) {
-	sec, ok := m.indexTicker[ticker]
+func (m *MarketData) read(id ID, day date.Date) (float64, bool) {
+	prices, ok := m.prices[id]
 	if !ok {
 		return 0.0, false
 	}
-	return sec.prices.Get(day)
-}
-
-// PriceAsOf returns the price of a security on a given day, or the most recent price before it.
-func (m *MarketData) PriceAsOf(id ID, day date.Date) (float64, bool) {
-	sec, ok := m.indexID[id]
-	if !ok {
-		return 0.0, false
-	}
-	return sec.prices.ValueAsOf(day)
+	return prices.Get(day)
 }

@@ -9,7 +9,6 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/etnz/portfolio/date"
@@ -64,13 +63,9 @@ func (m *MarketData) decodeDefinition(filename string, r io.Reader) error {
 			ticker:   js.Ticker,
 			id:       ID(js.ID),
 			currency: js.Currency,
-			prices:   date.History[float64]{},
 		}
 		m.Add(sec)
 	}
-	slices.SortFunc(m.securities, func(a, b *Security) int {
-		return strings.Compare(a.ticker, b.ticker)
-	})
 	return nil
 }
 
@@ -136,16 +131,18 @@ func decodeLine(m *MarketData, l fileLine) error {
 			continue
 		}
 
-		if !m.Has(ticker) {
-			return fmt.Errorf("parse error %s:%v: property %q must be an existing ticker", l.filename, l.i, ticker)
-		}
-
 		p, ok := price.(float64)
 		if !ok {
 			return fmt.Errorf("parse error %s:%v: property %q must be of type 'number'", l.filename, l.i, ticker)
 		}
+
+		id, exists := m.tickers[ticker]
+		if !exists {
+			return fmt.Errorf("parse error %s:%v: property %q must be an existing ticker", l.filename, l.i, ticker)
+		}
+
 		// Entry is valid add it to the database.
-		m.indexTicker[ticker].prices.Append(on, p)
+		m.Append(id, on, p)
 	}
 	return nil
 }
@@ -267,7 +264,11 @@ func EncodeMarketData(folder string, m *MarketData) error {
 	// The m.securities slice is already sorted, so we can use it directly.
 	histories := make([]date.History[float64], 0, len(m.securities))
 	for _, sec := range m.securities {
-		histories = append(histories, sec.prices)
+		prices, exists := m.prices[sec.ID()]
+		if !exists {
+			return fmt.Errorf("invalid market data: security %q has no prices", sec.Ticker())
+		}
+		histories = append(histories, *prices)
 	}
 
 	// Persist the definition file.
@@ -297,7 +298,7 @@ func EncodeMarketData(folder string, m *MarketData) error {
 		}
 		// Append tickers that have values.
 		for _, sec := range m.securities {
-			if val, ok := m.read(sec.Ticker(), day); ok {
+			if val, ok := m.read(sec.ID(), day); ok {
 				l.tickers = append(l.tickers, sec.Ticker())
 				l.prices = append(l.prices, val)
 			}

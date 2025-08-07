@@ -61,16 +61,13 @@ func (c *importInvestingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...in
 	}
 
 	id := db.Resolve(ticker)
-
-	sec := db.Get(id)
-	if sec == nil {
-		fmt.Println("unknown ticker", ticker)
+	if id == "" {
+		fmt.Printf("unknown ticker %q\n", ticker)
 		return subcommands.ExitFailure
 	}
-	oldPrices := sec.Prices()
 
 	for on, price := range newPrices.Values() {
-		oldPrices.Append(on, price)
+		db.Append(id, on, price)
 	}
 
 	if err := EncodeMarketData(db); err != nil {

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"slices"
 	"strings"
 
 	"github.com/etnz/portfolio/date"
@@ -55,18 +54,15 @@ func ImportMarketData(r io.Reader) (*MarketData, error) {
 			id:       ID(js.ID),
 			currency: js.Currency,
 		}
+		m.Add(sec)
 
 		// fill the security from json
 		for day, value := range js.History {
 			// error has been checked before
 			d, _ := date.Parse(day)
-			sec.prices.Append(d, value)
+			m.Append(sec.ID(), d, value)
 		}
-		m.Add(sec)
 	}
-	slices.SortFunc(m.securities, func(a, b *Security) int {
-		return strings.Compare(a.ticker, b.ticker)
-	})
 	return m, nil
 }
 
@@ -86,16 +82,16 @@ func ExportMarketData(w io.Writer, m *MarketData) error {
 		History  map[string]float64 `json:"history"`
 	}
 
-	for _, sec := range m.securities {
+	for id, sec := range m.securities {
 		// Create the json object security.
 		js := jsecurity{
 			Ticker:   sec.Ticker(),
-			ID:       string(sec.id),
+			ID:       id.String(),
 			Currency: sec.currency,
 			History:  make(map[string]float64),
 		}
 
-		for day, value := range sec.prices.Values() {
+		for day, value := range m.Prices(id) {
 			js.History[day.String()] = value
 		}
 

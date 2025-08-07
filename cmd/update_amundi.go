@@ -305,14 +305,11 @@ func appendMarketPoint(market *portfolio.MarketData, fundName, ticker string, da
 
 	sec := market.Get(id)
 	if sec == nil {
-		id, err := portfolio.NewPrivate(fundName)
-		if err != nil {
-			return fmt.Errorf("cannot create ID from fund name: %w", err)
-		}
 		sec = portfolio.NewSecurity(id, ticker, "EUR")
 		market.Add(sec)
 	}
 	log.Println("appending market point", sec.Ticker(), day, price)
-	sec.Prices().Append(day, price)
+	market.Append(id, day, price)
 	return nil
+
 }
