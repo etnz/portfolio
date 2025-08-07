@@ -66,8 +66,7 @@ func (m *MarketData) decodeDefinition(filename string, r io.Reader) error {
 			currency: js.Currency,
 			prices:   date.History[float64]{},
 		}
-		m.securities = append(m.securities, sec)
-		m.index[js.Ticker] = sec
+		m.Add(sec)
 	}
 	slices.SortFunc(m.securities, func(a, b *Security) int {
 		return strings.Compare(a.ticker, b.ticker)
@@ -146,7 +145,7 @@ func decodeLine(m *MarketData, l fileLine) error {
 			return fmt.Errorf("parse error %s:%v: property %q must be of type 'number'", l.filename, l.i, ticker)
 		}
 		// Entry is valid add it to the database.
-		m.index[ticker].prices.Append(on, p)
+		m.indexTicker[ticker].prices.Append(on, p)
 	}
 	return nil
 }

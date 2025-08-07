@@ -2,6 +2,8 @@ package portfolio
 
 import (
 	"iter"
+	"maps"
+	"slices"
 
 	"sort"
 
@@ -13,18 +15,37 @@ import (
 // In a Ledger transactions are always in chronological order.
 type Ledger struct {
 	transactions []Transaction
+	securities   map[string]Security // index securities by ticker
 }
 
 // NewLedger creates an empty ledger.
 func NewLedger() *Ledger {
 	return &Ledger{
 		transactions: make([]Transaction, 0),
+		securities:   make(map[string]Security),
 	}
+}
+
+// Get return the security declared with this ticker, or nil if unknown.
+func (l *Ledger) Get(ticker string) *Security {
+	sec, ok := l.securities[ticker]
+	if !ok {
+		return nil
+	}
+	return &sec
 }
 
 // Append appends transactions to this ledger.
 func (l *Ledger) Append(txs ...Transaction) {
 	l.transactions = append(l.transactions, txs...)
+	// process security declarations
+	for _, tx := range txs {
+		if dec, ok := tx.(Declare); ok {
+			sec := NewSecurity(dec.ID, dec.Ticker, dec.Currency)
+			l.securities[sec.Ticker()] = *sec
+		}
+	}
+
 	l.stableSort() // Ensure the ledger remains sorted after appending
 }
 
@@ -142,26 +163,14 @@ func (l Ledger) SecurityTransactions(ticker string, max date.Date) iter.Seq2[int
 	}
 }
 
-// AllSecurities iterates over security tickers that appear
-// in the ledger's transactions (Buy, Sell, or Dividend) without repetition.
-func (l *Ledger) AllSecurities() iter.Seq[string] {
-	return func(yield func(string) bool) {
-		visitedTickers := make(map[string]struct{})
-		for _, tx := range l.transactions {
-			var security string
-			switch v := tx.(type) {
-			case Buy:
-				security = v.Security
-			case Sell:
-				security = v.Security
-			case Dividend:
-				security = v.Security
-			}
-			if _, visited := visitedTickers[security]; !visited {
-				visitedTickers[security] = struct{}{}
-				if !yield(security) {
-					return
-				}
+// AllSecurities iterates over securities declared in this ledger.
+func (l *Ledger) AllSecurities() iter.Seq[Security] {
+	return func(yield func(Security) bool) {
+		tickers := slices.Collect(maps.Keys(l.securities))
+		slices.Sort(tickers)
+		for _, ticker := range tickers {
+			if !yield(l.securities[ticker]) {
+				return
 			}
 		}
 	}

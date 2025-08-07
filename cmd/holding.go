@@ -63,19 +63,21 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	fmt.Printf("%-10s %15s %15s %15s\n", "Ticker", "Quantity", "Price", "Market Value")
 	fmt.Println("-----------------------------------------------------------------")
 
-	for ticker := range ledger.AllSecurities() {
+	for sec := range ledger.AllSecurities() {
+		ticker := sec.Ticker()
+		id := sec.ID()
+		currency := sec.Currency()
 		position := ledger.Position(ticker, on)
 		if position <= 1e-9 {
 			continue
 		}
-		sec := market.Get(ticker)
-		price, ok := market.PriceAsOf(ticker, on)
+		price, ok := market.PriceAsOf(id, on)
 		if !ok {
-			fmt.Fprintf(os.Stderr, "Warning: could not find price for %s on %s\n", ticker, on)
+			fmt.Fprintf(os.Stderr, "Warning: could not find price for %s (%s) on %s\n", ticker, id, on)
 			continue
 		}
 		value := position * price
-		convertedValue, err := as.ConvertCurrency(value, sec.Currency(), c.currency, on)
+		convertedValue, err := as.ConvertCurrency(value, currency, c.currency, on)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: could not convert currency for %s: %v\n", ticker, err)
 			continue

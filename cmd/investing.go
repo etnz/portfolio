@@ -60,7 +60,9 @@ func (c *importInvestingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...in
 		return subcommands.ExitFailure
 	}
 
-	sec := db.Get(ticker)
+	id := db.Resolve(ticker)
+
+	sec := db.Get(id)
 	if sec == nil {
 		fmt.Println("unknown ticker", ticker)
 		return subcommands.ExitFailure

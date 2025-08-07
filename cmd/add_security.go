@@ -50,7 +50,7 @@ func (c *addSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interf
 		return subcommands.ExitFailure
 	}
 
-	if market.Get(c.ticker) != nil {
+	if market.Resolve(c.ticker) != "" {
 		fmt.Fprintf(os.Stderr, "Error: Ticker '%s' already exists in the market data.\n", c.ticker)
 		return subcommands.ExitFailure
 	}

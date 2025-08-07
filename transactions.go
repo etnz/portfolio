@@ -20,6 +20,7 @@ const (
 	CmdDeposit  CommandType = "deposit"
 	CmdWithdraw CommandType = "withdraw"
 	CmdConvert  CommandType = "convert"
+	CmdDeclare  CommandType = "declare"
 )
 
 type Transaction interface {
@@ -78,10 +79,19 @@ func (t *secCmd) Validate(as *AccountingSystem) error {
 		return errors.New("security ticker is missing")
 	}
 
+	// use ticker to resolve the ledger security
+	ledgerSec := as.Ledger.Get(t.Security)
+	if ledgerSec == nil {
+		return fmt.Errorf("security %s not found in ledger", t.Security)
+	}
+
 	// Quickfix to copy security currency
-	sec := as.MarketData.Get(t.Security)
-	if t.Currency == "" && sec != nil {
-		t.Currency = sec.currency
+	if t.Currency == "" {
+		t.Currency = ledgerSec.currency
+	}
+
+	if t.Currency != ledgerSec.currency {
+		return fmt.Errorf("invalid currency %s should %s as declared in the ledger", t.Currency, ledgerSec.currency)
 	}
 
 	if err := ValidateCurrency(t.Currency); err != nil {
@@ -170,6 +180,49 @@ func (t *Sell) Validate(as *AccountingSystem) error {
 
 	if as.Ledger.Position(t.Security, t.Date) < t.Quantity {
 		return fmt.Errorf("cannot sell %f of %s, position is only %f", t.Quantity, t.Security, as.Ledger.Position(t.Security, t.Date))
+	}
+
+	return nil
+}
+
+// --- Declare Command ---
+
+// Declare represents a transaction to declare a security for use in the ledger.
+// This maps a ledger-internal ticker to a globally unique security ID and its currency.
+type Declare struct {
+	baseCmd
+	Ticker   string `json:"ticker"`
+	ID       ID     `json:"id"`
+	Currency string `json:"currency"`
+}
+
+// NewDeclaration creates a new Declare transaction.
+func NewDeclaration(day date.Date, memo, ticker, id, currency string) Declare {
+	return Declare{
+		baseCmd:  baseCmd{Command: CmdDeclare, Date: day, Memo: memo},
+		Ticker:   ticker,
+		ID:       ID(id),
+		Currency: currency,
+	}
+}
+
+// Validate checks the Declare transaction's fields.
+// It ensures the ticker is not already declared and that the ID and currency are valid.
+func (t *Declare) Validate(as *AccountingSystem) error {
+	if err := t.baseCmd.Validate(as); err != nil {
+		return err
+	}
+	if t.Ticker == "" {
+		return errors.New("declaration ticker is missing")
+	}
+	if t.ID == "" {
+		return errors.New("declaration security ID is missing")
+	}
+	if _, err := ParseID(t.ID.String()); err != nil {
+		return fmt.Errorf("invalid security ID '%s' for declaration: %w", t.ID, err)
+	}
+	if err := ValidateCurrency(t.Currency); err != nil {
+		return fmt.Errorf("invalid currency for declaration: %w", err)
 	}
 
 	return nil

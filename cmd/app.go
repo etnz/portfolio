@@ -28,6 +28,7 @@ func Register(c *subcommands.Commander) {
 	c.Register(&sellCmd{}, "transactions")
 	c.Register(&dividendCmd{}, "transactions")
 	c.Register(&depositCmd{}, "transactions")
+	c.Register(&declareCmd{}, "transactions")
 	c.Register(&withdrawCmd{}, "transactions")
 	c.Register(&convertCmd{}, "transactions")
 
