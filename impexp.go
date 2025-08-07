@@ -62,8 +62,7 @@ func ImportMarketData(r io.Reader) (*MarketData, error) {
 			d, _ := date.Parse(day)
 			sec.prices.Append(d, value)
 		}
-		m.securities = append(m.securities, sec)
-		m.index[sec.ticker] = sec
+		m.Add(sec)
 	}
 	slices.SortFunc(m.securities, func(a, b *Security) int {
 		return strings.Compare(a.ticker, b.ticker)

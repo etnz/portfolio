@@ -298,7 +298,12 @@ func parseAmundiSnapshot(market *portfolio.MarketData, data []byte) (err error) 
 
 // appendMarketPoint add the (ticker, day, price) found from amundi portal.
 func appendMarketPoint(market *portfolio.MarketData, fundName, ticker string, day date.Date, price float64) error {
-	sec := market.Get(ticker)
+	id, err := portfolio.NewPrivate(fundName)
+	if err != nil {
+		return fmt.Errorf("cannot create ID from fund name %q: %w", fundName, err)
+	}
+
+	sec := market.Get(id)
 	if sec == nil {
 		id, err := portfolio.NewPrivate(fundName)
 		if err != nil {
@@ -307,7 +312,7 @@ func appendMarketPoint(market *portfolio.MarketData, fundName, ticker string, da
 		sec = portfolio.NewSecurity(id, ticker, "EUR")
 		market.Add(sec)
 	}
-	log.Println("appending market point", ticker, day, price)
+	log.Println("appending market point", sec.Ticker(), day, price)
 	sec.Prices().Append(day, price)
 	return nil
 }

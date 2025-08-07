@@ -94,21 +94,15 @@ func (as *AccountingSystem) TotalMarketValue(on date.Date) (float64, error) {
 	var totalValue float64
 
 	// Calculate value of all security positions
-	for ticker := range as.Ledger.AllSecurities() {
-		position := as.Ledger.Position(ticker, on)
+	for sec := range as.Ledger.AllSecurities() {
+		position := as.Ledger.Position(sec.Ticker(), on)
 		if position <= 0 {
 			continue
 		}
 
-		sec := as.MarketData.Get(ticker)
-		if sec == nil {
-			// This should not happen if validation is correct
-			return 0, fmt.Errorf("security %q found in ledger but not in market data", ticker)
-		}
-
-		price, ok := as.MarketData.PriceAsOf(ticker, on)
+		price, ok := as.MarketData.PriceAsOf(sec.ID(), on)
 		if !ok {
-			return 0, fmt.Errorf("could not find price for security %q as of %s", ticker, on)
+			return 0, fmt.Errorf("could not find price for security %q as of %s", sec.Ticker(), on)
 		}
 
 		positionValue := position * price
@@ -283,11 +277,18 @@ func (as *AccountingSystem) ConvertCurrency(amount float64, fromCurrency, toCurr
 	}
 
 	// To convert from fromCurrency to toCurrency, we need the pair fromCurrency + toCurrency.
-	pairTicker := fromCurrency + toCurrency
+	pairTicker, err := NewCurrencyPair(fromCurrency, toCurrency)
+	if err != nil {
+		return 0, fmt.Errorf("could not create currency pair: %w", err)
+	}
+
 	rate, ok := as.MarketData.PriceAsOf(pairTicker, on)
 	if !ok {
 		// If the direct pair is not found, try the inverse pair.
-		inversePairTicker := toCurrency + fromCurrency
+		inversePairTicker, err := NewCurrencyPair(toCurrency, fromCurrency)
+		if err != nil {
+			return 0, fmt.Errorf("could not create currency pair: %w", err)
+		}
 		inverseRate, ok := as.MarketData.PriceAsOf(inversePairTicker, on)
 		if !ok {
 			return 0, fmt.Errorf("could not find exchange rate for %s to %s as of %s", fromCurrency, toCurrency, on)

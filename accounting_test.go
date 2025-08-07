@@ -14,17 +14,19 @@ func setupCostBasisTest(t *testing.T) (*Ledger, *MarketData, *AccountingSystem) 
 	t.Helper()
 
 	// Create a ledger with deposits and withdrawals in different currencies.
-	ledger := &Ledger{
-		transactions: []Transaction{
-			NewDeposit(date.New(2025, time.January, 10), "Initial USD", "USD", 1000),
-			NewDeposit(date.New(2025, time.February, 15), "Initial GBP", "GBP", 500),
-			NewWithdraw(date.New(2025, time.March, 20), "Partial USD", "USD", 200),
-			NewDeposit(date.New(2025, time.April, 1), "EUR Deposit", "EUR", 2000),
-			// Add a non-cash-flow transaction to ensure it's ignored
-			NewBuy(date.New(2025, time.April, 5), "", "AAPL", 10, 150, "USD"),
-		},
-	}
-	ledger.stableSort() // Ensure transactions are sorted by date
+	o := date.New(2025, time.January, 1)
+
+	ledger := NewLedger()
+	ledger.Append(
+		NewDeclaration(o, "", "USDEUR", "USDEUR", "EUR"),
+		NewDeclaration(o, "", "GBPEUR", "GBPEUR", "EUR"),
+		NewDeposit(date.New(2025, time.January, 10), "Initial USD", "USD", 1000),
+		NewDeposit(date.New(2025, time.February, 15), "Initial GBP", "GBP", 500),
+		NewWithdraw(date.New(2025, time.March, 20), "Partial USD", "USD", 200),
+		NewDeposit(date.New(2025, time.April, 1), "EUR Deposit", "EUR", 2000),
+		// Add a non-cash-flow transaction to ensure it's ignored
+		NewBuy(date.New(2025, time.April, 5), "", "AAPL", 10, 150, "USD"),
+	)
 
 	// Create market data with historical exchange rates to EUR.
 	marketData := NewMarketData()
@@ -32,14 +34,12 @@ func setupCostBasisTest(t *testing.T) (*Ledger, *MarketData, *AccountingSystem) 
 	usdeur := &Security{ticker: "USDEUR", id: "USDEUR", currency: "EUR"}
 	usdeur.prices.Append(date.New(2025, time.January, 10), 0.90) // Rate on day of first USD deposit
 	usdeur.prices.Append(date.New(2025, time.March, 20), 0.92)   // Rate on day of USD withdrawal
-	marketData.securities = append(marketData.securities, usdeur)
-	marketData.index["USDEUR"] = usdeur
+	marketData.Add(usdeur)
 
 	// GBPEUR security for exchange rates
 	gbpeur := &Security{ticker: "GBPEUR", id: "GBPEUR", currency: "EUR"}
 	gbpeur.prices.Append(date.New(2025, time.February, 15), 1.15) // Rate on day of GBP deposit
-	marketData.securities = append(marketData.securities, gbpeur)
-	marketData.index["GBPEUR"] = gbpeur
+	marketData.Add(gbpeur)
 
 	// Create the accounting system with EUR as the reporting currency.
 	as, err := NewAccountingSystem(ledger, marketData, "EUR")
@@ -101,26 +101,28 @@ func TestAccountingSystem_CostBasis(t *testing.T) {
 func setupPerformanceTest(t *testing.T) (*Ledger, *MarketData, *AccountingSystem) {
 	t.Helper()
 
-	ledger := &Ledger{
-		transactions: []Transaction{
-			NewDeposit(date.New(2025, time.January, 1), "", "USD", 10000),
-			NewBuy(date.New(2025, time.January, 1), "", "TICK", 100, 100, "USD"),
-			NewDeposit(date.New(2025, time.January, 15), "", "USD", 1100),
-		},
-	}
-	ledger.stableSort()
-
-	marketData := NewMarketData()
 	id, err := NewPrivate("TICK Private Equity")
 	if err != nil {
 		t.Fatalf("NewPrivate() failed: %v", err)
 	}
+
+	o := date.New(2025, time.January, 1)
+
+	ledger := NewLedger()
+	ledger.Append(
+		NewDeclaration(o, "", "TICK", id.String(), "USD"),
+		NewDeposit(date.New(2025, time.January, 1), "", "USD", 10000),
+		NewBuy(date.New(2025, time.January, 1), "", "TICK", 100, 100, "USD"),
+		NewDeposit(date.New(2025, time.January, 15), "", "USD", 1100),
+	)
+
+	marketData := NewMarketData()
+
 	tick := &Security{ticker: "TICK", id: id, currency: "USD"}
 	tick.prices.Append(date.New(2025, time.January, 1), 100.0)
 	tick.prices.Append(date.New(2025, time.January, 15), 110.0)
 	tick.prices.Append(date.New(2025, time.January, 31), 120.0)
-	marketData.securities = append(marketData.securities, tick)
-	marketData.index["TICK"] = tick
+	marketData.Add(tick)
 
 	as, err := NewAccountingSystem(ledger, marketData, "USD")
 	if err != nil {
@@ -187,21 +189,21 @@ func TestAccountingSystem_CostBasis_ErrorOnMissingRate(t *testing.T) {
 func setupValidationTest(t *testing.T) *AccountingSystem {
 	t.Helper()
 
-	ledger := &Ledger{
-		transactions: []Transaction{
-			NewDeposit(date.New(2025, time.January, 1), "", "USD", 20000),
-			NewDeposit(date.New(2025, time.January, 1), "", "EUR", 10000),
-			NewBuy(date.New(2025, time.January, 2), "", "AAPL", 100, 150.0, "USD"), // Cost: 15000 USD, remaining: 5000 USD
-		},
-	}
-	ledger.stableSort()
+	o := date.New(2020, time.January, 1)
+	ledger := NewLedger()
+	ledger.Append(
+		NewDeclaration(o, "", "AAPL", "US0378331005.XNAS", "USD"),
+		NewDeclaration(o, "", "GOOG", "US38259P5089.XNAS", "USD"),
+		NewDeposit(date.New(2025, time.January, 1), "", "USD", 20000),
+		NewDeposit(date.New(2025, time.January, 1), "", "EUR", 10000),
+		NewBuy(date.New(2025, time.January, 2), "", "AAPL", 100, 150.0, "USD"), // Cost: 15000 USD, remaining: 5000 USD
+	)
 
 	marketData := NewMarketData()
 	aapl := &Security{ticker: "AAPL", id: "US0378331005.XNAS", currency: "USD"}
 	goog := &Security{ticker: "GOOG", id: "US38259P5089.XNAS", currency: "USD"}
-	marketData.securities = append(marketData.securities, aapl, goog)
-	marketData.index["AAPL"] = aapl
-	marketData.index["GOOG"] = goog
+	marketData.Add(aapl)
+	marketData.Add(goog)
 
 	// Reporting currency doesn't matter much for validation, but we set it for completeness.
 	as, err := NewAccountingSystem(ledger, marketData, "EUR")
