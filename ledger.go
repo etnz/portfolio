@@ -97,15 +97,15 @@ func (l *Ledger) CashBalance(currency string, on date.Date) float64 {
 		}
 		switch v := tx.(type) {
 		case Buy:
-			if v.Currency == currency {
+			if sec, ok := l.securities[v.Security]; ok && sec.Currency() == currency {
 				balance -= v.Quantity * v.Price
 			}
 		case Sell:
-			if v.Currency == currency {
+			if sec, ok := l.securities[v.Security]; ok && sec.Currency() == currency {
 				balance += v.Quantity * v.Price
 			}
 		case Dividend:
-			if v.Currency == currency {
+			if sec, ok := l.securities[v.Security]; ok && sec.Currency() == currency {
 				balance += v.Amount
 			}
 		case Deposit:
@@ -180,43 +180,26 @@ func (l *Ledger) AllSecurities() iter.Seq[Security] {
 // in the ledger's transactions.
 func (l *Ledger) AllCurrencies() iter.Seq[string] {
 	return func(yield func(string) bool) {
+
 		visitedCurrencies := make(map[string]struct{})
-		visit := func(currency string) bool {
-			if _, visited := visitedCurrencies[currency]; !visited {
-				visitedCurrencies[currency] = struct{}{}
-				return yield(currency)
-			}
-			return false
-		}
+		// first visit all, then yeild
 		for _, tx := range l.transactions {
 			switch v := tx.(type) {
-			case Buy:
-				if !visit(v.Currency) {
-					return
-				}
-			case Sell:
-				if !visit(v.Currency) {
-					return
-				}
-			case Dividend:
-				if !visit(v.Currency) {
-					return
-				}
 			case Deposit:
-				if !visit(v.Currency) {
-					return
-				}
+				visitedCurrencies[v.Currency] = struct{}{}
 			case Withdraw:
-				if !visit(v.Currency) {
-					return
-				}
+				visitedCurrencies[v.Currency] = struct{}{}
 			case Convert:
-				if !visit(v.FromCurrency) {
-					return
-				}
-				if !visit(v.ToCurrency) {
-					return
-				}
+				visitedCurrencies[v.FromCurrency] = struct{}{}
+				visitedCurrencies[v.ToCurrency] = struct{}{}
+			case Declare:
+				visitedCurrencies[v.Currency] = struct{}{}
+			}
+		}
+		// Now yield the values
+		for currency := range visitedCurrencies {
+			if !yield(currency) {
+				return
 			}
 		}
 	}

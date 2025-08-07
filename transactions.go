@@ -64,7 +64,6 @@ func (t *baseCmd) Validate(as *AccountingSystem) error {
 type secCmd struct {
 	baseCmd
 	Security string `json:"security"`
-	Currency string `json:"currency,omitempty"`
 }
 
 // Validate checks the security command fields. It validates the base command,
@@ -82,21 +81,9 @@ func (t *secCmd) Validate(as *AccountingSystem) error {
 	// use ticker to resolve the ledger security
 	ledgerSec := as.Ledger.Get(t.Security)
 	if ledgerSec == nil {
-		return fmt.Errorf("security %s not found in ledger", t.Security)
+		return fmt.Errorf("security %q not declared in ledger", t.Security)
 	}
 
-	// Quickfix to copy security currency
-	if t.Currency == "" {
-		t.Currency = ledgerSec.currency
-	}
-
-	if t.Currency != ledgerSec.currency {
-		return fmt.Errorf("invalid currency %s should %s as declared in the ledger", t.Currency, ledgerSec.currency)
-	}
-
-	if err := ValidateCurrency(t.Currency); err != nil {
-		return fmt.Errorf("invalid currency: %w", err)
-	}
 	return nil
 }
 
@@ -108,9 +95,9 @@ type Buy struct {
 }
 
 // NewBuy creates a new Buy transaction.
-func NewBuy(day date.Date, memo, security string, quantity, price float64, currency string) Buy {
+func NewBuy(day date.Date, memo, security string, quantity, price float64) Buy {
 	return Buy{
-		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdBuy, Date: day, Memo: memo}, Security: security, Currency: currency},
+		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdBuy, Date: day, Memo: memo}, Security: security},
 		Quantity: quantity,
 		Price:    price,
 	}
@@ -132,9 +119,11 @@ func (t *Buy) Validate(as *AccountingSystem) error {
 		return fmt.Errorf("buy transaction price must be positive, got %f", t.Price)
 	}
 
-	cash, cost := as.Ledger.CashBalance(t.Currency, t.Date), t.Quantity*t.Price
+	ledgerSec := as.Ledger.Get(t.Security) // We know this is not nil from secCmd.Validate
+	currency := ledgerSec.Currency()
+	cash, cost := as.Ledger.CashBalance(currency, t.Date), t.Quantity*t.Price
 	if cash < cost {
-		return fmt.Errorf("cannot buy for %f %s cash balance is %f %s", cost, t.Currency, cash, t.Currency)
+		return fmt.Errorf("cannot buy for %f %s cash balance is %f %s", cost, currency, cash, currency)
 	}
 	return nil
 }
@@ -149,9 +138,9 @@ type Sell struct {
 // NewSell creates a new Sell transaction.
 //
 // Quantity to exactly 0 is interpreted as a sell all on the position.
-func NewSell(day date.Date, memo, security string, quantity, price float64, currency string) Sell {
+func NewSell(day date.Date, memo, security string, quantity, price float64) Sell {
 	return Sell{
-		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdSell, Date: day, Memo: memo}, Security: security, Currency: currency},
+		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdSell, Date: day, Memo: memo}, Security: security},
 		Quantity: quantity,
 		Price:    price,
 	}
@@ -235,9 +224,9 @@ type Dividend struct {
 }
 
 // NewDividend creates a new Dividend transaction.
-func NewDividend(day date.Date, memo, security string, amount float64, currency string) Dividend {
+func NewDividend(day date.Date, memo, security string, amount float64) Dividend {
 	return Dividend{
-		secCmd: secCmd{baseCmd: baseCmd{Command: CmdDividend, Date: day, Memo: memo}, Security: security, Currency: currency},
+		secCmd: secCmd{baseCmd: baseCmd{Command: CmdDividend, Date: day, Memo: memo}, Security: security},
 		Amount: amount,
 	}
 }
