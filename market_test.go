@@ -202,12 +202,12 @@ func TestNewPrivate(t *testing.T) {
 		{"Valid 7-char ID", "myID123", false},
 		{"Valid 7-char ID with Space", "abc 123", false},
 		{"Valid Long ID", "a long id 123", false},
+		{"Valid (contains char)", "my-ID-123", false},
 
 		// Invalid IDs
 		{"Invalid (is a CurrencyPair - fails on length)", "EURUSD", true},
 		{"Invalid (resembles MSSI)", "ABCD.EFG", true},
 		{"Invalid (too short)", "id", true},
-		{"Invalid (contains non-allowed char)", "my-ID-123", true},
 		{"Empty String", "", true},
 	}
 
@@ -218,6 +218,54 @@ func TestNewPrivate(t *testing.T) {
 
 			if hasErr != tc.expectErr {
 				t.Fatalf("ParseID(%q) unexpected error state. Got error: %v, want error: %v", tc.input, err, tc.expectErr)
+			}
+		})
+	}
+}
+
+func TestParseID(t *testing.T) {
+	testCases := []struct {
+		name      string
+		input     string
+		expectID  ID
+		expectErr bool
+	}{
+		// Valid cases
+		{"Valid MSSI", "US0378331005.XNAS", "US0378331005.XNAS", false},
+		{"Valid CurrencyPair", "EURUSD", "EURUSD", false},
+		{"Valid Private ID", "My Private Fund", "My Private Fund", false},
+
+		// Invalid cases
+		{
+			name:      "Invalid (Too Short)",
+			input:     "short",
+			expectErr: true,
+		},
+		{
+			name:      "Invalid (Resembles MSSI but is invalid)",
+			input:     "NOTANISIN.MIC",
+			expectErr: true,
+		},
+		{
+			name:      "Invalid (Resembles CurrencyPair but is invalid)",
+			input:     "eurusd",
+			expectErr: true,
+		},
+		{
+			name:      "Empty String",
+			input:     "",
+			expectErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			id, err := ParseID(tc.input)
+			if (err != nil) != tc.expectErr {
+				t.Fatalf("ParseID(%q) unexpected error state. Got error: %v, want error: %v", tc.input, err, tc.expectErr)
+			}
+			if !tc.expectErr && id != tc.expectID {
+				t.Errorf("ParseID(%q) incorrect ID. Got: %q, want: %q", tc.input, id, tc.expectID)
 			}
 		})
 	}
