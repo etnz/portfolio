@@ -10,11 +10,8 @@ import (
 
 // This file contains functions to update the database with latest prices.
 
-// defaultPriceHistoryStartDate is the date from which to start fetching price history if a security has no prices yet.
-var defaultPriceHistoryStartDate = date.New(2020, 01, 01)
-
 // updateSecurityPrices attempts to fetch and update prices for a single security.
-func updateSecurityPrices(sec *Security, prices *date.History[float64], from, to date.Date) error {
+func updateSecurityPrices(sec Security, prices *date.History[float64], from, to date.Date) error {
 	apiKey := eodhdApiKey()
 	if apiKey == "" {
 		return errors.New("EODHD API key is not set. Use -eodhd-api-key flag or EODHD_API_KEY environment variable")
@@ -26,16 +23,23 @@ func updateSecurityPrices(sec *Security, prices *date.History[float64], from, to
 	// Determine security type and fetch prices accordingly.
 	if isin, mic, mssiErr := sec.ID().MSSI(); mssiErr == nil {
 		// This is an MSSI security.
-		newPrices, err = eodhdDailyISIN(apiKey, isin, mic, from, to)
+		newPrices, err = eodhdDailyMSSI(apiKey, isin, mic, from, to)
 		if err != nil {
 			return fmt.Errorf("failed to get prices for MSSI %s (%s): %w", sec.Ticker(), sec.ID(), err)
 		}
 	} else if base, quote, cpErr := sec.ID().CurrencyPair(); cpErr == nil {
 		// This is a CurrencyPair.
-		newPrices, err = eodhdDailyFrom(apiKey, base, quote, from, to)
+		newPrices, err = eodhdDailyCurrencyPair(apiKey, base, quote, from, to)
 		if err != nil {
 			return fmt.Errorf("failed to get prices for CurrencyPair %s (%s): %w", sec.Ticker(), sec.ID(), err)
 		}
+	} else if isin, fundErr := sec.ID().ISIN(); fundErr == nil {
+		// This is a Fund.
+		newPrices, err = eodhdDailyISIN(apiKey, isin, from, to)
+		if err != nil {
+			return fmt.Errorf("failed to get prices for ISIN %s (%s): %w", sec.Ticker(), sec.ID(), err)
+		}
+
 	} else {
 		// This is a private or unsupported security type for updates.
 		return nil // Not an error, just nothing to do.
@@ -57,10 +61,7 @@ func updateSecurityPrices(sec *Security, prices *date.History[float64], from, to
 // prices for each updatable security (i.e., those with an MSSI or CurrencyPair ID).
 // It fetches prices from the day after the last known price up to yesterday.
 // It returns a joined error if any updates fail.
-func (m *MarketData) Update() error {
-
-	yesterday := date.Today().Add(-1)
-	origin := defaultPriceHistoryStartDate
+func (m *MarketData) Update(start, end date.Date) error {
 
 	var errs error
 
@@ -69,23 +70,23 @@ func (m *MarketData) Update() error {
 		sec := m.Get(id)
 
 		// If we already have yesterday's price, we are up-to-date.
-		if !latest.Before(yesterday) {
+		if !latest.Before(end) {
 			continue
 		}
 
 		// Determine the start date for fetching new prices.
 		// If no prices exist, use the default origin. Otherwise, start from the day after the latest price.
-		fetchFrom := origin
-		if !latest.Before(origin) {
+		fetchFrom := start
+		if !latest.Before(start) {
 			fetchFrom = latest.Add(1)
 		}
 
 		// Don't try to fetch from the future.
-		if fetchFrom.After(yesterday) {
+		if fetchFrom.After(end) {
 			continue
 		}
 
-		if err := updateSecurityPrices(sec, prices, fetchFrom, yesterday); err != nil {
+		if err := updateSecurityPrices(sec, prices, fetchFrom, end); err != nil {
 			errs = errors.Join(errs, err)
 			continue
 		}

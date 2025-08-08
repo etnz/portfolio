@@ -164,8 +164,8 @@ func eodhdMicToExchangeCode(apiKey string) (map[string]string, error) {
 	return result, nil
 }
 
-// eodhdSearchByISIN searches by ISIN and MIC to get the internal EODHD ticker (e.g., "AAPL.US").
-func eodhdSearchByISIN(apiKey string, isin, mic string) (ticker string, err error) {
+// eodhdSearchByMSSI searches by ISIN and MIC to get the internal EODHD ticker (e.g., "AAPL.US").
+func eodhdSearchByMSSI(apiKey string, isin, mic string) (ticker string, err error) {
 	// https://eodhd.com/api/search/US67066G1040?api_token=67adc13417e148.00145034&fmt=json
 	// [
 	//   {
@@ -179,6 +179,12 @@ func eodhdSearchByISIN(apiKey string, isin, mic string) (ticker string, err erro
 	//     "previousClose": 131.14,
 	//     "previousCloseDate": "2025-02-12"
 	//   },
+
+	// delisted exception for now.
+	// TODO: find the way to get delisted stocks in EODHD.
+	if isin == "US90184L1026" {
+		return "TWTR.US", nil
+	}
 
 	mic2exchange, err := eodhdMicToExchangeCode(apiKey)
 	if err != nil {
@@ -220,10 +226,50 @@ func eodhdSearchByISIN(apiKey string, isin, mic string) (ticker string, err erro
 	return "", fmt.Errorf("security %s.%s is not available in eodhd.com (%d securities matching that isin)", isin, mic, len(content))
 }
 
-// eodhdDailyISIN returns the daily prices for a given ISIN and MIC.
-func eodhdDailyISIN(apiKey, isin, mic string, from, to date.Date) (prices date.History[float64], err error) {
+// eodhdSearchByISIN searches fund by ISIN to get the internal EODHD ticker (e.g., "AAPL.US").
+func eodhdSearchByISIN(apiKey string, isin string) (ticker string, err error) {
+	// https://eodhd.com/api/search/US67066G1040?api_token=67adc13417e148.00145034&fmt=json
+	// [
+	//   {
+	//     "Code": "NVDA",
+	//     "Exchange": "US",
+	//     "Name": "NVIDIA Corporation",
+	//     "Type": "Common Stock",
+	//     "Country": "USA",
+	//     "Currency": "USD",
+	//     "ISIN": "US67066G1040",
+	//     "previousClose": 131.14,
+	//     "previousCloseDate": "2025-02-12"
+	//   },
+
+	addr := fmt.Sprintf("https://eodhd.com/api/search/%s?fmt=json&api_token=%s", url.PathEscape(isin), apiKey)
+	type Info struct {
+		Code          string
+		Exchange      string
+		Name          string
+		Currency      string
+		PreviousClose float64 `json:"previousClose"`
+	}
+
+	// that's the payload
+	content := make([]Info, 0)
+	if err := jwget(newDailyCachingClient(), addr, &content); err != nil {
+		return "", err
+	}
+	if len(content) == 0 {
+		return "", fmt.Errorf("security %s is not available in eodhd.com", isin)
+	}
+	if len(content) > 1 {
+		return "", fmt.Errorf("security %s is not unique in eodhd.com", isin)
+	}
+
+	return content[0].Code + "." + content[0].Exchange, nil
+}
+
+// eodhdDailyMSSI returns the daily prices for a given ISIN and MIC.
+func eodhdDailyMSSI(apiKey, isin, mic string, from, to date.Date) (prices date.History[float64], err error) {
 	// find the eodhd ticker for the given isin and mic
-	ticker, err := eodhdSearchByISIN(apiKey, isin, mic)
+	ticker, err := eodhdSearchByMSSI(apiKey, isin, mic)
 	if err != nil {
 		return prices, fmt.Errorf("eodhd cannot find a ticker for %s.%s: %w", isin, mic, err)
 	}
@@ -231,8 +277,8 @@ func eodhdDailyISIN(apiKey, isin, mic string, from, to date.Date) (prices date.H
 	return prices, err
 }
 
-// eodhdDailyFrom returns the daily prices for a given currency pair.
-func eodhdDailyFrom(apiKey, fromCurrency, toCurrency string, from, to date.Date) (prices date.History[float64], err error) {
+// eodhdDailyCurrencyPair returns the daily prices for a given currency pair.
+func eodhdDailyCurrencyPair(apiKey, fromCurrency, toCurrency string, from, to date.Date) (prices date.History[float64], err error) {
 	// The Ticker for forex is in the format "fromCurrency+toCurrency.FOREX".
 	ticker := fmt.Sprintf("%s%s.FOREX", fromCurrency, toCurrency)
 	open, _, err := eodhdDaily(apiKey, ticker, from, to)
@@ -246,6 +292,17 @@ func eodhdDailyFrom(apiKey, fromCurrency, toCurrency string, from, to date.Date)
 		close.Append(t.Add(-1), v)
 	}
 	return close, nil
+}
+
+// eodhdDailyISIN returns the daily prices for a given ISIN and MIC.
+func eodhdDailyISIN(apiKey, isin string, from, to date.Date) (prices date.History[float64], err error) {
+	// find the eodhd ticker for the given isin and mic
+	ticker, err := eodhdSearchByISIN(apiKey, isin)
+	if err != nil {
+		return prices, fmt.Errorf("eodhd cannot find a ticker for %s: %w", isin, err)
+	}
+	_, prices, err = eodhdDaily(apiKey, ticker, from, to)
+	return prices, err
 }
 
 // eodhdDaily returns the daily open and adjusted close prices for a given EODHD ticker.

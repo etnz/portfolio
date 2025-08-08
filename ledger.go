@@ -42,7 +42,7 @@ func (l *Ledger) Append(txs ...Transaction) {
 	for _, tx := range txs {
 		if dec, ok := tx.(Declare); ok {
 			sec := NewSecurity(dec.ID, dec.Ticker, dec.Currency)
-			l.securities[sec.Ticker()] = *sec
+			l.securities[sec.Ticker()] = sec
 		}
 	}
 

@@ -40,7 +40,7 @@ func (c *importInvestingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...in
 		return subcommands.ExitUsageError
 	}
 
-	db, err := DecodeSecurities()
+	db, err := DecodeMarketData()
 	if err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure

@@ -49,7 +49,7 @@ func ImportMarketData(r io.Reader) (*MarketData, error) {
 	// Append securities for each ticker
 	for _, js := range jsecurities {
 		// Create the security.
-		sec := &Security{
+		sec := Security{
 			ticker:   js.Ticker,
 			id:       ID(js.ID),
 			currency: js.Currency,

@@ -102,6 +102,14 @@ func NewCurrencyPair(base, quote string) (ID, error) {
 }
 
 // NewPrivate creates a new private ID after validating its format.
+func NewISIN(isin string) (ID, error) {
+	if err := ValidateISIN(isin); err != nil {
+		return "", err
+	}
+	return ID(isin), nil
+}
+
+// NewPrivate creates a new private ID after validating its format.
 func NewPrivate(s string) (ID, error) {
 	// Rule 1: Must be at least 7 characters long.
 	// This also implicitly invalidates 6-character Currency Pairs.
@@ -113,10 +121,13 @@ func NewPrivate(s string) (ID, error) {
 	if strings.Contains(s, ".") {
 		return "", fmt.Errorf("invalid id: must not contain a '.' (resembles an MSSI)")
 	}
+	if err := ValidateISIN(s); err == nil {
+		return "", fmt.Errorf("invalid private id: must not be an ISIN")
+	}
 
-	// Rule 2: Must be alphanumeric or a space.
+	// Rule 2: Must only valid char.
 	if !idCharRegex.MatchString(s) {
-		return "", fmt.Errorf("invalid id: must only contain alphanumeric characters and spaces")
+		return "", fmt.Errorf("invalid id: must only contain alphanumeric characters and spaces and -")
 	}
 
 	return ID(s), nil
@@ -140,14 +151,20 @@ func ParseID(s string) (ID, error) {
 		return id, nil
 	}
 
+	// Try parsing as ISIN
+	_, errIsin := id.ISIN()
+	if errIsin == nil {
+		return id, nil
+	}
+
 	// Try parsing as Private
-	_, errPrivate := NewPrivate(s)
+	_, errPrivate := id.Private()
 	if errPrivate == nil {
 		return id, nil
 	}
 
 	// If all fail, return a compound error.
-	return "", errors.Join(errMSSI, errCP, errPrivate)
+	return "", errors.Join(errMSSI, errCP, errIsin, errPrivate)
 }
 
 // ValidateISIN checks if a string is a validly formatted ISIN.
@@ -250,10 +267,14 @@ func (id ID) MSSI() (isin string, mic string, err error) {
 	return isin, mic, nil
 }
 
-// ISIN returns the ISIN part of the identifier or an empty string if the ID is not an MSSI.
-func (id ID) ISIN() string {
-	isin, _, _ := id.MSSI()
-	return isin
+// ISIN Validate that the ID is isin only (for fund) and returns the isin part.
+func (id ID) ISIN() (isin string, err error) {
+	isin = string(id) // that would be the result.
+	err = ValidateISIN(isin)
+	if err != nil {
+		return "", err
+	}
+	return isin, nil
 }
 
 // MIC returns the Market Identifier Code part of the identifier or an empty string if the ID is not an MSSI.
@@ -311,8 +332,8 @@ type Security struct {
 	currency string // The currency in which the security is traded.
 }
 
-func NewSecurity(id ID, ticker, currency string) *Security {
-	return &Security{
+func NewSecurity(id ID, ticker, currency string) Security {
+	return Security{
 		id:       id,
 		ticker:   ticker,
 		currency: currency, // prices are initialized in MarketData

@@ -57,9 +57,10 @@ func (m *MarketData) decodeDefinition(filename string, r io.Reader) error {
 		}
 
 		if m.Has(js.Ticker) {
-			return fmt.Errorf("format error in %q: ticker %q is already defined", filename, js.Ticker)
+			log.Printf("format error in %q: ticker %q is already defined", filename, js.Ticker)
+			continue
 		}
-		sec := &Security{
+		sec := Security{
 			ticker:   js.Ticker,
 			id:       ID(js.ID),
 			currency: js.Currency,
@@ -148,24 +149,24 @@ func decodeLine(m *MarketData, l fileLine) error {
 }
 
 // DecodeMarketData reads a folder containing securities definition and prices, and returns a MarketData object.
-func DecodeMarketData(folder string) (*MarketData, error) {
+func DecodeMarketData(marketFile string) (*MarketData, error) {
+	folder := filepath.Dir(marketFile)
 	// Creates an empty database.
 	m := NewMarketData()
 
 	// strategy: reads the metadata file containing securities definition and ticker, then uses it to load prices.
 	// then read all json files and break it into lines, and load them individually.
 
-	definitionFile := filepath.Join(folder, definitionFilename)
-	f, err := os.Open(definitionFile)
+	f, err := os.Open(marketFile)
 	if err != nil {
 		if os.IsNotExist(err) {
-			fmt.Println("does not exists", err)
+			return m, nil // Empty database.
 		}
-		return nil, fmt.Errorf("load error: cannot open market definition file %q: %w", definitionFile, err)
+		return nil, fmt.Errorf("load error: cannot open market definition file %q: %w", marketFile, err)
 	}
 	defer f.Close()
 
-	if err := m.decodeDefinition(definitionFile, f); err != nil {
+	if err := m.decodeDefinition(marketFile, f); err != nil {
 		return nil, fmt.Errorf("load error: cannot read market definition file: %w", err)
 	}
 
@@ -250,7 +251,7 @@ func encodeLine(w io.Writer, day date.Date, tickers []string, values []float64) 
 }
 
 // EncodeMarketData encodes the market data into a folder, creating a definition file and a set of jsonl files for each year.
-func EncodeMarketData(folder string, m *MarketData) error {
+func EncodeMarketData(definitionFile string, m *MarketData) error {
 
 	// we first generate the security price values into this list of structured items.
 	type line struct {
@@ -272,7 +273,7 @@ func EncodeMarketData(folder string, m *MarketData) error {
 	}
 
 	// Persist the definition file.
-	definitionFile := filepath.Join(folder, definitionFilename)
+	folder := filepath.Dir(definitionFile)
 	f, err := os.Create(definitionFile)
 	if err != nil {
 		return fmt.Errorf("persist error: cannot create file %q: %w", definitionFile, err)
@@ -396,6 +397,10 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 			var tx Convert
 			err = json.Unmarshal(lineBytes, &tx)
 			decodedTx = tx
+		case CmdDeclare:
+			var tx Declare
+			err = json.Unmarshal(lineBytes, &tx)
+			decodedTx = tx
 		default:
 			err = fmt.Errorf("unknown transaction command: %q", identifier.Command)
 		}
@@ -403,7 +408,7 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 		if err != nil {
 			return nil, err
 		}
-		ledger.transactions = append(ledger.transactions, decodedTx)
+		ledger.Append(decodedTx)
 	}
 
 	if err := scanner.Err(); err != nil {

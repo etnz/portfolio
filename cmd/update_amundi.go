@@ -26,6 +26,9 @@ var (
 	uriDispositif   = "https://epargnant.amundi-ee.com/api/individu/produitsEpargne/idDispositif/"
 	uriAffiliations = "https://epargnant.amundi-ee.com/api/individu/affiliations"
 	uriAffiliation  = "https://epargnant.amundi-ee.com/api/individu/produitsEpargne/affiliation/"
+
+	// it seems that this is listing all the products which should simplify the discovery uriDispositifs and uriAffiliations
+	// uriProducts = "https://epargnant.amundi-ee.com/api/individu/produitsEpargne?codeRegroupement=ER%2CRC%2CES"
 )
 
 // HeaderVal support dynamic -H options to mimic curl command line
@@ -90,9 +93,9 @@ func (c *updateAmundiCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...inter
 	}
 	end := date.Today()
 
-	market, err := DecodeSecurities()
+	market, err := DecodeMarketData()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading securities: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error loading accounting system: %v\n", err)
 		return subcommands.ExitFailure
 	}
 
@@ -304,7 +307,7 @@ func appendMarketPoint(market *portfolio.MarketData, fundName, ticker string, da
 	}
 
 	sec := market.Get(id)
-	if sec == nil {
+	if sec == (portfolio.Security{}) {
 		sec = portfolio.NewSecurity(id, ticker, "EUR")
 		market.Add(sec)
 	}

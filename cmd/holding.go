@@ -37,7 +37,7 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitUsageError
 	}
 
-	market, err := DecodeSecurities()
+	market, err := DecodeMarketData()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading securities: %v\n", err)
 		return subcommands.ExitFailure

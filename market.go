@@ -8,7 +8,7 @@ import (
 
 // MarketData holds all the market data, including security definitions and their price histories.
 type MarketData struct {
-	securities map[ID]*Security
+	securities map[ID]Security
 	tickers    map[string]ID
 	prices     map[ID]*date.History[float64]
 }
@@ -16,21 +16,24 @@ type MarketData struct {
 // NewMarketData creates an empty MarketData store.
 func NewMarketData() *MarketData {
 	return &MarketData{
-		securities: make(map[ID]*Security),
+		securities: make(map[ID]Security),
 		tickers:    make(map[string]ID),
 		prices:     make(map[ID]*date.History[float64]),
 	}
 }
 
 // Add adds a security to the market data. It also initializes an empty price history for it.
-func (m *MarketData) Add(s *Security) {
+func (m *MarketData) Add(s Security) {
+	if _, ok := m.securities[s.ID()]; ok {
+		return
+	}
 	m.securities[s.ID()] = s
 	m.tickers[s.Ticker()] = s.ID()
 	m.prices[s.ID()] = &date.History[float64]{}
 }
 
-// Get retrieves a security by its ID. It returns nil if the security is not found.
-func (m *MarketData) Get(id ID) *Security { return m.securities[id] }
+// Get retrieves a security by its ID. It returns zero if the security is not found.
+func (m *MarketData) Get(id ID) Security { return m.securities[id] }
 
 // Resolve converts a ticker to a security ID.
 func (m *MarketData) Resolve(ticker string) ID {

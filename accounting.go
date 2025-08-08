@@ -47,11 +47,37 @@ func NewAccountingSystem(ledger *Ledger, marketData *MarketData, reportingCurren
 			return nil, fmt.Errorf("invalid reporting currency: %w", err)
 		}
 	}
-	return &AccountingSystem{
+	as := &AccountingSystem{
 		Ledger:            ledger,
 		MarketData:        marketData,
 		ReportingCurrency: reportingCurrency,
-	}, nil
+	}
+	if err := as.declareSecurities(); err != nil {
+		return nil, fmt.Errorf("could not declare securities from ledger to the market data: %w", err)
+	}
+
+	return as, nil
+}
+
+// declareSecurities scan all securities (and currencies) in the ledger and
+// make sure they are declared in the marketdata
+func (as *AccountingSystem) declareSecurities() error {
+
+	for sec := range as.Ledger.AllSecurities() {
+		as.MarketData.Add(sec)
+	}
+	for currency := range as.Ledger.AllCurrencies() {
+		if currency == as.ReportingCurrency {
+			// skip absurd self currency
+			continue
+		}
+		id, err := NewCurrencyPair(currency, as.ReportingCurrency)
+		if err != nil {
+			return fmt.Errorf("could not create currency pair: %w", err)
+		}
+		as.MarketData.Add(NewSecurity(id, id.String(), currency))
+	}
+	return nil
 }
 
 // Validate checks a transaction for correctness and applies quick fixes where

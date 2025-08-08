@@ -32,13 +32,13 @@ func setupCostBasisTest(t *testing.T) (*Ledger, *MarketData, *AccountingSystem) 
 	// Create market data with historical exchange rates to EUR.
 	marketData := NewMarketData()
 	// USDEUR security for exchange rates
-	usdeur := &Security{ticker: "USDEUR", id: "USDEUR", currency: "EUR"}
+	usdeur := Security{ticker: "USDEUR", id: "USDEUR", currency: "EUR"}
 	marketData.Add(usdeur)
 	marketData.Append("USDEUR", date.New(2025, time.January, 10), 0.90) // Rate on day of first USD deposit
 	marketData.Append("USDEUR", date.New(2025, time.March, 20), 0.92)   // Rate on day of USD withdrawal
 
 	// GBPEUR security for exchange rates
-	gbpeur := &Security{ticker: "GBPEUR", id: "GBPEUR", currency: "EUR"}
+	gbpeur := Security{ticker: "GBPEUR", id: "GBPEUR", currency: "EUR"}
 	marketData.Add(gbpeur)
 	marketData.Append("GBPEUR", date.New(2025, time.February, 15), 1.15) // Rate on day of GBP deposit
 
@@ -119,7 +119,7 @@ func setupPerformanceTest(t *testing.T) (*Ledger, *MarketData, *AccountingSystem
 
 	marketData := NewMarketData()
 
-	tick := &Security{ticker: "TICK", id: id, currency: "USD"}
+	tick := Security{ticker: "TICK", id: id, currency: "USD"}
 	marketData.Add(tick)
 	marketData.Append(id, date.New(2025, time.January, 1), 100.0)
 	marketData.Append(id, date.New(2025, time.January, 15), 110.0)
@@ -201,8 +201,8 @@ func setupValidationTest(t *testing.T) *AccountingSystem {
 	)
 
 	marketData := NewMarketData()
-	aapl := &Security{ticker: "AAPL", id: "US0378331005.XNAS", currency: "USD"}
-	goog := &Security{ticker: "GOOG", id: "US38259P5089.XNAS", currency: "USD"}
+	aapl := Security{ticker: "AAPL", id: "US0378331005.XNAS", currency: "USD"}
+	goog := Security{ticker: "GOOG", id: "US38259P5089.XNAS", currency: "USD"}
 	marketData.Add(aapl)
 	marketData.Add(goog)
 
