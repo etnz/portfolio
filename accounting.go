@@ -2,6 +2,7 @@ package portfolio
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/etnz/portfolio/date"
 )
@@ -296,7 +297,8 @@ func (as *AccountingSystem) NewSummary(on date.Date) (*Summary, error) {
 		inceptionDate = on
 	}
 	if summary.Inception, err = as.calculatePeriodPerformance(inceptionDate, on); err != nil {
-		return nil, fmt.Errorf("failed to calculate inception performance: %w", err)
+		//return nil, fmt.Errorf("failed to calculate inception performance: %w", err)
+		log.Printf("warning failed to calculate inception performance: %v", err)
 	}
 
 	return summary, nil
