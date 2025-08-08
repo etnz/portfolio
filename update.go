@@ -93,3 +93,43 @@ func (m *MarketData) Update(start, end date.Date) error {
 	}
 	return errs
 }
+
+func (m *MarketData) UpdateIntraday() error {
+
+	// Update the EURUSD ticker
+	val, err := tradegateLatestEURperUSD()
+	if err != nil {
+		return err
+	}
+	id, _ := NewCurrencyPair("USD", "EUR")
+	m.Append(id, date.Today(), 1/val)
+
+	// then update stocks
+	for id, sec := range m.securities {
+
+		var latest float64
+		var err error
+
+		// If it's a stock
+		if isin, _, mssiErr := id.MSSI(); mssiErr == nil {
+			latest, err = tradegateLatest(sec.Ticker(), isin)
+		} else if isin, fundErr := id.ISIN(); fundErr == nil {
+			latest, err = tradegateLatest(sec.Ticker(), isin)
+		} else {
+			continue
+		}
+		if err != nil {
+			log.Printf("warning error reading intraday value for %s: %v", sec.Ticker(), err)
+		} else {
+			if sec.Currency() == "USD" {
+				// all assets in tradegate are in eur (so far) so convert back to USD if needed.
+				m.Append(id, date.Today(), latest/val)
+			}
+			if sec.Currency() == "EUR" {
+				m.Append(id, date.Today(), latest)
+			}
+		}
+	}
+	return nil
+
+}

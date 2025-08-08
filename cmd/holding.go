@@ -14,12 +14,13 @@ import (
 type holdingCmd struct {
 	date     string
 	currency string
+	update   bool
 }
 
 func (*holdingCmd) Name() string     { return "holding" }
 func (*holdingCmd) Synopsis() string { return "display portfolio holdings at a specific date" }
 func (*holdingCmd) Usage() string {
-	return `holding [-d <date>] [-c <currency>]
+	return `holding [-d <date>] [-c <currency>] [-u]
 
   Displays the portfolio holdings (securities and cash) on a given date.
 `
@@ -28,6 +29,8 @@ func (*holdingCmd) Usage() string {
 func (c *holdingCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", date.Today().String(), "Date for the holdings report (YYYY-MM-DD)")
 	f.StringVar(&c.currency, "c", "EUR", "Reporting currency for market values")
+	f.BoolVar(&c.update, "u", false, "update with latest intraday prices before calculating the report")
+
 }
 
 func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -53,6 +56,14 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating accounting system: %v\n", err)
 		return subcommands.ExitFailure
+	}
+
+	if c.update {
+		err := market.UpdateIntraday()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
+			return subcommands.ExitFailure
+		}
 	}
 
 	fmt.Printf("Holdings on %s in reporting currency %s\n\n", on, c.currency)

@@ -1,0 +1,3 @@
+{"command":"declare","date":"2025-08-07","ticker":"NVD","id":"US67066G1040.XETR","currency":"EUR"}
+{"command":"deposit","date":"2025-08-07","amount":200,"currency":"EUR"}
+{"command":"buy","date":"2025-08-07","security":"NVD","quantity":1,"price":155}
