@@ -24,9 +24,9 @@ func (*importInvestingCmd) Name() string { return "import-investing" }
 func (*importInvestingCmd) Synopsis() string {
 	return "import public security prices from investing.com's CSV format"
 }
-func (*importInvestingCmd) Usage() string { return "pcs import-investing <ticker>\n" }
+func (*importInvestingCmd) Usage() string { return "pcs import-investing -file <file> <ticker>\n" }
 func (c *importInvestingCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.file, "i", "", "input file")
+	f.StringVar(&c.file, "file", "", "input file")
 }
 func (c *importInvestingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if f.NArg() != 1 {
@@ -36,7 +36,7 @@ func (c *importInvestingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...in
 	ticker := f.Arg(0)
 
 	if c.file == "" {
-		fmt.Println("-i argument is required")
+		fmt.Println("-file argument is required")
 		return subcommands.ExitUsageError
 	}
 

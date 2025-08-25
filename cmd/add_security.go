@@ -20,7 +20,7 @@ type addSecurityCmd struct {
 func (*addSecurityCmd) Name() string     { return "add-security" }
 func (*addSecurityCmd) Synopsis() string { return "add a new security to the market data" }
 func (*addSecurityCmd) Usage() string {
-	return `add-security -ticker <ticker> [-id <id> -currency <currency> | -portfolio]
+	return `add-security -s <ticker> [-id <id> -c <currency> | -portfolio]
 
   Adds a new security to the definition file:
   - ticker: The ticker symbol for the security (e.g., "NVDA"). Must be unique.
@@ -34,9 +34,9 @@ func (*addSecurityCmd) Usage() string {
 }
 
 func (c *addSecurityCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.ticker, "ticker", "", "Security ticker symbol (required)")
+	f.StringVar(&c.ticker, "s", "", "Security ticker symbol (required)")
 	f.StringVar(&c.id, "id", "", "Unique security identifier (required)")
-	f.StringVar(&c.currency, "currency", "", "Security's currency, 3-letter code (required)")
+	f.StringVar(&c.currency, "c", "", "Security's currency, 3-letter code (required)")
 	f.BoolVar(&c.portfolio, "portfolio", false, "Declare all securities in the portfolio into the market data")
 }
 
@@ -48,7 +48,7 @@ func (c *addSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interf
 
 	// It must be either a single or (inclusive) a porfolio addition.
 	if !(simple || c.portfolio) {
-		fmt.Fprintln(os.Stderr, "Error: either (-ticker, -id, and -currency) or -portfolio flags are required.")
+		fmt.Fprintln(os.Stderr, "Error: either (-s, -id, and -c) or -portfolio flags are required.")
 		return subcommands.ExitUsageError
 	}
 

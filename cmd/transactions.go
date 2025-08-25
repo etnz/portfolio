@@ -202,7 +202,7 @@ func (*convertCmd) Synopsis() string {
 	return "converts cash from one currency to another within the portfolio"
 }
 func (*convertCmd) Usage() string {
-	return `convert -d <date> -from-c <currency> -from-a <amount> -to-c <currency> -to-a <amount> [-m <memo>]
+	return `convert -d <date> -fc <currency> -fa <amount> -tc <currency> -ta <amount> [-m <memo>]
 
   Records an internal cash conversion between two currency accounts.
   This does not represent a net portfolio deposit or withdrawal.
@@ -211,10 +211,10 @@ func (*convertCmd) Usage() string {
 
 func (c *convertCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date (YYYY-MM-DD)")
-	f.StringVar(&c.fromCurrency, "from-c", "", "Source currency code (e.g., USD)")
-	f.Float64Var(&c.fromAmount, "from-a", 0, "Amount of cash to convert from the source currency")
-	f.StringVar(&c.toCurrency, "to-c", "", "Destination currency code (e.g., EUR)")
-	f.Float64Var(&c.toAmount, "to-a", 0, "Amount of cash received in the destination currency")
+	f.StringVar(&c.fromCurrency, "fc", "", "Source currency code (e.g., USD)")
+	f.Float64Var(&c.fromAmount, "fa", 0, "Amount of cash to convert from the source currency")
+	f.StringVar(&c.toCurrency, "tc", "", "Destination currency code (e.g., EUR)")
+	f.Float64Var(&c.toAmount, "ta", 0, "Amount of cash received in the destination currency")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 }
 
@@ -263,16 +263,16 @@ func (*declareCmd) Usage() string {
 }
 
 func (c *declareCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.ticker, "ticker", "", "Ledger-internal ticker to define (e.g., 'MY_AAPL')")
+	f.StringVar(&c.ticker, "s", "", "Ledger-internal ticker to define (e.g., 'MY_AAPL')")
 	f.StringVar(&c.id, "id", "", "Full, unique security ID (e.g., 'US0378331005.XNAS')")
-	f.StringVar(&c.currency, "currency", "", "The currency of the security (e.g., 'USD')")
+	f.StringVar(&c.currency, "c", "", "The currency of the security (e.g., 'USD')")
 	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date (YYYY-MM-DD)")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 }
 
 func (c *declareCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if c.ticker == "" || c.id == "" || c.currency == "" {
-		fmt.Fprintln(os.Stderr, "Error: -ticker, -id, and -currency flags are all required.")
+		fmt.Fprintln(os.Stderr, "Error: -s, -id, and -c flags are all required.")
 		return subcommands.ExitUsageError
 	}
 
