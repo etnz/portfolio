@@ -123,7 +123,7 @@ func (m *MarketData) UpdateIntraday() error {
 		} else {
 			if sec.Currency() == "USD" {
 				// all assets in tradegate are in eur (so far) so convert back to USD if needed.
-				m.Append(id, date.Today(), latest/val)
+				m.Append(id, date.Today(), latest*val)
 			}
 			if sec.Currency() == "EUR" {
 				m.Append(id, date.Today(), latest)
