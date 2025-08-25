@@ -11,25 +11,27 @@ import (
 )
 
 type addSecurityCmd struct {
-	ticker    string
-	id        string
-	currency  string
-	portfolio bool
+	ticker     string
+	id         string
+	currency   string
+	fromLedger bool
 }
 
 func (*addSecurityCmd) Name() string     { return "add-security" }
 func (*addSecurityCmd) Synopsis() string { return "add a new security to the market data" }
 func (*addSecurityCmd) Usage() string {
-	return `add-security -s <ticker> [-id <id> -c <currency> | -portfolio]
+	return `pcs add-security -s <ticker> -id <id> -c <currency> | pcs add-security -from-ledger
 
-  Adds a new security to the definition file:
+  Adds a new security to the definition file, or adds all securities from the ledger file.
+
+  When adding a single security, all of -s, -id, and -c are required.
   - ticker: The ticker symbol for the security (e.g., "NVDA"). Must be unique.
   - id: The unique identifier for the security (e.g., "US67066G1040.XFRA").
   - currency: The 3-letter currency code for the security (e.g., "EUR").
 
-  Adds all securities declared in the portfolio.
+  The -from-ledger flag adds all securities declared in the ledger.
 
-  Both types of addition can be executed, but at least one must be attempted.
+  Both forms can be used in a single invocation.
 `
 }
 
@@ -37,7 +39,7 @@ func (c *addSecurityCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.ticker, "s", "", "Security ticker symbol (required)")
 	f.StringVar(&c.id, "id", "", "Unique security identifier (required)")
 	f.StringVar(&c.currency, "c", "", "Security's currency, 3-letter code (required)")
-	f.BoolVar(&c.portfolio, "portfolio", false, "Declare all securities in the portfolio into the market data")
+	f.BoolVar(&c.fromLedger, "from-ledger", false, "Declare all securities in the ledger into the market data")
 }
 
 func (c *addSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -46,9 +48,9 @@ func (c *addSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interf
 	// it has an attempt to define a simple security.
 	simple := c.ticker != "" || c.id != "" || c.currency != ""
 
-	// It must be either a single or (inclusive) a porfolio addition.
-	if !(simple || c.portfolio) {
-		fmt.Fprintln(os.Stderr, "Error: either (-s, -id, and -c) or -portfolio flags are required.")
+	// It must be either a single or (inclusive) a fromLedger addition.
+	if !(simple || c.fromLedger) {
+		fmt.Fprintln(os.Stderr, "Error: either (-s, -id, and -c) or -from-ledger flags are required.")
 		return subcommands.ExitUsageError
 	}
 
@@ -79,11 +81,11 @@ func (c *addSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interf
 		market.Add(sec)
 	}
 
-	if c.portfolio {
-		// Declaring all securities from portfolio into the market data
+	if c.fromLedger {
+		// Declaring all securities from ledger into the market data
 		ledger, err := DecodeLedger()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading portfolio: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error loading ledger: %v\n", err)
 			return subcommands.ExitFailure
 		}
 		portfolio.DeclareSecurities(ledger, market, *defaultCurrency)
@@ -92,6 +94,7 @@ func (c *addSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interf
 			return subcommands.ExitFailure
 		}
 	}
+
 
 	if err := EncodeMarketData(market); err != nil {
 		fmt.Fprintf(os.Stderr, "Error saving securities database: %v\n", err)

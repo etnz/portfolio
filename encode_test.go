@@ -3,6 +3,7 @@ package portfolio
 import (
 	"bytes"
 	"encoding/json"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -25,15 +26,16 @@ func TestEncodeDecodeMarketData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Import() has unexpected error: %v", err)
 	}
-	folder := t.TempDir()
 
-	if err := EncodeMarketData(folder, market); err != nil {
-		t.Fatalf("Persist(%q) has unexpected error: %v", folder, err)
+	datafile := filepath.Join(t.TempDir(), "market.jsonl")
+
+	if err := EncodeMarketData(datafile, market); err != nil {
+		t.Fatalf("Persist(%q) has unexpected error: %v", datafile, err)
 	}
 
-	market2, err := DecodeMarketData(folder)
+	market2, err := DecodeMarketData(datafile)
 	if err != nil {
-		t.Fatalf("Load(%q) has unexpected error: %v", folder, err)
+		t.Fatalf("Load(%q) has unexpected error: %v", datafile, err)
 	}
 
 	// export the market data to check consistency

@@ -16,7 +16,7 @@ type searchSecurityCmd struct{}
 func (*searchSecurityCmd) Name() string     { return "search-security" }
 func (*searchSecurityCmd) Synopsis() string { return "search for securities using EODHD API" }
 func (*searchSecurityCmd) Usage() string {
-	return `search-security <search term>
+	return `pcs search-security <search term>
 
   Searches for securities via EOD Historical Data API and prints
   ready-to-use 'add-security' commands for the results.

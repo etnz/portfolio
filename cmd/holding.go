@@ -21,7 +21,7 @@ type holdingCmd struct {
 func (*holdingCmd) Name() string     { return "holding" }
 func (*holdingCmd) Synopsis() string { return "display detailed holdings for a specific date" }
 func (*holdingCmd) Usage() string {
-	return `holding [-d <date>] [-c <currency>] [-u]
+	return `pcs holding [-d <date>] [-c <currency>] [-u]
 
   Displays the portfolio holdings (securities and cash) on a given date.
 `

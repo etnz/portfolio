@@ -66,9 +66,11 @@ func (*importAmundiCmd) Synopsis() string {
 	return "Converts an Amundi transactions JSON file to JSONL format."
 }
 func (*importAmundiCmd) Usage() string {
-	return `import-amundi <amundi_transactions.json>:
-  Reads Amundi;s JSON file for transactions and outputs transactions in the standard JSONL format to stdout.
-  Example: portfolio import-amundi /path/to/amundi_transactions.json > transactions.jsonl
+	return `pcs import-amundi <amundi_transactions.json>
+
+
+  Reads Amundi's JSON file for transactions and outputs transactions in the standard JSONL format to stdout.
+  Example: pcs import-amundi /path/to/amundi_transactions.json > transactions.jsonl
 
   Translation cannot be perfect, use with care and review the output.
 `

@@ -20,7 +20,7 @@ type summaryCmd struct {
 func (*summaryCmd) Name() string     { return "summary" }
 func (*summaryCmd) Synopsis() string { return "display a portfolio performance summary" }
 func (*summaryCmd) Usage() string {
-	return `summary [-d <date>] [-c <currency>] [-u]
+	return `pcs summary [-d <date>] [-c <currency>] [-u]
 
   Displays a summary of the portfolio, including total market value.
 `

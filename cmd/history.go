@@ -18,7 +18,7 @@ type historyCmd struct {
 func (*historyCmd) Name() string     { return "history" }
 func (*historyCmd) Synopsis() string { return "display asset value history" }
 func (*historyCmd) Usage() string {
-	return `history -s <security> | -c <currency>
+	return `pcs history -s <security> | -c <currency>
 
   Displays the value of a single asset or cash account over time.
 `

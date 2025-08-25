@@ -62,9 +62,9 @@ func (*updateAmundiCmd) Name() string     { return "update-amundi" }
 func (*updateAmundiCmd) Synopsis() string { return "import transactions from an amundi jsonl file" }
 func (*updateAmundiCmd) Usage() string {
 	return `pcs update-amundi [-start <date>] -curl <curl command arguments, only -H is used>:
-  Update security prices that are only available on Amundi portal (amundi-ee.com). 
+  Update security prices that are only available on Amundi portal (amundi-ee.com).
   It scans all your saving accounts (for ID) then get its daily summary that contains the securities price.
-  
+
   To access Amundi portal API from the CLI we need identifications headers. Here is how to proceed: 
   
   * Open your portal https://epargnant.amundi-ee.com/#/epargne?onglet=ES
