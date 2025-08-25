@@ -50,10 +50,15 @@ func (l *Ledger) Append(txs ...Transaction) {
 }
 
 // Transactions returns an iterator that yields each transaction in its original order.
-func (l Ledger) Transactions() iter.Seq2[int, Transaction] {
+func (l Ledger) Transactions(filters ...func(Transaction) bool) iter.Seq2[int, Transaction] {
 	// The returned iterator preserves the original order of transactions in the ledger.
 	return func(yield func(int, Transaction) bool) {
 		for i, tx := range l.transactions {
+			for _, filter := range filters {
+				if !filter(tx) {
+					continue
+				}
+			}
 			if !yield(i, tx) {
 				return
 			}

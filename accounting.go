@@ -274,19 +274,19 @@ func (as *AccountingSystem) NewSummary(on date.Date) (*Summary, error) {
 
 	// 2. Calculate performance for each period
 	if summary.Daily, err = as.calculatePeriodPerformance(on, on); err != nil {
-		return nil, fmt.Errorf("failed to calculate daily performance: %w", err)
+		log.Printf("failed to calculate daily performance: %v	", err)
 	}
 	if summary.WTD, err = as.calculatePeriodPerformance(date.StartOfWeek(on), on); err != nil {
-		return nil, fmt.Errorf("failed to calculate WTD performance: %w", err)
+		log.Printf("failed to calculate WTD performance: %v", err)
 	}
 	if summary.MTD, err = as.calculatePeriodPerformance(date.StartOfMonth(on), on); err != nil {
-		return nil, fmt.Errorf("failed to calculate MTD performance: %w", err)
+		log.Printf("failed to calculate MTD performance: %v", err)
 	}
 	if summary.QTD, err = as.calculatePeriodPerformance(date.StartOfQuarter(on), on); err != nil {
-		return nil, fmt.Errorf("failed to calculate QTD performance: %w", err)
+		log.Printf("failed to calculate QTD performance: %v", err)
 	}
 	if summary.YTD, err = as.calculatePeriodPerformance(date.StartOfYear(on), on); err != nil {
-		return nil, fmt.Errorf("failed to calculate YTD performance: %w", err)
+		log.Printf("failed to calculate YTD performance: %v", err)
 	}
 
 	// 3. Calculate performance since inception

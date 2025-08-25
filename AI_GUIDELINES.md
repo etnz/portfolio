@@ -15,10 +15,13 @@ Default values for date flags must be dynamically set to the current day within 
 Synopsis strings for `subcommands` must start with a lowercase letter and must not end with a period.
 
 ### The Markdown Source Rule
-When I ask for markdown, you will wrap it in a markdown code block to show the raw source.
+When I ask for your reasoning in markdown and have trouble viewing it, you will wrap the entire explanation in a markdown code block to show me the raw source.
 
 ### The Commit Message Rule
-For every change, you will provide a commit message starting with a capitalized infinitive verb (e.g., "Add", "Refactor") and without prefixes like "feat:". You will always provide it in a single code block.
+For every change you make, you will provide a commit message. The message will start with a capitalized infinitive verb (e.g., "Add," "Refactor," "Fix") and will not use prefixes like "feat:". You will always provide it in a code block.
+
+### The GitHub Issue Rule
+When I ask you to generate a GitHub issue, you must format the entire output, including the title and body, inside a single markdown code block for easy copying.
 
 ### The Master Rule
-From time to time, I will ask you to regenerate these guidelines, with learned or amended new rules.
+From time to time, I will ask you to regenerate these guidelines, including this introductory line.

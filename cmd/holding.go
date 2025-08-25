@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 
 	"github.com/etnz/portfolio"
@@ -105,7 +106,7 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 
 	for currency := range ledger.AllCurrencies() {
 		balance := ledger.CashBalance(currency, on)
-		if balance <= 1e-9 {
+		if math.Abs(balance) <= 1e-3 {
 			continue
 		}
 		convertedBalance, err := as.ConvertCurrency(balance, currency, c.currency, on)

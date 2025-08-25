@@ -34,6 +34,7 @@ func Register(c *subcommands.Commander) {
 
 	c.Register(&summaryCmd{}, "analysis")
 	c.Register(&holdingCmd{}, "analysis")
+	c.Register(&historyCmd{}, "analysis")
 
 }
 

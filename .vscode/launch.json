@@ -10,7 +10,16 @@
             "request": "launch",
             "mode": "debug",
             "program": "pcs/main.go",
-            "args": [ "--securities-path=.", "summary"],
+            "args": [ "summary"],
+            "cwd": "${workspaceFolder}",
+        },
+        {
+            "name": "pcs holding",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "pcs/main.go",
+            "args": [ "holding"],
             "cwd": "${workspaceFolder}",
         },
         {
