@@ -18,7 +18,7 @@ type summaryCmd struct {
 }
 
 func (*summaryCmd) Name() string     { return "summary" }
-func (*summaryCmd) Synopsis() string { return "display portfolio summary dashboard" }
+func (*summaryCmd) Synopsis() string { return "display a portfolio performance summary" }
 func (*summaryCmd) Usage() string {
 	return `summary [-d <date>] [-c <currency>] [-u]
 

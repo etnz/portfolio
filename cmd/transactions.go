@@ -22,7 +22,7 @@ type buyCmd struct {
 }
 
 func (*buyCmd) Name() string     { return "buy" }
-func (*buyCmd) Synopsis() string { return "purchase shares to open or add to a position" }
+func (*buyCmd) Synopsis() string { return "record the purchase of a security" }
 func (*buyCmd) Usage() string {
 	return `buy -d <date> -s <security> -q <quantity> -p <price> [-m <memo>]
 
@@ -60,7 +60,7 @@ type sellCmd struct {
 }
 
 func (*sellCmd) Name() string     { return "sell" }
-func (*sellCmd) Synopsis() string { return "sell shares to trim or close a position" }
+func (*sellCmd) Synopsis() string { return "record the sale of a security" }
 func (*sellCmd) Usage() string {
 	return `sell -d <date> -s <security> -q <quantity> -p <price> [-m <memo>]
 
@@ -252,7 +252,7 @@ type declareCmd struct {
 }
 
 func (*declareCmd) Name() string     { return "declare" }
-func (*declareCmd) Synopsis() string { return "declare a security for use within the ledger" }
+func (*declareCmd) Synopsis() string { return "declare a new security" }
 func (*declareCmd) Usage() string {
 	return `pcs declare -ticker <ticker> -id <security-id> -currency <currency> [-d <date>] [-m <memo>]
 

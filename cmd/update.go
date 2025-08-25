@@ -15,7 +15,7 @@ type updateCmd struct {
 
 func (*updateCmd) Name() string { return "update" }
 func (*updateCmd) Synopsis() string {
-	return "update security prices in from eodhd.com provider"
+	return "update security prices from an external provider"
 }
 func (*updateCmd) Usage() string { return "pcs update\n" }
 func (c *updateCmd) SetFlags(f *flag.FlagSet) {
