@@ -61,12 +61,11 @@ func (c *historyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 			sec := as.Ledger.Get(c.security)
 			price, ok := as.MarketData.PriceAsOf(sec.ID(), on)
 			if !ok {
-				fmt.Fprintf(os.Stderr, "error getting price for %s on %s\n", c.security, on)
-				price = 0 // or some other default
+				fmt.Printf("%s\t\t%.2f\tN/A\tN/A\n", on, position)
+			} else {
+				value := position * price
+				fmt.Printf("%s\t\t%.2f\t%.2f\t%.2f\n", on, position, price, value)
 			}
-			value := position * price
-			fmt.Printf("%s\t%.2f %.2f %.2f\n", on, position, price, value)
-
 		} else {
 			value := as.Ledger.CashBalance(c.currency, on)
 			fmt.Printf("%s\t%.2f\n", on, value)
