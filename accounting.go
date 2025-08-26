@@ -13,6 +13,25 @@ type Performance struct {
 	Return     float64 // Return is a ratio (e.g., 0.05 for 5%)
 }
 
+// GainsReport contains the results of a capital gains calculation.
+type GainsReport struct {
+	Range             date.Range
+	Method            CostBasisMethod
+	ReportingCurrency string
+	Securities        []SecurityGains
+}
+
+// SecurityGains holds the realized and unrealized gains for a single security.
+type SecurityGains struct {
+	Security         string
+	Realized         float64
+	Unrealized       float64
+	Total            float64
+	CostBasis        float64
+	MarketValue      float64
+	Quantity         float64
+}
+
 // Summary provides a comprehensive, at-a-glance overview of the portfolio's
 // state and performance on a given date.
 type Summary struct {
@@ -377,4 +396,78 @@ func (as *AccountingSystem) CostBasis(on date.Date) (float64, error) {
 
 	}
 	return totalCostBasis, nil
+}
+
+// CalculateGains computes the realized and unrealized gains for all securities
+// over a given period, using a specified cost basis accounting method.
+func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMethod) (*GainsReport, error) {
+	report := &GainsReport{
+		Range:             period,
+		Method:            method,
+		ReportingCurrency: as.ReportingCurrency,
+		Securities:        []SecurityGains{},
+	}
+
+	for sec := range as.Ledger.AllSecurities() {
+		ticker := sec.Ticker()
+		position := as.Ledger.Position(ticker, period.To)
+
+		realizedGainEnd, err := as.Ledger.RealizedGain(ticker, period.To, method)
+		if err != nil {
+			return nil, fmt.Errorf("could not calculate realized gain for %q at end of period: %w", ticker, err)
+		}
+
+		realizedGainStart, err := as.Ledger.RealizedGain(ticker, period.From.Add(-1), method)
+		if err != nil {
+			return nil, fmt.Errorf("could not calculate realized gain for %q at start of period: %w", ticker, err)
+		}
+
+		realizedGain := realizedGainEnd - realizedGainStart
+
+		// Unrealized Gain
+		costBasisEnd, err := as.Ledger.CostBasis(ticker, period.To, method)
+		if err != nil {
+			return nil, fmt.Errorf("could not calculate cost basis for %q: %w", ticker, err)
+		}
+		priceEnd, ok := as.MarketData.PriceAsOf(sec.ID(), period.To)
+		if !ok {
+			if position > 0 {
+				return nil, fmt.Errorf("could not find price for security %q as of %s", ticker, period.To)
+			}
+		}
+		marketValueEnd := position * priceEnd
+		unrealizedGainEnd := marketValueEnd - costBasisEnd
+
+		positionStart := as.Ledger.Position(ticker, period.From.Add(-1))
+		costBasisStart, err := as.Ledger.CostBasis(ticker, period.From.Add(-1), method)
+		if err != nil {
+			return nil, fmt.Errorf("could not calculate cost basis for %q: %w", ticker, err)
+		}
+		priceStart, ok := as.MarketData.PriceAsOf(sec.ID(), period.From.Add(-1))
+		if !ok {
+			if positionStart > 0 {
+				return nil, fmt.Errorf("could not find price for security %q as of %s", ticker, period.From.Add(-1))
+			}
+		}
+		marketValueStart := positionStart * priceStart
+		unrealizedGainStart := marketValueStart - costBasisStart
+
+		unrealizedGain := unrealizedGainEnd - unrealizedGainStart
+
+		if position == 0 && realizedGain == 0 {
+			continue
+		}
+
+		report.Securities = append(report.Securities, SecurityGains{
+			Security:    ticker,
+			Realized:    realizedGain,
+			Unrealized:  unrealizedGain,
+			Total:       realizedGain + unrealizedGain,
+			CostBasis:   costBasisEnd,
+			MarketValue: marketValueEnd,
+			Quantity:    position,
+		})
+	}
+
+	return report, nil
 }

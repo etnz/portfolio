@@ -2,8 +2,8 @@ package portfolio
 
 import (
 	"reflect"
-	"time"
 	"testing"
+	"time"
 
 	"github.com/etnz/portfolio/date"
 )
@@ -305,6 +305,81 @@ func TestLedger_CashBalance(t *testing.T) {
 			gotBalance := ledger.CashBalance(tc.currency, tc.date)
 			if gotBalance != tc.wantBalance {
 				t.Errorf("CashBalance(%q, %s) = %v, want %v", tc.currency, tc.date, gotBalance, tc.wantBalance)
+			}
+		})
+	}
+}
+
+func TestLedger_CostBasisAndRealizedGain(t *testing.T) {
+	ledger := NewLedger()
+	o := date.New(2025, time.January, 1)
+	ledger.Append(
+		NewDeclaration(o, "", "AAPL", "US0378331005.XNAS", "USD"),
+		NewBuy(date.New(2025, time.January, 10), "", "AAPL", 100, 150.0), // Cost: 15000
+		NewBuy(date.New(2025, time.January, 15), "", "AAPL", 50, 160.0),  // Cost: 8000
+		NewSell(date.New(2025, time.February, 1), "", "AAPL", 75, 170.0), // Proceeds: 12750
+		NewBuy(date.New(2025, time.February, 10), "", "AAPL", 25, 180.0), // Cost: 4500
+		NewSell(date.New(2025, time.March, 1), "", "AAPL", 100, 190.0), // Proceeds: 19000
+	)
+
+	testCases := []struct {
+		name             string
+		ticker           string
+		date             date.Date
+		method           CostBasisMethod
+		wantCostBasis    float64
+		wantRealizedGain float64
+	}{
+		{
+			name:             "FIFO - After first sell",
+			ticker:           "AAPL",
+			date:             date.New(2025, time.February, 5),
+			method:           FIFO,
+			wantCostBasis:    (25 * 150) + (50 * 160),
+			wantRealizedGain: (75 * 170) - (75 * 150),
+		},
+		{
+			name:             "FIFO - Final",
+			ticker:           "AAPL",
+			date:             date.New(2025, time.April, 1),
+			method:           FIFO,
+			wantCostBasis:    0,
+			wantRealizedGain: ((75 * 170) - (75 * 150)) + ((100 * 190) - ((25 * 150) + (50 * 160) + (25 * 180))),
+		},
+		{
+			name:             "Average Cost - After first sell",
+			ticker:           "AAPL",
+			date:             date.New(2025, time.February, 5),
+			method:           AverageCost,
+			wantCostBasis:    11500,
+			wantRealizedGain: 1250,
+		},
+		{
+			name:             "Average Cost - Final",
+			ticker:           "AAPL",
+			date:             date.New(2025, time.April, 1),
+			method:           AverageCost,
+			wantCostBasis:    0,
+			wantRealizedGain: 4250,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			costBasis, err := ledger.CostBasis(tc.ticker, tc.date, tc.method)
+			if err != nil {
+				t.Errorf("CostBasis() error = %v", err)
+			}
+			if costBasis != tc.wantCostBasis {
+				t.Errorf("CostBasis() = %v, want %v", costBasis, tc.wantCostBasis)
+			}
+
+			realizedGain, err := ledger.RealizedGain(tc.ticker, tc.date, tc.method)
+			if err != nil {
+				t.Errorf("RealizedGain() error = %v", err)
+			}
+			if realizedGain != tc.wantRealizedGain {
+				t.Errorf("RealizedGain() = %v, want %v", realizedGain, tc.wantRealizedGain)
 			}
 		})
 	}

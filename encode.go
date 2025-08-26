@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/etnz/portfolio/date"
@@ -203,7 +204,16 @@ func encodeDefinition(w io.Writer, m *MarketData) error {
 		//more to come when the security definition grows.
 	}
 
+	// Collect securities and sort them by ticker for stable output.
+	var sortedSecurities []Security
 	for _, sec := range m.securities {
+		sortedSecurities = append(sortedSecurities, sec)
+	}
+	sort.Slice(sortedSecurities, func(i, j int) bool {
+		return sortedSecurities[i].Ticker() < sortedSecurities[j].Ticker()
+	})
+
+	for _, sec := range sortedSecurities {
 		js := jsecurity{
 			Ticker:   sec.Ticker(),
 			ID:       string(sec.ID()),
@@ -212,7 +222,7 @@ func encodeDefinition(w io.Writer, m *MarketData) error {
 
 		data, err := json.Marshal(js)
 		if err != nil {
-			return fmt.Errorf("persist error: cannot marshal security %q: %w", sec.ticker, err)
+			return fmt.Errorf("persist error: cannot marshal security %q: %w", sec.Ticker(), err)
 		}
 
 		if _, err := w.Write(append(data, '\n')); err != nil {
@@ -262,9 +272,17 @@ func EncodeMarketData(definitionFile string, m *MarketData) error {
 	}
 	lines := make([]line, 0, 365*100) // hunderd years should be enough
 
-	// The m.securities slice is already sorted, so we can use it directly.
-	histories := make([]date.History[float64], 0, len(m.securities))
+	// Collect securities and sort them by ticker for stable output.
+	var sortedSecurities []Security
 	for _, sec := range m.securities {
+		sortedSecurities = append(sortedSecurities, sec)
+	}
+	sort.Slice(sortedSecurities, func(i, j int) bool {
+		return sortedSecurities[i].Ticker() < sortedSecurities[j].Ticker()
+	})
+
+	histories := make([]date.History[float64], 0, len(sortedSecurities))
+	for _, sec := range sortedSecurities {
 		prices, exists := m.prices[sec.ID()]
 		if !exists {
 			return fmt.Errorf("invalid market data: security %q has no prices", sec.Ticker())

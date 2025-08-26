@@ -54,6 +54,7 @@ Subcommands for amundi:
         update-amundi    import transactions from an amundi jsonl file
 
 Subcommands for analysis:
+        gains            realized and unrealized gain analysis
         history          display asset value history
         holding          display detailed holdings for a specific date
         summary          display a portfolio performance summary

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sort"
 
 	"github.com/etnz/portfolio/date"
 )
@@ -82,16 +83,25 @@ func ExportMarketData(w io.Writer, m *MarketData) error {
 		History  map[string]float64 `json:"history"`
 	}
 
-	for id, sec := range m.securities {
+	// Collect securities and sort them by ticker for stable output.
+	var sortedSecurities []Security
+	for _, sec := range m.securities {
+		sortedSecurities = append(sortedSecurities, sec)
+	}
+	sort.Slice(sortedSecurities, func(i, j int) bool {
+		return sortedSecurities[i].Ticker() < sortedSecurities[j].Ticker()
+	})
+
+	for _, sec := range sortedSecurities {
 		// Create the json object security.
 		js := jsecurity{
 			Ticker:   sec.Ticker(),
-			ID:       id.String(),
+			ID:       sec.ID().String(),
 			Currency: sec.currency,
 			History:  make(map[string]float64),
 		}
 
-		for day, value := range m.Prices(id) {
+		for day, value := range m.Prices(sec.ID()) {
 			js.History[day.String()] = value
 		}
 

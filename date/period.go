@@ -28,3 +28,24 @@ func StartOfQuarter(d Date) Date {
 func StartOfYear(d Date) Date {
 	return New(d.Year(), time.January, 1)
 }
+
+// NewRangeFrom returns a new date range from an end date and a period string.
+func NewRangeFrom(end Date, period string) Range {
+	var start Date
+	switch period {
+	case "day":
+		start = end
+	case "week":
+		start = StartOfWeek(end)
+	case "month":
+		start = StartOfMonth(end)
+	case "quarter":
+		start = StartOfQuarter(end)
+	case "year", "": // default to year
+		start = StartOfYear(end)
+	default:
+		// maybe we should return an error here
+		start = StartOfYear(end)
+	}
+	return Range{From: start, To: end}
+}
