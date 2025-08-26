@@ -379,6 +379,14 @@ func (l *Ledger) AllCurrencies() iter.Seq[string] {
 				visitedCurrencies[v.ToCurrency] = struct{}{}
 			case Declare:
 				visitedCurrencies[v.Currency] = struct{}{}
+			case Buy:
+				if sec := l.Get(v.Security); sec != nil {
+					visitedCurrencies[sec.Currency()] = struct{}{}
+				}
+			case Sell:
+				if sec := l.Get(v.Security); sec != nil {
+					visitedCurrencies[sec.Currency()] = struct{}{}
+				}
 			}
 		}
 		// Now yield the values

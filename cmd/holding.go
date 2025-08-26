@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"math"
 	"os"
 
 	"github.com/etnz/portfolio"
@@ -47,6 +46,14 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitFailure
 	}
 
+	if c.update {
+		err := market.UpdateIntraday()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
+			return subcommands.ExitFailure
+		}
+	}
+
 	ledger, err := DecodeLedger()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading ledger: %v\n", err)
@@ -59,15 +66,13 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitFailure
 	}
 
-	if c.update {
-		err := market.UpdateIntraday()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
-			return subcommands.ExitFailure
-		}
+	report, err := as.NewHoldingReport(on)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating holding report: %v\n", err)
+		return subcommands.ExitFailure
 	}
 
-	fmt.Printf("Holdings on %s in reporting currency %s\n\n", on, c.currency)
+	fmt.Printf("Holdings on %s in reporting currency %s\n\n", report.Date, report.ReportingCurrency)
 
 	// Securities
 	fmt.Println("Securities:")
@@ -75,26 +80,8 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	fmt.Printf("%-10s %15s %15s %15s\n", "Ticker", "Quantity", "Price", "Market Value")
 	fmt.Println("-----------------------------------------------------------------")
 
-	for sec := range ledger.AllSecurities() {
-		ticker := sec.Ticker()
-		id := sec.ID()
-		currency := sec.Currency()
-		position := ledger.Position(ticker, on)
-		if position <= 1e-9 {
-			continue
-		}
-		price, ok := market.PriceAsOf(id, on)
-		if !ok {
-			fmt.Fprintf(os.Stderr, "Warning: could not find price for %s (%s) on %s\n", ticker, id, on)
-			continue
-		}
-		value := position * price
-		convertedValue, err := as.ConvertCurrency(value, currency, c.currency, on)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: could not convert currency for %s: %v\n", ticker, err)
-			continue
-		}
-		fmt.Printf("%-10s %15.4f %15.4f %15.2f\n", ticker, position, price, convertedValue)
+	for _, h := range report.Securities {
+		fmt.Printf("%-10s %15.4f %15.4f %15.2f\n", h.Ticker, h.Quantity, h.Price, h.MarketValue)
 	}
 	fmt.Println("-----------------------------------------------------------------")
 
@@ -104,26 +91,12 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	fmt.Printf("%-10s %15s %15s\n", "Currency", "Balance", "Value")
 	fmt.Println("-------------------------------------------------")
 
-	for currency := range ledger.AllCurrencies() {
-		balance := ledger.CashBalance(currency, on)
-		if math.Abs(balance) <= 1e-3 {
-			continue
-		}
-		convertedBalance, err := as.ConvertCurrency(balance, currency, c.currency, on)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: could not convert currency for cash %s: %v\n", currency, err)
-			continue
-		}
-		fmt.Printf("%-10s %15.2f %15.2f\n", currency, balance, convertedBalance)
+	for _, h := range report.Cash {
+		fmt.Printf("%-10s %15.2f %15.2f\n", h.Currency, h.Balance, h.Value)
 	}
 	fmt.Println("-------------------------------------------------")
 
-	tmv, err := as.TotalMarketValue(on)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error calculating total market value: %v\n", err)
-		return subcommands.ExitFailure
-	}
-	fmt.Printf("\nTotal Portfolio Value: %.2f %s\n", tmv, c.currency)
+	fmt.Printf("\nTotal Portfolio Value: %.2f %s\n", report.TotalValue, report.ReportingCurrency)
 
 	return subcommands.ExitSuccess
 }

@@ -471,3 +471,69 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 
 	return report, nil
 }
+
+// NewHoldingReport calculates and returns a detailed holdings report for a given date.
+func (as *AccountingSystem) NewHoldingReport(on date.Date) (*HoldingReport, error) {
+	report := &HoldingReport{
+		Date:              on,
+		ReportingCurrency: as.ReportingCurrency,
+		Securities:        []SecurityHolding{},
+		Cash:              []CashHolding{},
+	}
+
+	// Securities
+	for sec := range as.Ledger.AllSecurities() {
+		ticker := sec.Ticker()
+		id := sec.ID()
+		currency := sec.Currency()
+		position := as.Ledger.Position(ticker, on)
+		if position <= 1e-9 {
+			continue
+		}
+		price, ok := as.MarketData.PriceAsOf(id, on)
+		if !ok {
+			log.Printf("Warning: could not find price for %s (%s) on %s", ticker, id, on)
+			continue
+		}
+		value := position * price
+		convertedValue, err := as.ConvertCurrency(value, currency, as.ReportingCurrency, on)
+		if err != nil {
+			log.Printf("Warning: could not convert currency for %s: %v", ticker, err)
+			continue
+		}
+		report.Securities = append(report.Securities, SecurityHolding{
+			Ticker:      ticker,
+			ID:          id.String(),
+			Currency:    currency,
+			Quantity:    position,
+			Price:       price,
+			MarketValue: convertedValue,
+		})
+	}
+
+	// Cash
+	for currency := range as.Ledger.AllCurrencies() {
+		balance := as.Ledger.CashBalance(currency, on)
+		if balance == 0 {
+			continue
+		}
+		convertedBalance, err := as.ConvertCurrency(balance, currency, as.ReportingCurrency, on)
+		if err != nil {
+			log.Printf("Warning: could not convert currency for cash %s: %v", currency, err)
+			continue
+		}
+		report.Cash = append(report.Cash, CashHolding{
+			Currency: currency,
+			Balance:  balance,
+			Value:    convertedBalance,
+		})
+	}
+
+	tmv, err := as.TotalMarketValue(on)
+	if err != nil {
+		return nil, fmt.Errorf("could not calculate total market value: %w", err)
+	}
+	report.TotalValue = tmv
+
+	return report, nil
+}
