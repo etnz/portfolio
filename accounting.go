@@ -3,6 +3,7 @@ package portfolio
 import (
 	"fmt"
 	"log"
+	"math"
 
 	"github.com/etnz/portfolio/date"
 )
@@ -454,7 +455,7 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 
 		unrealizedGain := unrealizedGainEnd - unrealizedGainStart
 
-		if position == 0 && realizedGain == 0 {
+		if math.Abs(realizedGain) < 1e-9 && math.Abs(unrealizedGain) < 1e-9 {
 			continue
 		}
 
