@@ -41,9 +41,12 @@ func Register(c *subcommands.Commander) {
 
 // As a CLI application, it has a very short-lived lifecycle, so it is ok to use global variables for flags.
 
-var marketFile = flag.String("market-file", "market.jsonl", "Path to the market data file containing securities (JSONL format)")
-var ledgerFile = flag.String("ledger-file", "transactions.jsonl", "Path to the ledger file containing transactions (JSONL format)")
-var defaultCurrency = flag.String("default-currency", "EUR", "default currency")
+var (
+	marketFile      = flag.String("market-file", "market.jsonl", "Path to the market data file containing securities (JSONL format)")
+	ledgerFile      = flag.String("ledger-file", "transactions.jsonl", "Path to the ledger file containing transactions (JSONL format)")
+	defaultCurrency = flag.String("default-currency", "EUR", "default currency")
+	Verbose         = flag.Bool("v", false, "enable verbose logging")
+)
 
 func DecodeAccountingSystem() (*portfolio.AccountingSystem, error) {
 	market, err := DecodeMarketData()

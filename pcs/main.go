@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"flag"
+	"io"
+	"log"
 	"os"
 	"path"
 
@@ -20,5 +22,10 @@ func main() {
 	cmd.Register(commander)
 
 	flag.Parse()
+
+	if !*cmd.Verbose {
+		log.SetOutput(io.Discard)
+	}
+
 	os.Exit(int(commander.Execute(context.Background())))
 }
