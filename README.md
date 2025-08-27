@@ -63,7 +63,7 @@ Subcommands for securities:
         add-security     add a new security to the market data
         import-investing  import public security prices from investing.com's CSV format
         search-security  search for securities using EODHD API
-        update           update security prices from an external provider
+        update-security  update security prices, either automatically or manually
 
 Subcommands for transactions:
         buy              record the purchase of a security

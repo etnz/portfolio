@@ -1,6 +1,7 @@
 package portfolio
 
 import (
+	"fmt"
 	"iter"
 
 	"github.com/etnz/portfolio/date"
@@ -54,6 +55,21 @@ func (m *MarketData) Append(id ID, day date.Date, price float64) bool {
 		return true
 	}
 	return false
+}
+
+// SetPrice sets the price for a security on a specific date.
+// This is used for manual price adjustments.
+func (m *MarketData) SetPrice(id ID, day date.Date, price float64) error {
+	// check that the security exists
+	if _, ok := m.securities[id]; !ok {
+		return fmt.Errorf("security with ID %q not found", id)
+	}
+	if prices, ok := m.prices[id]; ok {
+		prices.Append(day, price)
+		return nil
+	}
+	// this should not happen if the security exists
+	return fmt.Errorf("price history not found for security with ID %q", id)
 }
 
 // Values return a iterator on date and prices for the given ID (or nil)

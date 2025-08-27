@@ -17,7 +17,7 @@ import (
 // A main package will call Register() to set up the CLI.
 func Register(c *subcommands.Commander) {
 	c.Register(&importInvestingCmd{}, "securities")
-	c.Register(&updateCmd{}, "securities")
+	c.Register(&updateSecurityCmd{}, "securities")
 	c.Register(&addSecurityCmd{}, "securities")
 	c.Register(&searchSecurityCmd{}, "securities")
 
