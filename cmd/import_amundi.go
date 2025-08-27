@@ -63,7 +63,7 @@ type importAmundiCmd struct{}
 
 func (*importAmundiCmd) Name() string { return "import-amundi" }
 func (*importAmundiCmd) Synopsis() string {
-	return "Converts an Amundi transactions JSON file to JSONL format."
+	return "converts an Amundi transactions JSON file to JSONL format"
 }
 func (*importAmundiCmd) Usage() string {
 	return `pcs import-amundi <amundi_transactions.json>

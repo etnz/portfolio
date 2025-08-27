@@ -136,8 +136,9 @@ type Sell struct {
 }
 
 // NewSell creates a new Sell transaction.
-//
-// Quantity to exactly 0 is interpreted as a sell all on the position.
+// If the quantity is set to 0, it signifies a "sell all" instruction.
+// The actual number of shares will be determined during the validation phase
+// based on the portfolio's position on the transaction date.
 func NewSell(day date.Date, memo, security string, quantity, price float64) Sell {
 	return Sell{
 		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdSell, Date: day, Memo: memo}, Security: security},
@@ -286,6 +287,8 @@ type Withdraw struct {
 }
 
 // NewWithdraw creates a new Withdraw transaction.
+// If the amount is set to 0, it signifies a "withdraw all" instruction for the specified currency.
+// The actual amount will be determined during the validation phase based on the cash balance on the transaction date.
 func NewWithdraw(day date.Date, memo, currency string, amount float64) Withdraw {
 	return Withdraw{
 		baseCmd:  baseCmd{Command: CmdWithdraw, Date: day, Memo: memo},

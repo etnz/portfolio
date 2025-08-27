@@ -21,7 +21,7 @@ import (
 
 const eodhd_api_key = "EODHD_API_KEY"
 
-var eodhdApiFlag = flag.String("eodhd-api-key", "", "EODHD API key to use for fetching prices from EODHD.com.\n If missing it will read for the environment variable \""+eodhd_api_key+"\". You can get one at https://eodhd.com/")
+var eodhdApiFlag = flag.String("eodhd-api-key", "", "EODHD API key to use for fetching prices from EODHD.com. This flag takes precedence over the "+eodhd_api_key+" environment variable. You can get one at https://eodhd.com/")
 
 // eodhdApiKey retrieves the EODHD API key from the command-line flag or the environment variable.
 // It prioritizes the flag over the environment variable.

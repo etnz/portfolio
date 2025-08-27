@@ -50,7 +50,7 @@ Subcommands:
         help             describe subcommands and their syntax
 
 Subcommands for amundi:
-        import-amundi    Converts an Amundi transactions JSON file to JSONL format.
+        import-amundi    converts an Amundi transactions JSON file to JSONL format
         update-amundi    import transactions from an amundi jsonl file
 
 Subcommands for analysis:
@@ -77,3 +77,13 @@ Subcommands for transactions:
 
 Use "pcs flags" for a list of top-level flags
 ```
+
+## About This Project
+
+This project is an exercise in using AI to generate code. The maintainer is using Gemini Code Assist as a full stack software engineer:
+* the initial ontology (naming concepts, like ledger), project structure, CLI commands names, consistency accross function names.
+* All design documents, and implementation plans.
+* This readme (except this section)
+* Github issues interactions. Most of the comments, many issues descriptions.
+* All commit messages.
+* All the code, including tests.

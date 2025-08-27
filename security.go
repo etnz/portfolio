@@ -27,7 +27,7 @@ var idCharRegex = regexp.MustCompile(`^[a-zA-Z0-9 -]+$`)
 //
 // It can have multiple different types.
 //
-// MSSI (Market-Specific Security Identifier).
+// # MSSI (Market-Specific Security Identifier)
 //
 // MSSI represents a Market-Specific Security Identifier, a proposed standard for
 // creating an unambiguous, composite identifier for a security listed on a
@@ -38,12 +38,14 @@ var idCharRegex = regexp.MustCompile(`^[a-zA-Z0-9 -]+$`)
 //
 // Formal Definition: ID = ISIN "." MIC
 //
+// Example: "US0378331005.XNAS" for Apple Inc. on the NASDAQ.
+//
 // This type provides a safe way to create, parse, and handle MSSIs, ensuring
 // the format is always valid. It is based on two existing ISO standards:
 //   - ISO 6166 (ISIN): For identifying the security.
 //   - ISO 10383 (MIC): For identifying the market.
 //
-// CurrencyPair.
+// # CurrencyPair
 //
 // CurrencyPair represents a currency pair identifier according to the common market
 // convention used in foreign exchange (FX) markets.
@@ -63,13 +65,15 @@ var idCharRegex = regexp.MustCompile(`^[a-zA-Z0-9 -]+$`)
 // Example: The pair "EURUSD" represents the price of one Euro (EUR) in terms of
 // US Dollars (USD).
 //
-// Private.
+// # Private
 //
 // Private represents a generic, non-standard identifier.
 //
 // The format rules for a private ID are designed to prevent ambiguity with other, more
 // specific financial identifiers. The rationale is to ensure that a private ID cannot be
 // misinterpreted as a Market-Specific Security Identifier (MSSI) or a CurrencyPair.
+//
+// Example: "My Private Equity Investment"
 //
 // Rules:
 //  1. Must be at least 7 characters long.

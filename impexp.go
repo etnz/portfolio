@@ -17,6 +17,9 @@ import (
 // ImportMarketData imports market data from 'r' in the import/export format.
 //
 // The import format is a JSONL file, where each line is a JSON object representing a security.
+// For example:
+//
+//	{"ticker":"AAPL","id":"US0378331005.XNAS","currency":"USD","history":{"2023-01-02":130.28,"2023-01-03":125.07}}
 //
 // A security is a single json object whose property 'ticker' contains the security ticker, 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
 //
@@ -70,6 +73,9 @@ func ImportMarketData(r io.Reader) (*MarketData, error) {
 // ExportMarketData exports the market data to 'w' in the import/export format.
 //
 // The format is a JSONL file, where each line is a JSON object representing a security.
+// For example:
+//
+//	{"ticker":"AAPL","id":"US0378331005.XNAS","currency":"USD","history":{"2023-01-02":130.28,"2023-01-03":125.07}}
 //
 // A security is a single json object whose property 'ticker' contains the security ticker, 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
 //

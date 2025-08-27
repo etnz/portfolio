@@ -16,7 +16,9 @@ import (
 type CostBasisMethod int
 
 const (
+	// AverageCost calculates the cost basis by averaging the cost of all shares.
 	AverageCost CostBasisMethod = iota
+	// FIFO (First-In, First-Out) calculates the cost basis by assuming the first shares purchased are the first ones sold.
 	FIFO
 )
 
@@ -80,7 +82,7 @@ func (l *Ledger) Get(ticker string) *Security {
 	return &sec
 }
 
-// Append appends transactions to this ledger.
+// Append appends transactions to this ledger and maintains the chronological order of transactions.
 func (l *Ledger) Append(txs ...Transaction) {
 	l.transactions = append(l.transactions, txs...)
 	// process security declarations and update lots

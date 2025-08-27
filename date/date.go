@@ -14,8 +14,8 @@ const DateFormat = "2006-01-02" // write date format
 
 const Day = 24 * time.Hour
 
-// Date represent a date with no lower than day granularity.
-type Date struct { // Date represents a date with day-level granularity.
+// Date represents a date with day-level granularity.
+type Date struct {
 	y int
 	m time.Month
 	d int
@@ -165,7 +165,7 @@ func Iterate[T float32 | float64](histories ...History[T]) iter.Seq[Date] {
 	return iterate(dates...)
 }
 
-// TODO #2: fill and test this package see issue
+
 
 // Range represents a range of dates.
 type Range struct{ From, To Date }
