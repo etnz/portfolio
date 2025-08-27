@@ -27,5 +27,28 @@ func main() {
 		log.SetOutput(io.Discard)
 	}
 
+	// Check if a subcommand is provided
+	if flag.NArg() > 0 {
+		subcommand := flag.Arg(0)
+		isBuiltIn := false
+
+		// Iterate through registered built-in commands to check for a match
+		commander.VisitCommands(func(g *subcommands.CommandGroup, c subcommands.Command) {
+			if c.Name() == subcommand {
+				isBuiltIn = true
+			}
+		})
+
+		// If it's not a built-in command, attempt to run as an extension
+		if !isBuiltIn {
+			extensionExecuted, exitCode := cmd.RunExtension(subcommand, os.Args[1:])
+			if extensionExecuted {
+				os.Exit(exitCode)
+			}
+		}
+	}
+
+	// If no extension was executed (either not found, or it was a built-in command),
+	// proceed with built-in commands execution.
 	os.Exit(int(commander.Execute(context.Background())))
 }
