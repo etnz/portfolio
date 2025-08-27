@@ -11,7 +11,10 @@ import (
 	"github.com/google/subcommands"
 )
 
-type searchSecurityCmd struct{}
+type searchSecurityCmd struct{
+	addSecurityCmd *addSecurityCmd
+	showErrors     bool
+}
 
 func (*searchSecurityCmd) Name() string     { return "search-security" }
 func (*searchSecurityCmd) Synopsis() string { return "search for securities using EODHD API" }
@@ -24,7 +27,9 @@ func (*searchSecurityCmd) Usage() string {
 `
 }
 
-func (c *searchSecurityCmd) SetFlags(f *flag.FlagSet) {}
+func (c *searchSecurityCmd) SetFlags(f *flag.FlagSet) {
+	f.BoolVar(&c.showErrors, "show-errors", false, "Display entries with invalid ISINs and print error messages")
+}
 
 func (c *searchSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if f.NArg() == 0 {
@@ -54,12 +59,14 @@ func (c *searchSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...int
 
 		securityID, err := portfolio.NewMSSI(item.ISIN, item.MIC)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "    Error creating security ID: %v\n\n", err)
+			if c.showErrors {
+				fmt.Fprintf(os.Stderr, "    Error creating security ID for %s (%s): %v\n\n", item.Name, item.Code, err)
+			}
 			continue // skip invalid results
 		}
 
 		suggestedTicker := item.Code
-		commandToCopy := fmt.Sprintf("pcs add-security -ticker='%s' -id='%s' -currency='%s'", suggestedTicker, securityID, item.Currency)
+		commandToCopy := c.addSecurityCmd.GenerateAddCommand(suggestedTicker, securityID.String(), item.Currency)
 
 		fmt.Printf("    $ %s\n\n", commandToCopy)
 	}

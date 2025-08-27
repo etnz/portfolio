@@ -15,6 +15,10 @@ type addSecurityCmd struct {
 	id         string
 	currency   string
 	fromLedger bool
+
+	tickerFlagName   string
+	idFlagName       string
+	currencyFlagName string
 }
 
 func (*addSecurityCmd) Name() string     { return "add-security" }
@@ -35,11 +39,24 @@ func (*addSecurityCmd) Usage() string {
 `
 }
 
+func NewAddSecurityCmd() *addSecurityCmd {
+	return &addSecurityCmd{
+		tickerFlagName:   "s",
+		idFlagName:       "id",
+		currencyFlagName: "c",
+	}
+}
+
 func (c *addSecurityCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.ticker, "s", "", "Security ticker symbol (required)")
-	f.StringVar(&c.id, "id", "", "Unique security identifier (required)")
-	f.StringVar(&c.currency, "c", "", "Security's currency, 3-letter code (required)")
+	f.StringVar(&c.ticker, c.tickerFlagName, "", "Security ticker symbol (required)")
+	f.StringVar(&c.id, c.idFlagName, "", "Unique security identifier (required)")
+	f.StringVar(&c.currency, c.currencyFlagName, "", "Security's currency, 3-letter code (required)")
 	f.BoolVar(&c.fromLedger, "from-ledger", false, "Declare all securities in the ledger into the market data")
+}
+
+// GenerateAddCommand generates the 'pcs add-security' command string with the given parameters.
+func (c *addSecurityCmd) GenerateAddCommand(ticker, id, currency string) string {
+	return fmt.Sprintf("pcs add-security -%s='%s' -%s='%s' -%s='%s'", c.tickerFlagName, ticker, c.idFlagName, id, c.currencyFlagName, currency)
 }
 
 func (c *addSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -94,7 +111,6 @@ func (c *addSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interf
 			return subcommands.ExitFailure
 		}
 	}
-
 
 	if err := EncodeMarketData(market); err != nil {
 		fmt.Fprintf(os.Stderr, "Error saving securities database: %v\n", err)
