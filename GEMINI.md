@@ -23,6 +23,15 @@ To interact with Github issues or pull requests, you can use the `gh` command li
 
 When reading an issue always read all the comments too.
 
+**Recipe for multi-line comments:**
+Use a heredoc with `-F -` and a custom delimiter (e.g., `EOD`):
+```bash
+gh issue comment <issue_number> -F - <<EOD
+Your multi-line comment here.
+It can span multiple lines.
+EOD
+```
+
 ### The Testing Rule
 
 Run project's test often to ensure everything is working as expected. At least before any commit.
