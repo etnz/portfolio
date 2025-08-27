@@ -23,6 +23,8 @@ From time to time, I will ask you to regenerate these guidelines, including this
 
 To interact with Github issues or pull requests, you can use the `gh` command line.
 
+When reading an issue always read all the comments too.
+
 ### The Testing Rule
 
 Run project's test often to ensure everything is working as expected. At least before any commit.

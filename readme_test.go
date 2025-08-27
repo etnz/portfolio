@@ -9,6 +9,15 @@ import (
 	"testing"
 )
 
+// This file contains the logic to test the examples in the README.md file.
+//
+// To add a new testable example to the README.md file, you need to follow these steps:
+//
+// 1.  Add the command to the README.md file, wrapped in a ```bash ... ``` block.
+// 2.  Add the expected output of the command, wrapped in a ```console ... ``` block.
+//
+// The test will automatically parse the README.md file, run the commands, and compare the output with the expected output.
+
 // Command holds a command and its expected output.
 type Command struct {
 	Cmd      string
@@ -42,9 +51,9 @@ func parseReadme(t *testing.T) []Command {
 	}
 
 	// Parse the README.md file
-	readme := string(content)
-	re := regexp.MustCompile("(?m)```bash\\n(pcs.*?)\\n```\\n\\n```console\\n((.|\\n)*?)```")
-	matches := re.FindAllStringSubmatch(readme, -1)
+	repo := string(content)
+	re := regexp.MustCompile("(?m)```bash\\n(pcs.*?)\n```\\n\\n```console\n((.|\\n)*?)```")
+	matches := re.FindAllStringSubmatch(repo, -1)
 
 	var commands []Command
 	for _, match := range matches {
@@ -58,16 +67,17 @@ func TestReadme(t *testing.T) {
 	tmp := t.TempDir()
 	pcsPath := buildPcs(t, tmp)
 
-	commands := parseReadme(t)
+	commands := parseReadme(t)	
 
 	for _, cmd := range commands {
 		t.Run(cmd.Cmd, func(t *testing.T) {
 			args := strings.Fields(cmd.Cmd)
 			t.Log("Running command:", pcsPath, args)
 			command := exec.Command(pcsPath, args[1:]...)
+			command.Dir = tmp
 			output, err := command.CombinedOutput()
 			if err != nil {
-				t.Fatalf("failed to run command: %v, output: %s", err, output)
+				t.Fatalf("failed to run command: %v, output: \n%s", err, output)
 			}
 			result := string(output)
 			// replace tabs with spaces for consistent comparison

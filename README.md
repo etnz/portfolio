@@ -1,81 +1,202 @@
-# Portfolio Management CLI
+# pcs: Your Private, Unified Portfolio Tracker
 
-This is a command-line tool for managing your investment portfolio. It helps you track your securities, transactions, and analyze your portfolio's performance.
+In a world where your investments are scattered across multiple platforms—from corporate savings plans and retirement accounts to various online brokers—getting a single, clear view of your financial health is a challenge. `pcs` is a local-first, command-line tool designed to solve this problem by providing a unified, private, and auditable view of your entire investment portfolio.
 
-## Benefits
+## The Challenge: A Scattered Portfolio
 
-- **Comprehensive Portfolio Summary:** Generate detailed performance summaries, including daily, weekly, monthly, quarterly, yearly, and inception-to-date returns.
-- **Time-Weighted Return (TWR) Calculation:** Uses the industry-standard TWR to accurately measure performance, removing the distorting effects of cash flows.
-- **Multi-Currency Support:** Handle multiple currencies and convert them to a single reporting currency.
-- **Transaction Validation:** Validate transactions before recording them to maintain data integrity.
-- **Cost Basis Calculation:** Calculate the cost basis of your portfolio for tax purposes.
+Many of us have assets spread across a variety of disconnected accounts:
 
-## Limitations
+*   **Corporate Savings Plans:** Often managed by specific institutions and not easily tracked in standard brokerage accounts.
+*   **Retirement Plans:** Typically held in separate, dedicated accounts.
+*   **Corporate Stock Options:** Managed by a specific broker, adding another silo to your portfolio.
+*   **Online Trading Platforms:** Modern online banks and trading platforms that offer stock and crypto trading.
+*   **Traditional Life Insurance:** Held in a traditional bank, with its own interface and reporting.
 
-- **Data Source:** The tool relies on JSONL files for market data and transactions. It does not connect to live data sources.
-- **No GUI:** This is a command-line only tool.
-- **Manual Data Entry:** Transactions and market data must be entered manually.
+This scattered landscape makes it incredibly difficult to answer a simple question: "What is my total net worth, and how is it performing?"
 
-## Getting Started
+## The Solution: A Unified, Private Portfolio
 
-### Prerequisites
+`pcs` allows you to bring all your assets into a single view, giving you a clear picture of your entire portfolio. The tool is designed to handle both publicly-traded stocks and private, hard-to-track assets, like corporate savings plans or even real estate. Because `pcs` is a local-first tool that operates on your own machine, you have complete privacy and control over your financial data.
 
-- [Go](https://golang.org/) installed on your system.
-- make sure that `go install` will install binaries in your PATH. `go install` will install binaries in the directory named by the GOBIN environment variable, which defaults to $GOPATH/bin or $HOME/go/bin if the GOPATH
-environment variable is not set.
-- An API key for [EODHD](https://eodhd.com/) if you want to use the security search and update feature.
+## Getting Started: Your First Unified Portfolio
+
+This tutorial will walk you through the process of setting up your portfolio and tracking your first investment.
 
 ### Installation
 
-To install (or update) the tool, simply use the following command:
+To get started, ensure you have the following prerequisites:
+- [Go](https://golang.org/) is installed on your system.
+- [EODHD](https://eodhd.com/) API key must be set in the `EODHD_API_KEY` environment variable (free tier is sufficient) or you can pass it as a flag to the `pcs` command.
+
+Then, you can install `pcs` with a single command:
 
 ```bash
 go install github.com/etnz/portfolio/cmd/pcs@latest
 ```
 
-This will compile and install the `pcs` command-line tool in your PATH.
+### Declaring Your Assets in the Market Data
 
-Check the installation by running:
+Before you can track an asset, it needs to be declared in the `market.jsonl` file. 
+
+Let's declare a public stock (Apple) and a private fund in your corporate savings plan.
+
 
 ```bash
-pcs help
+pcs add-security -s AAPL -id US0378331005.XETR -c EUR
 ```
 
 ```console
-Usage: pcs <flags> <subcommand> <subcommand args>
+✅ Successfully added security 'AAPL' to the market data.
+```
 
-Subcommands:
-        commands         list all command names
-        flags            describe all known top-level flags
-        help             describe subcommands and their syntax
-
-Subcommands for amundi:
-        import-amundi    converts an Amundi transactions JSON file to JSONL format
-        update-amundi    import transactions from an amundi jsonl file
-
-Subcommands for analysis:
-        gains            realized and unrealized gain analysis
-        history          display asset value history
-        holding          display detailed holdings for a specific date
-        summary          display a portfolio performance summary
-
-Subcommands for securities:
-        add-security     add a new security to the market data
-        import-investing  import public security prices from investing.com's CSV format
-        search-security  search for securities using EODHD API
-        update-security  update security prices, either automatically or manually
-
-Subcommands for transactions:
-        buy              record the purchase of a security
-        convert          converts cash from one currency to another within the portfolio
-        declare          declare a new security
-        deposit          record a cash deposit into the portfolio
-        dividend         record a dividend payment for a security
-        sell             record the sale of a security
-        withdraw         record a cash withdrawal from the portfolio
+> [!NOTE]
+> id uses Apple stock's ISIN followed by the exchange MIC code (XETR for XETRA). You can find this information on any financial websites. `pcs search-security Apple` can also help you find it.
 
 
-Use "pcs flags" for a list of top-level flags
+Your corporate savings plan let you buy shares of funds that unfortunately are publicly traded. You can still track it by giving it a unique identifier, and updating them manually:
+
+```bash
+pcs add-security -s BankFund1 -id My-bank-Fund1 -c EUR
+```
+
+```console
+✅ Successfully added security 'BankFund1' to the market data.
+```
+
+> [!NOTE]
+> -id is private identifier that identifies your bank's private fund.
+
+Public securities will have their prices fetched automatically, while private securities will need to be updated manually.
+
+### Declaring Your Assets in your Ledger
+
+Also it might look redundant, but you need to declare your assets in your ledger as well. This is because you might have multiple ledgers holding the same security, and you want to track them separately.
+
+```bash
+pcs declare -s AAPL -id US0378331005.XETR -c EUR
+```
+
+```console
+Successfully appended transaction to transactions.jsonl
+```
+
+```bash
+pcs declare -s BankFund1 -id My-bank-Fund1 -c EUR
+```
+
+```console
+Successfully appended transaction to transactions.jsonl
+```
+
+### Recording Transactions
+
+Let's deposit some cash into your account.
+
+```bash
+pcs deposit -a 10000 -c EUR
+```
+
+```console
+Successfully appended transaction to transactions.jsonl
+```
+
+Let's buy some Apple stock.
+
+```bash
+pcs buy -d 2025-08-27 -s AAPL -q 10 -p 150.0
+```
+
+```console
+Successfully appended transaction to transactions.jsonl
+```
+
+Let's record a buy in the corporate savings plan.
+
+```bash
+pcs buy -d 2025-08-27 -s BankFund1 -q 100 -p 12.0
+```
+
+```console
+Successfully appended transaction to transactions.jsonl
+```
+
+
+### Keeping Your Portfolio Up-to-Date
+
+You can update the prices for your securities using the `update-security` command.
+
+For publicly traded securities or assets you can get the latest prices automatically, which is very handy for daily updates. You would just run `pcs update-security` without any flags.
+
+However for the purpose of this tutorial only, let's manually set the price for Apple stock to its closing price on 2025-08-27:
+
+```bash
+pcs update-security -id US0378331005.XETR -d 2025-08-27 -p 193.20
+```
+
+```console
+Successfully set price for US0378331005.XETR on 2025-08-27 to 193.20.
+```
+
+For private assets, you have to manually update their price using the same command. Or write your own command to fetch prices from your bank's API if they provide one. Here we'll set the price for your corporate savings plan fund to its value on 2025-08-27:
+
+```bash
+pcs update-security -id My-bank-Fund1 -d 2025-08-27 -p 11.23
+```
+
+```console
+Successfully set price for My-bank-Fund1 on 2025-08-27 to 11.23.
+```
+
+> [!NOTE]
+> The `pcs update-security` command, when run without any flags, will automatically fetch the latest prices for all publicly traded securities from an external provider (requires EODHD API key). This is usually run daily to get yesterday's closing prices.
+
+
+
+### The Payoff: Reporting
+
+Now, you can see a unified view of your portfolio:
+
+```bash
+pcs holding
+```
+
+```console
+Holdings on 2025-08-27 in reporting currency EUR
+
+Securities:
+-----------------------------------------------------------------
+Ticker            Quantity           Price    Market Value
+-----------------------------------------------------------------
+AAPL               10.0000        193.2000         1932.00
+BankFund1         100.0000         11.2300         1123.00
+-----------------------------------------------------------------
+
+Cash Balances:
+-------------------------------------------------
+Currency           Balance           Value
+-------------------------------------------------
+EUR                7300.00         7300.00
+-------------------------------------------------
+
+Total Portfolio Value: 10355.00 EUR
+```
+
+
+And gains on the portfolio:
+
+```bash
+pcs gains -period=day -end 2025-08-27
+```
+
+```console
+Capital Gains Report (Method: average) for 2025-08-27 to 2025-08-27 (in EUR)
+--------------------------------------------------------------------------------
+Security               Realized Gain/Loss Unrealized Gain/Loss      Total Gain/Loss
+--------------------------------------------------------------------------------
+AAPL                                 0.00               432.00               432.00
+BankFund1                            0.00               -77.00               -77.00
+--------------------------------------------------------------------------------
+Total                                0.00               355.00               355.00
 ```
 
 ## About This Project
