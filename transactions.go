@@ -94,12 +94,21 @@ type Buy struct {
 	Amount   float64 `json:"amount"`
 }
 
-// NewBuy creates a new Buy transaction.
-func NewBuy(day date.Date, memo, security string, quantity, price float64) Buy {
+// NewBuyWithPrice creates a new Buy transaction.
+func NewBuyWithPrice(day date.Date, memo, security string, quantity, price float64) Buy {
 	return Buy{
 		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdBuy, Date: day, Memo: memo}, Security: security},
 		Quantity: quantity,
 		Amount:   quantity * price,
+	}
+}
+
+// NewBuyWithAmount creates a new Buy transaction.
+func NewBuyWithAmount(day date.Date, memo, security string, quantity, amount float64) Buy {
+	return Buy{
+		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdBuy, Date: day, Memo: memo}, Security: security},
+		Quantity: quantity,
+		Amount:   amount,
 	}
 }
 
@@ -135,15 +144,27 @@ type Sell struct {
 	Amount   float64 `json:"amount"`
 }
 
-// NewSell creates a new Sell transaction.
+// NewSellWithPrice creates a new Sell transaction.
 // If the quantity is set to 0, it signifies a "sell all" instruction.
 // The actual number of shares will be determined during the validation phase
 // based on the portfolio's position on the transaction date.
-func NewSell(day date.Date, memo, security string, quantity, price float64) Sell {
+func NewSellWithPrice(day date.Date, memo, security string, quantity, price float64) Sell {
 	return Sell{
 		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdSell, Date: day, Memo: memo}, Security: security},
 		Quantity: quantity,
 		Amount:   quantity * price,
+	}
+}
+
+// NewSellWithAmount creates a new Sell transaction.
+// If the quantity is set to 0, it signifies a "sell all" instruction.
+// The actual number of shares will be determined during the validation phase
+// based on the portfolio's position on the transaction date.
+func NewSellWithAmount(day date.Date, memo, security string, quantity, amount float64) Sell {
+	return Sell{
+		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdSell, Date: day, Memo: memo}, Security: security},
+		Quantity: quantity,
+		Amount:   amount,
 	}
 }
 
@@ -157,9 +178,7 @@ func (t *Sell) Validate(as *AccountingSystem) error {
 	}
 	if t.Quantity == 0 {
 		// quick fix, sell all.
-		price := t.Amount / t.Quantity
 		t.Quantity = as.Ledger.Position(t.Security, t.Date)
-		t.Amount = t.Quantity * price
 	}
 
 	if t.Quantity <= 0 {

@@ -15,9 +15,9 @@ func TestAccountingSystem_NewHoldingReport(t *testing.T) {
 	ledger.Append(
 		NewDeclaration(o, "", "AAPL", "US0378331005.XNAS", "USD"),
 		NewDeclaration(o, "", "GOOG", "US38259P5089.XNAS", "USD"),
-		NewBuy(date.New(2025, time.January, 10), "", "AAPL", 100, 150.0),
-		NewBuy(date.New(2025, time.January, 15), "", "GOOG", 50, 2800.0),
-		NewSell(date.New(2025, time.February, 1), "", "AAPL", 25, 160.0),
+		NewBuyWithPrice(date.New(2025, time.January, 10), "", "AAPL", 100, 150.0),
+		NewBuyWithPrice(date.New(2025, time.January, 15), "", "GOOG", 50, 2800.0),
+		NewSellWithPrice(date.New(2025, time.February, 1), "", "AAPL", 25, 160.0),
 		NewDeposit(date.New(2025, time.February, 5), "", "EUR", 10000),
 	)
 

@@ -26,7 +26,7 @@ func setupCostBasisTest(t *testing.T) (*Ledger, *MarketData, *AccountingSystem) 
 		NewWithdraw(date.New(2025, time.March, 20), "Partial USD", "USD", 200),
 		NewDeposit(date.New(2025, time.April, 1), "EUR Deposit", "EUR", 2000),
 		// Add a non-cash-flow transaction to ensure it's ignored
-		NewBuy(date.New(2025, time.April, 5), "", "AAPL", 10, 150),
+		NewBuyWithPrice(date.New(2025, time.April, 5), "", "AAPL", 10, 150),
 	)
 
 	// Create market data with historical exchange rates to EUR.
@@ -113,7 +113,7 @@ func setupPerformanceTest(t *testing.T) (*Ledger, *MarketData, *AccountingSystem
 	ledger.Append(
 		NewDeclaration(o, "", "TICK", id.String(), "USD"),
 		NewDeposit(date.New(2025, time.January, 1), "", "USD", 10000),
-		NewBuy(date.New(2025, time.January, 1), "", "TICK", 100, 100),
+		NewBuyWithPrice(date.New(2025, time.January, 1), "", "TICK", 100, 100),
 		NewDeposit(date.New(2025, time.January, 15), "", "USD", 1100),
 	)
 
@@ -197,7 +197,7 @@ func setupValidationTest(t *testing.T) *AccountingSystem {
 		NewDeclaration(o, "", "GOOG", "US38259P5089.XNAS", "USD"),
 		NewDeposit(date.New(2025, time.January, 1), "", "USD", 20000),
 		NewDeposit(date.New(2025, time.January, 1), "", "EUR", 10000),
-		NewBuy(date.New(2025, time.January, 2), "", "AAPL", 100, 150.0), // Cost: 15000 USD, remaining: 5000 USD
+		NewBuyWithPrice(date.New(2025, time.January, 2), "", "AAPL", 100, 150.0), // Cost: 15000 USD, remaining: 5000 USD
 	)
 
 	marketData := NewMarketData()
@@ -224,14 +224,12 @@ func TestAccountingSystem_Validate(t *testing.T) {
 		wantTx  Transaction
 		wantErr bool
 	}{
-		// TEMP disabled, quick fix cannot be computed without knowing position
-		// once NewSell will be replaced by NewSellWithAmount it will be possible again
-		// {
-		// 	name:    "Quick Fix: Sell All",
-		// 	inputTx: NewSell(testDate, "sell all", "AAPL", 0, 160.0),
-		// 	wantTx:  NewSell(testDate, "sell all", "AAPL", 100, 160.0), // Position is 100
-		// 	wantErr: false,
-		// },
+		{
+			name:    "Quick Fix: Sell All",
+			inputTx: NewSellWithAmount(testDate, "sell all", "AAPL", 0, 16000.0),
+			wantTx:  NewSellWithAmount(testDate, "sell all", "AAPL", 100, 16000.0), // Position is 100
+			wantErr: false,
+		},
 		{
 			name:    "Quick Fix: Withdraw All",
 			inputTx: NewWithdraw(testDate, "cash out", "USD", 0),
@@ -252,12 +250,12 @@ func TestAccountingSystem_Validate(t *testing.T) {
 		},
 		{
 			name:    "Error: Insufficient funds for Buy",
-			inputTx: NewBuy(testDate, "", "AAPL", 1, 5001), // Cost > 5000 balance
+			inputTx: NewBuyWithPrice(testDate, "", "AAPL", 1, 5001), // Cost > 5000 balance
 			wantErr: true,
 		},
 		{
 			name:    "Error: Insufficient position for Sell",
-			inputTx: NewSell(testDate, "", "AAPL", 101, 150), // Position is 100
+			inputTx: NewSellWithPrice(testDate, "", "AAPL", 101, 150), // Position is 100
 			wantErr: true,
 		},
 		{
@@ -267,7 +265,7 @@ func TestAccountingSystem_Validate(t *testing.T) {
 		},
 		{
 			name:    "Error: Negative quantity on Buy",
-			inputTx: NewBuy(testDate, "", "AAPL", -10, 150),
+			inputTx: NewBuyWithPrice(testDate, "", "AAPL", -10, 150),
 			wantErr: true,
 		},
 	}

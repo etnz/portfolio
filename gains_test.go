@@ -12,7 +12,7 @@ func TestAccountingSystem_CalculateGains_FilterZeroGainRows(t *testing.T) {
 	o := date.New(2025, time.January, 1)
 	ledger.Append(
 		NewDeclaration(o, "", "ZERO", "ZERO-ID", "USD"),
-		NewBuy(date.New(2025, time.January, 10), "", "ZERO", 100, 100.0), // Cost: 10000
+		NewBuyWithPrice(date.New(2025, time.January, 10), "", "ZERO", 100, 100.0), // Cost: 10000
 	)
 
 	market := NewMarketData()

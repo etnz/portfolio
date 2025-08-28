@@ -40,8 +40,8 @@ func (c *buyCmd) SetFlags(f *flag.FlagSet) {
 }
 
 func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.security == "" || c.quantity == 0 || c.price == 0 {
-		fmt.Fprintln(os.Stderr, "Error: -s, -q, and -p flags are all required.")
+	if c.security == "" || c.quantity == 0 || c.amount == 0 {
+		fmt.Fprintln(os.Stderr, "Error: -s, -q, and -a flags are all required.")
 		return subcommands.ExitUsageError
 	}
 	day, err := date.Parse(c.date) // Validate date format
@@ -50,7 +50,8 @@ func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) s
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.NewBuy(day, c.memo, c.security, c.quantity, c.price)
+	price := c.amount / c.quantity
+	tx := portfolio.NewBuyWithPrice(day, c.memo, c.security, c.quantity, price)
 	return handleTransaction(tx, f)
 }
 
@@ -91,7 +92,7 @@ func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	tx := portfolio.NewSell(day, c.memo, c.security, c.quantity, c.price)
+	tx := portfolio.NewSellWithPrice(day, c.memo, c.security, c.quantity, c.price)
 	return handleTransaction(tx, f)
 }
 

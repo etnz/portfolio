@@ -14,12 +14,12 @@ func TestLedger_Position(t *testing.T) {
 	ledger.Append(
 		NewDeclaration(o, "", "AAPL", "US0378331005.XNAS", "EUR"),
 		NewDeclaration(o, "", "GOOG", "US38259P5089.XNAS", "EUR"),
-		NewBuy(date.New(2025, time.January, 10), "", "AAPL", 100, 150.0),
-		NewBuy(date.New(2025, time.January, 15), "", "GOOG", 50, 2800.0),
-		NewSell(date.New(2025, time.February, 1), "", "AAPL", 25, 160.0),
+		NewBuyWithPrice(date.New(2025, time.January, 10), "", "AAPL", 100, 150.0),
+		NewBuyWithPrice(date.New(2025, time.January, 15), "", "GOOG", 50, 2800.0),
+		NewSellWithPrice(date.New(2025, time.February, 1), "", "AAPL", 25, 160.0),
 		NewDeposit(date.New(2025, time.February, 5), "", "USD", 10000), // Should be ignored
-		NewBuy(date.New(2025, time.February, 10), "", "AAPL", 10, 155.0),
-		NewSell(date.New(2025, time.March, 1), "", "GOOG", 50, 2900.0), // Sell all GOOG
+		NewBuyWithPrice(date.New(2025, time.February, 10), "", "AAPL", 10, 155.0),
+		NewSellWithPrice(date.New(2025, time.March, 1), "", "GOOG", 50, 2900.0), // Sell all GOOG
 	)
 	// The ledger is intentionally created with sorted transactions, as the underlying
 	// SecurityTransactions method relies on a sorted list for efficiency.
@@ -110,9 +110,9 @@ func TestLedger_Position(t *testing.T) {
 
 func TestLedger_SecurityTransactions(t *testing.T) {
 	// 1. Arrange: Create a sorted ledger with a mix of transactions.
-	tx1_aapl_buy := NewBuy(date.New(2025, time.January, 10), "", "AAPL", 10, 150.0)
-	tx2_aapl_sell := NewSell(date.New(2025, time.January, 15), "", "AAPL", 5, 155.0)
-	tx3_goog_buy := NewBuy(date.New(2025, time.January, 15), "", "GOOG", 2, 2800.0)
+	tx1_aapl_buy := NewBuyWithPrice(date.New(2025, time.January, 10), "", "AAPL", 10, 150.0)
+	tx2_aapl_sell := NewSellWithPrice(date.New(2025, time.January, 15), "", "AAPL", 5, 155.0)
+	tx3_goog_buy := NewBuyWithPrice(date.New(2025, time.January, 15), "", "GOOG", 2, 2800.0)
 	tx4_aapl_div := NewDividend(date.New(2025, time.January, 20), "", "AAPL", 20.0)
 	tx5_deposit := NewDeposit(date.New(2025, time.January, 22), "", "USD", 1000.0) // Should be ignored by SecurityTransactions
 
@@ -209,12 +209,12 @@ func TestLedger_CashBalance(t *testing.T) {
 		// Transactions are sorted by date to match the function's assumption for optimization.
 		NewDeposit(date.New(2025, time.January, 5), "", "EUR", 10000),
 		NewDeposit(date.New(2025, time.January, 10), "", "USD", 50000),
-		NewBuy(date.New(2025, time.January, 15), "", "AAPL", 100, 150.0), // -15000 USD
-		NewSell(date.New(2025, time.February, 1), "", "AAPL", 25, 160.0),  // +4000 USD
-		NewDividend(date.New(2025, time.February, 15), "", "AAPL", 75),     // +75 USD
-		NewWithdraw(date.New(2025, time.March, 1), "", "USD", 1000),           // -1000 USD
-		NewConvert(date.New(2025, time.March, 10), "", "USD", 2000, "EUR", 1800), // -2000 USD, +1800 EUR
-		NewWithdraw(date.New(2025, time.April, 1), "", "EUR", 500),            // -500 EUR
+		NewBuyWithPrice(date.New(2025, time.January, 15), "", "AAPL", 100, 150.0), // -15000 USD
+		NewSellWithPrice(date.New(2025, time.February, 1), "", "AAPL", 25, 160.0), // +4000 USD
+		NewDividend(date.New(2025, time.February, 15), "", "AAPL", 75),            // +75 USD
+		NewWithdraw(date.New(2025, time.March, 1), "", "USD", 1000),               // -1000 USD
+		NewConvert(date.New(2025, time.March, 10), "", "USD", 2000, "EUR", 1800),  // -2000 USD, +1800 EUR
+		NewWithdraw(date.New(2025, time.April, 1), "", "EUR", 500),                // -500 EUR
 	)
 
 	testCases := []struct {
@@ -315,11 +315,11 @@ func TestLedger_CostBasisAndRealizedGain(t *testing.T) {
 	o := date.New(2025, time.January, 1)
 	ledger.Append(
 		NewDeclaration(o, "", "AAPL", "US0378331005.XNAS", "USD"),
-		NewBuy(date.New(2025, time.January, 10), "", "AAPL", 100, 150.0), // Cost: 15000
-		NewBuy(date.New(2025, time.January, 15), "", "AAPL", 50, 160.0),  // Cost: 8000
-		NewSell(date.New(2025, time.February, 1), "", "AAPL", 75, 170.0), // Proceeds: 12750
-		NewBuy(date.New(2025, time.February, 10), "", "AAPL", 25, 180.0), // Cost: 4500
-		NewSell(date.New(2025, time.March, 1), "", "AAPL", 100, 190.0), // Proceeds: 19000
+		NewBuyWithPrice(date.New(2025, time.January, 10), "", "AAPL", 100, 150.0), // Cost: 15000
+		NewBuyWithPrice(date.New(2025, time.January, 15), "", "AAPL", 50, 160.0),  // Cost: 8000
+		NewSellWithPrice(date.New(2025, time.February, 1), "", "AAPL", 75, 170.0), // Proceeds: 12750
+		NewBuyWithPrice(date.New(2025, time.February, 10), "", "AAPL", 25, 180.0), // Cost: 4500
+		NewSellWithPrice(date.New(2025, time.March, 1), "", "AAPL", 100, 190.0),   // Proceeds: 19000
 	)
 
 	testCases := []struct {
