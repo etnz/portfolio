@@ -55,12 +55,12 @@ Here is a complete reference for all the commands available in `pcs`.
     * `-d`: Transaction date (YYYY-MM-DD).
     * `-s`: Security ticker.
     * `-q`: Number of shares.
-    * `-p`: Price per share.
+    * `-a`: Total amount paid for the shares.
     * `-m`: An optional memo for the transaction.
 * **`sell`**: Records the sale of a security.
     * `-d`: Transaction date (YYYY-MM-DD).
     * `-s`: Security ticker.
-    * `-p`: Price per share.
+    * `-a`: Total amount received for the shares.
     * `-q`: Number of shares (if omitted, all shares are sold).
     * `-m`: An optional memo for the transaction.
 * **`dividend`**: Records a dividend payment.

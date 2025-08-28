@@ -143,11 +143,11 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 			}
 			if inst.Indicator == "Source" {
 				instructionIds[inst.Id] = struct{}{}
-				sellTx := portfolio.NewSellWithPrice(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price)
+				sellTx := portfolio.NewSellWithAmount(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Amount)
 				transactions = append(transactions, sellTx)
 			} else if inst.Indicator == "Cible" {
 				instructionIds[inst.Id] = struct{}{}
-				buyTx := portfolio.NewBuyWithPrice(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price)
+				buyTx := portfolio.NewBuyWithAmount(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Amount)
 				transactions = append(transactions, buyTx)
 			}
 		}
@@ -180,7 +180,7 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 			if inst.Type == "SOUS_MTT" {
 				instructionIds[inst.Id] = struct{}{}
 				totalAmount += inst.Amount // accumulate buy amounts to create a global deposit after
-				buyTx := portfolio.NewBuyWithPrice(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price)
+				buyTx := portfolio.NewBuyWithAmount(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Amount)
 				transactions = append(transactions, buyTx)
 			}
 		}
@@ -203,7 +203,7 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 				totalAmount += inst.Amount
 			} else if inst.Indicator == "Cible" {
 				instructionIds[inst.Id] = struct{}{}
-				buyTx := portfolio.NewBuyWithPrice(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price)
+				buyTx := portfolio.NewBuyWithAmount(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Amount)
 				transactions = append(transactions, buyTx)
 			}
 		}

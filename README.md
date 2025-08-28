@@ -105,7 +105,7 @@ Successfully appended transaction to transactions.jsonl
 Let's buy some Apple stock.
 
 ```bash
-pcs buy -d 2025-08-27 -s AAPL -q 10 -p 150.0
+pcs buy -d 2025-08-27 -s AAPL -q 10 -a 1500.0
 ```
 
 ```console
@@ -115,7 +115,7 @@ Successfully appended transaction to transactions.jsonl
 Let's record a buy in the corporate savings plan.
 
 ```bash
-pcs buy -d 2025-08-27 -s BankFund1 -q 100 -p 12.0
+pcs buy -d 2025-08-27 -s BankFund1 -q 100 -a 1200.0
 ```
 
 ```console

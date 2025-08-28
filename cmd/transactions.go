@@ -17,7 +17,7 @@ type buyCmd struct {
 	date     string
 	security string
 	quantity float64
-	price    float64
+	amount   float64
 	memo     string
 }
 
@@ -35,7 +35,7 @@ func (c *buyCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date (YYYY-MM-DD)")
 	f.StringVar(&c.security, "s", "", "Security ticker")
 	f.Float64Var(&c.quantity, "q", 0, "Number of shares")
-	f.Float64Var(&c.price, "p", 0, "Price per share")
+	f.Float64Var(&c.amount, "a", 0, "Total amount paid for the shares")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 }
 
@@ -50,8 +50,7 @@ func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) s
 		return subcommands.ExitUsageError
 	}
 
-	price := c.amount / c.quantity
-	tx := portfolio.NewBuyWithPrice(day, c.memo, c.security, c.quantity, price)
+	tx := portfolio.NewBuyWithAmount(day, c.memo, c.security, c.quantity, c.amount)
 	return handleTransaction(tx, f)
 }
 
@@ -61,7 +60,7 @@ type sellCmd struct {
 	date     string
 	security string
 	quantity float64
-	price    float64
+	amount   float64
 	memo     string
 }
 
@@ -79,12 +78,12 @@ func (c *sellCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date (YYYY-MM-DD)")
 	f.StringVar(&c.security, "s", "", "Security ticker")
 	f.Float64Var(&c.quantity, "q", 0, "Number of shares, if missing all shares are sold")
-	f.Float64Var(&c.price, "p", 0, "Price per share")
+	f.Float64Var(&c.amount, "a", 0, "Total amount received for the shares")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 }
 func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.security == "" || c.price == 0 {
-		fmt.Fprintln(os.Stderr, "Error: -s and -p flags are required.")
+	if c.security == "" || c.amount == 0 {
+		fmt.Fprintln(os.Stderr, "Error: -s and -a flags are required.")
 		return subcommands.ExitUsageError
 	}
 	day, err := date.Parse(c.date) // Validate date format
@@ -92,7 +91,7 @@ func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	tx := portfolio.NewSellWithPrice(day, c.memo, c.security, c.quantity, c.price)
+	tx := portfolio.NewSellWithAmount(day, c.memo, c.security, c.quantity, c.amount)
 	return handleTransaction(tx, f)
 }
 
