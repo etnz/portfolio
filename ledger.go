@@ -96,7 +96,7 @@ func (l *Ledger) Append(txs ...Transaction) {
 			l.lots[v.Security] = append(l.lots[v.Security], lot{
 				Date:     v.When(),
 				Quantity: decimal.NewFromFloat(v.Quantity),
-				Cost:     decimal.NewFromFloat(v.Amount()),
+				Cost:     decimal.NewFromFloat(v.Amount),
 			})
 			// Keep lots sorted by date for FIFO
 			sort.Slice(l.lots[v.Security], func(i, j int) bool {
@@ -162,11 +162,11 @@ func (l *Ledger) CashBalance(currency string, on date.Date) float64 {
 		switch v := tx.(type) {
 		case Buy:
 			if sec, ok := l.securities[v.Security]; ok && sec.Currency() == currency {
-				balance -= v.Amount()
+				balance -= v.Amount
 			}
 		case Sell:
 			if sec, ok := l.securities[v.Security]; ok && sec.Currency() == currency {
-				balance += v.Amount()
+				balance += v.Amount
 			}
 		case Dividend:
 			if sec, ok := l.securities[v.Security]; ok && sec.Currency() == currency {
@@ -233,7 +233,7 @@ func (l *Ledger) calculateRemainingLots(ticker string, on date.Date, method Cost
 				newLot := lot{
 					Date:     v.When(),
 					Quantity: decimal.NewFromFloat(v.Quantity),
-					Cost:     decimal.NewFromFloat(v.Amount()),
+					Cost:     decimal.NewFromFloat(v.Amount),
 				}
 				currentLots = append(currentLots, newLot)
 				sort.Slice(currentLots, func(i, j int) bool {
@@ -243,7 +243,7 @@ func (l *Ledger) calculateRemainingLots(ticker string, on date.Date, method Cost
 		case Sell:
 			if v.Security == ticker {
 				soldQuantity := decimal.NewFromFloat(v.Quantity)
-				proceeds := decimal.NewFromFloat(v.Amount())
+				proceeds := decimal.NewFromFloat(v.Amount)
 				costOfSoldShares, newLots, err := l.reduceLots(currentLots, soldQuantity, method)
 				if err != nil {
 					return nil, decimal.Zero, err

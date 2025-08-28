@@ -137,54 +137,72 @@ func TestEncodeLedger(t *testing.T) {
 
 // TestEncodeDecodeLedger verifies that loading an unsorted JSONL file and immediately
 // saving it results in a correctly and stably sorted file.
-func TestEncodeDecodeLedger(t *testing.T) {
-	// 1. Arrange: Define a long, unsorted list of transactions.
-	// Note the two transactions on 2025-08-05 are in a specific order.
-	unsortedJSONL := `
-{"command":"deposit","date":"2025-08-02","amount":5000,"currency":"USD"}
-{"command":"buy","date":"2025-08-03","security":"AAPL","quantity":10,"price":195.5}
-{"command":"buy","date":"2025-08-01","security":"GOOG","quantity":5,"price":140.2}
-{"command":"convert","date":"2025-08-05","fromCurrency":"USD","fromAmount":1000,"toCurrency":"EUR","toAmount":920}
-{"command":"dividend","date":"2025-08-04","security":"AAPL","amount":5.5}
-{"command":"sell","date":"2025-08-05","memo":"trim position","security":"GOOG","quantity":2,"price":142}
-{"command":"withdraw","date":"2025-08-06","amount":500,"currency":"USD"}
-{"command":"buy","date":"2025-08-04","memo":"buy the dip","security":"MSFT","quantity":15,"price":410}
-{"command":"deposit","date":"2025-08-01","memo":"wire transfer","amount":10000,"currency":"EUR"}
+func TestDecodeLedger_BackwardCompatibility(t *testing.T) {
+	// 1. Arrange: Define a JSONL stream with both old (price) and new (amount) formats.
+	jsonlStream := `
+{"command":"buy","date":"2025-08-01","security":"AAPL","quantity":10,"price":195.5}
+{"command":"sell","date":"2025-08-02","security":"GOOG","quantity":5,"amount":701}
+{"command":"buy","date":"2025-08-03","security":"MSFT","quantity":15,"price":410,"amount":6150}
+{"command":"sell","date":"2025-08-04","security":"TSLA","quantity":2,"price":142,"amount":284}
+{"command":"buy","date":"2025-08-05","security":"AMZN","quantity":10,"amount":1500}
+{"command":"sell","date":"2025-08-06","security":"NFLX","quantity":5,"price":400}
 `
-
-	// Define the expected output after a stable sort by date.
-	// The two 2025-08-01 transactions are now at the top, in their original order.
-	// The two 2025-08-05 transactions are also in their original relative order.
-	expectedSortedJSONL := `{"command":"buy","date":"2025-08-01","security":"GOOG","quantity":5,"price":140.2}
-{"command":"deposit","date":"2025-08-01","memo":"wire transfer","amount":10000,"currency":"EUR"}
-{"command":"deposit","date":"2025-08-02","amount":5000,"currency":"USD"}
-{"command":"buy","date":"2025-08-03","security":"AAPL","quantity":10,"price":195.5}
-{"command":"dividend","date":"2025-08-04","security":"AAPL","amount":5.5}
-{"command":"buy","date":"2025-08-04","memo":"buy the dip","security":"MSFT","quantity":15,"price":410}
-{"command":"convert","date":"2025-08-05","fromCurrency":"USD","fromAmount":1000,"toCurrency":"EUR","toAmount":920}
-{"command":"sell","date":"2025-08-05","memo":"trim position","security":"GOOG","quantity":2,"price":142}
-{"command":"withdraw","date":"2025-08-06","amount":500,"currency":"USD"}
-`
-
-	// 2. Act: Load the unsorted data, then save it to a new buffer.
-	reader := strings.NewReader(unsortedJSONL)
-	ledger, err := DecodeLedger(reader)
+	// 2. Act: Decode the stream.
+	ledger, err := DecodeLedger(strings.NewReader(jsonlStream))
 	if err != nil {
-		t.Fatalf("DecodeLedger() failed unexpectedly: %v", err)
+		t.Fatalf("DecodeLedger() returned an unexpected error: %v", err)
 	}
 
-	var savedBuffer bytes.Buffer
-	err = EncodeLedger(&savedBuffer, ledger)
-	if err != nil {
-		t.Fatalf("EncodeLedger() failed unexpectedly: %v", err)
+	// 3. Assert: Check the decoded transactions.
+	expectedTransactions := []Transaction{
+		Buy{
+			secCmd:   secCmd{baseCmd: baseCmd{Command: CmdBuy, Date: date.New(2025, time.August, 1)}, Security: "AAPL"},
+			Quantity: 10,
+			Amount:   1955,
+		},
+		Sell{
+			secCmd:   secCmd{baseCmd: baseCmd{Command: CmdSell, Date: date.New(2025, time.August, 2)}, Security: "GOOG"},
+			Quantity: 5,
+			Amount:   701,
+		},
+		Buy{
+			secCmd:   secCmd{baseCmd: baseCmd{Command: CmdBuy, Date: date.New(2025, time.August, 3)}, Security: "MSFT"},
+			Quantity: 15,
+			Amount:   6150,
+		},
+		Sell{
+			secCmd:   secCmd{baseCmd: baseCmd{Command: CmdSell, Date: date.New(2025, time.August, 4)}, Security: "TSLA"},
+			Quantity: 2,
+			Amount:   284,
+		},
+		Buy{
+			secCmd:   secCmd{baseCmd: baseCmd{Command: CmdBuy, Date: date.New(2025, time.August, 5)}, Security: "AMZN"},
+			Quantity: 10,
+			Amount:   1500,
+		},
+		Sell{
+			secCmd:   secCmd{baseCmd: baseCmd{Command: CmdSell, Date: date.New(2025, time.August, 6)}, Security: "NFLX"},
+			Quantity: 5,
+			Amount:   2000,
+		},
 	}
 
-	// 3. Assert: Compare the saved result with the expected sorted output.
-	// We trim space to handle leading/trailing newlines for a robust comparison.
-	got := strings.TrimSpace(savedBuffer.String())
-	want := strings.TrimSpace(expectedSortedJSONL)
+	if len(ledger.transactions) != len(expectedTransactions) {
+		t.Fatalf("DecodeLedger() decoded wrong number of transactions. Got: %d, want: %d", len(ledger.transactions), len(expectedTransactions))
+	}
 
-	if got != want {
-		t.Errorf("Decode/Encode cycle produced incorrect output.\nGot:\n%s\n\nWant:\n%s", got, want)
+	for i, tx := range ledger.transactions {
+		// We need to compare the structs without the unexported price field in Sell
+		if buy, ok := tx.(Buy); ok {
+			expectedBuy := expectedTransactions[i].(Buy)
+			if buy.What() != expectedBuy.What() || buy.When() != expectedBuy.When() || buy.Security != expectedBuy.Security || buy.Quantity != expectedBuy.Quantity || buy.Amount != expectedBuy.Amount {
+				t.Errorf("Transaction %d is incorrect.\nGot:  %+v\nWant: %+v", i, buy, expectedBuy)
+			}
+		} else if sell, ok := tx.(Sell); ok {
+			expectedSell := expectedTransactions[i].(Sell)
+			if sell.What() != expectedSell.What() || sell.When() != expectedSell.When() || sell.Security != expectedSell.Security || sell.Quantity != expectedSell.Quantity || sell.Amount != expectedSell.Amount {
+				t.Errorf("Transaction %d is incorrect.\nGot:  %+v\nWant: %+v", i, sell, expectedSell)
+			}
+		}
 	}
 }

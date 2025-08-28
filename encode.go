@@ -17,7 +17,6 @@ import (
 
 const attrOn = "on"
 const marketDataFilesGlob = "[0-9][0-9][0-9][0-9].jsonl"
-const definitionFilename = "definition.jsonl"
 
 // This file contains code to persist market data in a folder, in a way that is still human-readable and git-friendly.
 // the main goal for such market data is to live on a private github repo.
@@ -392,13 +391,59 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 
 		switch identifier.Command {
 		case CmdBuy:
-			var tx Buy
-			err = json.Unmarshal(lineBytes, &tx)
-			decodedTx = tx
+			// Use a temporary type that has all possible fields.
+			var temp struct {
+				secCmd
+				Quantity float64 `json:"quantity"`
+				Price    float64 `json:"price"`  // Old field
+				Amount   float64 `json:"amount"` // New field
+			}
+			if err := json.Unmarshal(lineBytes, &temp); err != nil {
+				return nil, err
+			}
+
+			// Create the final transaction struct
+			buy := Buy{
+				secCmd:   temp.secCmd,
+				Quantity: temp.Quantity,
+			}
+
+			// Logic to handle both formats
+			if temp.Amount != 0 {
+				// New format: amount is present
+				buy.Amount = temp.Amount
+			} else {
+				// Old format: price is present, calculate amount
+				buy.Amount = temp.Price * temp.Quantity
+			}
+			decodedTx = buy
 		case CmdSell:
-			var tx Sell
-			err = json.Unmarshal(lineBytes, &tx)
-			decodedTx = tx
+			// Use a temporary type that has all possible fields.
+			var temp struct {
+				secCmd
+				Quantity float64 `json:"quantity"`
+				Price    float64 `json:"price"`  // Old field
+				Amount   float64 `json:"amount"` // New field
+			}
+			if err := json.Unmarshal(lineBytes, &temp); err != nil {
+				return nil, err
+			}
+
+			// Create the final transaction struct
+			sell := Sell{
+				secCmd:   temp.secCmd,
+				Quantity: temp.Quantity,
+			}
+
+			// Logic to handle both formats
+			if temp.Amount != 0 {
+				// New format: amount is present
+				sell.Amount = temp.Amount
+			} else {
+				// Old format: price is present, calculate amount
+				sell.Amount = temp.Price * temp.Quantity
+			}
+			decodedTx = sell
 		case CmdDividend:
 			var tx Dividend
 			err = json.Unmarshal(lineBytes, &tx)
