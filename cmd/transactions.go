@@ -50,7 +50,7 @@ func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) s
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.NewBuyWithAmount(day, c.memo, c.security, c.quantity, c.amount)
+	tx := portfolio.NewBuy(day, c.memo, c.security, c.quantity, c.amount)
 	return handleTransaction(tx, f)
 }
 

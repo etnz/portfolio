@@ -94,17 +94,8 @@ type Buy struct {
 	Amount   float64 `json:"amount"`
 }
 
-// NewBuyWithPrice creates a new Buy transaction.
-func NewBuyWithPrice(day date.Date, memo, security string, quantity, price float64) Buy {
-	return Buy{
-		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdBuy, Date: day, Memo: memo}, Security: security},
-		Quantity: quantity,
-		Amount:   quantity * price,
-	}
-}
-
-// NewBuyWithAmount creates a new Buy transaction.
-func NewBuyWithAmount(day date.Date, memo, security string, quantity, amount float64) Buy {
+// NewBuy creates a new Buy transaction.
+func NewBuy(day date.Date, memo, security string, quantity, amount float64) Buy {
 	return Buy{
 		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdBuy, Date: day, Memo: memo}, Security: security},
 		Quantity: quantity,
