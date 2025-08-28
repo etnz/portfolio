@@ -10,9 +10,34 @@ Go package names must be singular (e.g., `transaction`).
 
 
 ### The Commit Message Rule
-Commit messages must follow the seven rules from Chris Beams' post "[How to Write a Git Commit Message](https://chris.beams.io/posts/git-commit/)" and not Conventional Commits style.
+Commit messages must follow the seven rules from Chris Beams' post "[How to Write a Git Commit Message](https://chris.beams.io/posts/git-commit/)":
+1. Separate subject from body with a blank line
+2. Limit the subject line to 50 characters
+3. Capitalize the subject line
+4. Do not end the subject line with a period
+5. Use the imperative mood in the subject line
+6. Wrap the body at 72 characters
+7. Use the body to explain what and why vs. how
 
-You must ensure that commit messages are clear, descriptive and comprehensive.
+Do not use Conventional Commits style. Do not use prefixes like `feat:`, `fix:`, etc.
+
+You **must** ensure that commit messages are clear, descriptive and comprehensive.
+
+Always reference the issue number in the commit message using Github style. Use automatic closing issues keywords when appropriate.
+
+Gemini, here is a robust way of writing you messages:
+```bash
+git commit -F - <<EOF
+> Your subject line here
+>
+> Your detailed, multi-line body goes here without any need for quotes
+> or escaping special characters.
+>
+> - Even bullet points work perfectly.
+>
+> Fixes #123
+> EOF
+```
 
 ### The Master Rule
 From time to time, I will ask you to regenerate these guidelines, including this introductory line.
