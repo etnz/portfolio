@@ -67,25 +67,23 @@ func TestReadme(t *testing.T) {
 	tmp := t.TempDir()
 	pcsPath := buildPcs(t, tmp)
 
-	commands := parseReadme(t)	
+	commands := parseReadme(t)
 
 	for _, cmd := range commands {
-		t.Run(cmd.Cmd, func(t *testing.T) {
-			args := strings.Fields(cmd.Cmd)
-			t.Log("Running command:", pcsPath, args)
-			command := exec.Command(pcsPath, args[1:]...)
-			command.Dir = tmp
-			output, err := command.CombinedOutput()
-			if err != nil {
-				t.Fatalf("failed to run command: %v, output: \n%s", err, output)
-			}
-			result := string(output)
-			// replace tabs with spaces for consistent comparison
-			result = strings.ReplaceAll(result, "\t", "        ")
+		args := strings.Fields(cmd.Cmd)
+		t.Log("Running command:", pcsPath, args)
+		command := exec.Command(pcsPath, args[1:]...)
+		command.Dir = tmp
+		output, err := command.CombinedOutput()
+		if err != nil {
+			t.Fatalf("failed to run command: %v, output: \n%s", err, output)
+		}
+		result := string(output)
+		// replace tabs with spaces for consistent comparison
+		result = strings.ReplaceAll(result, "\t", "        ")
 
-			if cmd.Expected != result {
-				t.Errorf("expected output:\n%q\nbut got:\n%q", cmd.Expected, result)
-			}
-		})
+		if cmd.Expected != result {
+			t.Errorf("expected output:\n%q\nbut got:\n%q", cmd.Expected, result)
+		}
 	}
 }

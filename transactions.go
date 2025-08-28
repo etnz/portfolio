@@ -91,7 +91,17 @@ func (t *secCmd) Validate(as *AccountingSystem) error {
 type Buy struct {
 	secCmd
 	Quantity float64 `json:"quantity"`
-	Price    float64 `json:"price"`
+	P        float64 `json:"price"`
+}
+
+// Amount returns the total amount of the transaction.
+func (t Buy) Amount() float64 {
+	return t.Quantity * t.P
+}
+
+// Price returns the price of the transaction.
+func (t Buy) Price() float64 {
+	return t.P
 }
 
 // NewBuy creates a new Buy transaction.
@@ -99,7 +109,7 @@ func NewBuy(day date.Date, memo, security string, quantity, price float64) Buy {
 	return Buy{
 		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdBuy, Date: day, Memo: memo}, Security: security},
 		Quantity: quantity,
-		Price:    price,
+		P:        price,
 	}
 }
 
@@ -115,13 +125,13 @@ func (t *Buy) Validate(as *AccountingSystem) error {
 	if t.Quantity <= 0 {
 		return fmt.Errorf("buy transaction quantity must be positive, got %f", t.Quantity)
 	}
-	if t.Price <= 0 {
-		return fmt.Errorf("buy transaction price must be positive, got %f", t.Price)
+	if t.Price() <= 0 {
+		return fmt.Errorf("buy transaction price must be positive, got %f", t.Price())
 	}
 
 	ledgerSec := as.Ledger.Get(t.Security) // We know this is not nil from secCmd.Validate
 	currency := ledgerSec.Currency()
-	cash, cost := as.Ledger.CashBalance(currency, t.Date), t.Quantity*t.Price
+	cash, cost := as.Ledger.CashBalance(currency, t.Date), t.Amount()
 	if cash < cost {
 		return fmt.Errorf("cannot buy for %f %s cash balance is %f %s", cost, currency, cash, currency)
 	}
@@ -132,7 +142,17 @@ func (t *Buy) Validate(as *AccountingSystem) error {
 type Sell struct {
 	secCmd
 	Quantity float64 `json:"quantity"`
-	Price    float64 `json:"price"`
+	P        float64 `json:"price"`
+}
+
+// Amount returns the total amount of the transaction.
+func (t Sell) Amount() float64 {
+	return t.Quantity * t.P
+}
+
+// Price returns the price of the transaction.
+func (t Sell) Price() float64 {
+	return t.P
 }
 
 // NewSell creates a new Sell transaction.
@@ -143,7 +163,7 @@ func NewSell(day date.Date, memo, security string, quantity, price float64) Sell
 	return Sell{
 		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdSell, Date: day, Memo: memo}, Security: security},
 		Quantity: quantity,
-		Price:    price,
+		P:        price,
 	}
 }
 
@@ -164,8 +184,8 @@ func (t *Sell) Validate(as *AccountingSystem) error {
 		// For Sell quantity == 0 is interpreted as sell all.
 		return fmt.Errorf("sell transaction quantity must be positive, got %f", t.Quantity)
 	}
-	if t.Price <= 0 {
-		return fmt.Errorf("sell transaction price must be positive, got %f", t.Price)
+	if t.Price() <= 0 {
+		return fmt.Errorf("sell transaction price must be positive, got %f", t.Price())
 	}
 
 	if as.Ledger.Position(t.Security, t.Date) < t.Quantity {

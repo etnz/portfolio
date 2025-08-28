@@ -95,7 +95,7 @@ Successfully appended transaction to transactions.jsonl
 Let's deposit some cash into your account.
 
 ```bash
-pcs deposit -a 10000 -c EUR
+pcs deposit -d 2025-08-27 -a 10000 -c EUR
 ```
 
 ```console
@@ -159,7 +159,7 @@ Successfully set price for My-bank-Fund1 on 2025-08-27 to 11.23.
 Now, you can see a unified view of your portfolio:
 
 ```bash
-pcs holding
+pcs holding -d 2025-08-27
 ```
 
 ```console
