@@ -143,7 +143,7 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 			}
 			if inst.Indicator == "Source" {
 				instructionIds[inst.Id] = struct{}{}
-				sellTx := portfolio.NewSellWithAmount(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Amount)
+				sellTx := portfolio.NewSell(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Amount)
 				transactions = append(transactions, sellTx)
 			} else if inst.Indicator == "Cible" {
 				instructionIds[inst.Id] = struct{}{}
@@ -157,7 +157,7 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 			if inst.Type == "RACH_TIT" {
 				instructionIds[inst.Id] = struct{}{}
 				memo := strings.Join([]string{inst.Id, inst.Dispositif, memo, inst.FundName}, ": ")
-				sellTx := portfolio.NewSellWithPrice(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Price)
+				sellTx := portfolio.NewSell(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Quantity*inst.Price)
 				// record the associated withdrawal
 				withdrawTx := portfolio.NewWithdraw(inst.DateVL, memo, currency, inst.Amount)
 				transactions = append(transactions, sellTx, withdrawTx)

@@ -226,8 +226,8 @@ func TestAccountingSystem_Validate(t *testing.T) {
 	}{
 		{
 			name:    "Quick Fix: Sell All",
-			inputTx: NewSellWithAmount(testDate, "sell all", "AAPL", 0, 16000.0),
-			wantTx:  NewSellWithAmount(testDate, "sell all", "AAPL", 100, 16000.0), // Position is 100
+			inputTx: NewSell(testDate, "sell all", "AAPL", 0, 16000.0),
+			wantTx:  NewSell(testDate, "sell all", "AAPL", 100, 16000.0), // Position is 100
 			wantErr: false,
 		},
 		{
@@ -255,7 +255,7 @@ func TestAccountingSystem_Validate(t *testing.T) {
 		},
 		{
 			name:    "Error: Insufficient position for Sell",
-			inputTx: NewSellWithPrice(testDate, "", "AAPL", 101, 150), // Position is 100
+			inputTx: NewSell(testDate, "", "AAPL", 101, 101*150), // Position is 100
 			wantErr: true,
 		},
 		{

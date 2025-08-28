@@ -135,23 +135,11 @@ type Sell struct {
 	Amount   float64 `json:"amount"`
 }
 
-// NewSellWithPrice creates a new Sell transaction.
+// NewSell creates a new Sell transaction.
 // If the quantity is set to 0, it signifies a "sell all" instruction.
 // The actual number of shares will be determined during the validation phase
 // based on the portfolio's position on the transaction date.
-func NewSellWithPrice(day date.Date, memo, security string, quantity, price float64) Sell {
-	return Sell{
-		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdSell, Date: day, Memo: memo}, Security: security},
-		Quantity: quantity,
-		Amount:   quantity * price,
-	}
-}
-
-// NewSellWithAmount creates a new Sell transaction.
-// If the quantity is set to 0, it signifies a "sell all" instruction.
-// The actual number of shares will be determined during the validation phase
-// based on the portfolio's position on the transaction date.
-func NewSellWithAmount(day date.Date, memo, security string, quantity, amount float64) Sell {
+func NewSell(day date.Date, memo, security string, quantity, amount float64) Sell {
 	return Sell{
 		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdSell, Date: day, Memo: memo}, Security: security},
 		Quantity: quantity,

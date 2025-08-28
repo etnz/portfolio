@@ -91,7 +91,7 @@ func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	tx := portfolio.NewSellWithAmount(day, c.memo, c.security, c.quantity, c.amount)
+	tx := portfolio.NewSell(day, c.memo, c.security, c.quantity, c.amount)
 	return handleTransaction(tx, f)
 }
 
