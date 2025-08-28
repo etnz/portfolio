@@ -1,3 +1,5 @@
+[![Go Reference](https://pkg.go.dev/badge/github.com/etnz/portfolio.svg)](https://pkg.go.dev/github.com/etnz/portfolio)
+
 # pcs: Your Private, Unified Portfolio Tracker
 
 In a world where your investments are scattered across multiple platforms—from corporate savings plans and retirement accounts to various online brokers—getting a single, clear view of your financial health is a challenge. `pcs` is a local-first, command-line tool designed to solve this problem by providing a unified, private, and auditable view of your entire investment portfolio.
@@ -198,6 +200,10 @@ BankFund1                            0.00               -77.00               -77
 --------------------------------------------------------------------------------
 Total                                0.00               355.00               355.00
 ```
+
+## User Manual
+
+For a detailed guide on all the features and commands, please refer to the [User Manual](./UserManual.md).
 
 ## About This Project
 
