@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"sort"
-	"strings"
 )
 
 // DecodeLedger decodes transactions from a stream of JSONL data from an io.Reader,
@@ -128,7 +126,6 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 
 // EncodeTransaction marshals a single transaction to JSON and writes it to the
 // writer, followed by a newline, in JSONL format.
-// It ensures that the JSON keys are sorted alphabetically for canonical output.
 func EncodeTransaction(w io.Writer, tx Transaction) error {
 	// Marshal the transaction into a generic map to get all fields.
 	// This step uses json.Marshal, which doesn't guarantee key order,
@@ -138,36 +135,8 @@ func EncodeTransaction(w io.Writer, tx Transaction) error {
 		return fmt.Errorf("failed to marshal transaction to temporary map: %w", err)
 	}
 
-	var rawMap map[string]interface{}
-	if err := json.Unmarshal(tempData, &rawMap); err != nil {
-		return fmt.Errorf("failed to unmarshal temporary data to map: %w", err)
-	}
-
-	// Extract keys and sort them alphabetically.
-	keys := make([]string, 0, len(rawMap))
-	for k := range rawMap {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	// Manually build the JSON string with sorted keys.
-	var b strings.Builder
-	b.WriteString("{")
-	for i, key := range keys {
-		if i > 0 {
-			b.WriteString(",")
-		}
-		// Marshal each value individually to handle different types correctly.
-		valData, err := json.Marshal(rawMap[key])
-		if err != nil {
-			return fmt.Errorf("failed to marshal value for key %q: %w", key, err)
-		}
-		fmt.Fprintf(&b, "%q:%s", key, valData)
-	}
-	b.WriteString("}")
-
 	// Write the JSON data followed by a newline to create the JSONL format.
-	if _, err := w.Write([]byte(b.String() + "\n")); err != nil {
+	if _, err := w.Write(append(tempData, '\n')); err != nil {
 		return fmt.Errorf("failed to write transaction: %w", err)
 	}
 	return nil

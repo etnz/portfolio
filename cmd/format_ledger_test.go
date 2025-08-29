@@ -31,12 +31,12 @@ func createTempLedger(t *testing.T, content string) string {
 // TestFormatLedgerDefaultOutput tests the default behavior (writes to default ledger file)
 func TestFormatLedgerDefaultOutput(t *testing.T) {
 	// Arrange
-	originalLedgerContent := `{"command":"deposit","date":"2025-08-01","amount":1000}
+	originalLedgerContent := `{"command":"deposit","date":"2025-08-01","amount":1000, "memo":"this is a comment"}
 {"command":"buy","date":"2025-08-03","security":"AAPL","quantity":10,"amount":1500}
 `
-	expectedFormattedContent := `{"amount":1000,"command":"deposit","date":"2025-08-01"}
-{"amount":1500,"command":"buy","date":"2025-08-03","quantity":10,"security":"AAPL"}
-` // Assuming canonical output sorts keys alphabetically
+	expectedFormattedContent := `{"command":"deposit","date":"2025-08-01","memo":"this is a comment","amount":1000}
+{"command":"buy","date":"2025-08-03","security":"AAPL","quantity":10,"amount":1500}
+`
 
 	// Create a temporary default ledger file
 	tempLedgerFile := createTempLedger(t, originalLedgerContent)
@@ -64,7 +64,7 @@ func TestFormatLedgerDefaultOutput(t *testing.T) {
 		t.Fatalf("Failed to read formatted ledger file: %v", err)
 	}
 
-	if string(gotContent) != expectedFormattedContent {
+	if strings.TrimSpace(string(gotContent)) != strings.TrimSpace(expectedFormattedContent) {
 		t.Errorf("Default output mismatch.\nGot:\n%s\nWant:\n%s", string(gotContent), expectedFormattedContent)
 	}
 }
@@ -75,8 +75,8 @@ func TestFormatLedgerToFileOutput(t *testing.T) {
 	originalLedgerContent := `{"command":"deposit","date":"2025-08-01","amount":1000}
 {"command":"buy","date":"2025-08-03","security":"AAPL","quantity":10,"amount":1500}
 `
-	expectedFormattedContent := `{"amount":1000,"command":"deposit","date":"2025-08-01"}
-{"amount":1500,"command":"buy","date":"2025-08-03","quantity":10,"security":"AAPL"}
+	expectedFormattedContent := `{"command":"deposit","date":"2025-08-01","amount":1000}
+{"command":"buy","date":"2025-08-03","security":"AAPL","quantity":10,"amount":1500}
 `
 
 	// Create a temporary input ledger file
@@ -109,7 +109,7 @@ func TestFormatLedgerToFileOutput(t *testing.T) {
 		t.Fatalf("Failed to read output file: %v", err)
 	}
 
-	if string(gotContent) != expectedFormattedContent {
+	if strings.TrimSpace(string(gotContent)) != strings.TrimSpace(expectedFormattedContent) {
 		t.Errorf("File output mismatch.\nGot:\n%s\nWant:\n%s", string(gotContent), expectedFormattedContent)
 	}
 }
@@ -120,8 +120,8 @@ func TestFormatLedgerToStdoutOutput(t *testing.T) {
 	originalLedgerContent := `{"command":"deposit","date":"2025-08-01","amount":1000}
 {"command":"buy","date":"2025-08-03","security":"AAPL","quantity":10,"amount":1500}
 `
-	expectedFormattedContent := `{"amount":1000,"command":"deposit","date":"2025-08-01"}
-{"amount":1500,"command":"buy","date":"2025-08-03","quantity":10,"security":"AAPL"}
+	expectedFormattedContent := `{"command":"deposit","date":"2025-08-01","amount":1000}
+{"command":"buy","date":"2025-08-03","security":"AAPL","quantity":10,"amount":1500}
 `
 
 	// Create a temporary input ledger file
@@ -156,10 +156,9 @@ func TestFormatLedgerToStdoutOutput(t *testing.T) {
 		t.Errorf("Expected ExitSuccess, got %v", status)
 	}
 
-	outputLines := strings.Split(string(gotOutput), "\n")
-	gotFormattedContent := strings.Join(outputLines, "\n")
+	gotFormattedContent := string(gotOutput)
 
-	if gotFormattedContent != expectedFormattedContent {
+	if strings.TrimSpace(gotFormattedContent) != strings.TrimSpace(expectedFormattedContent) {
 		t.Errorf("Stdout output mismatch.\nGot:\n%s\nWant:\n%s", gotFormattedContent, expectedFormattedContent)
 	}
 }

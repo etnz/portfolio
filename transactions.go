@@ -51,6 +51,15 @@ func (t baseCmd) Rationale() string {
 	return t.Memo
 }
 
+// MarshalJSON implements the json.Marshaler interface for baseCmd.
+func (t baseCmd) MarshalJSON() ([]byte, error) {
+	var w jsonObjectWriter
+	w.Append("command", t.Command)
+	w.Append("date", t.Date)
+	w.Optional("memo", t.Memo)
+	return w.MarshalJSON()
+}
+
 // Validate checks the base command fields. It sets the date to today if it's zero.
 // It's meant to be embedded in other transaction validation methods.
 func (t *baseCmd) Validate(as *AccountingSystem) error {
@@ -87,11 +96,28 @@ func (t *secCmd) Validate(as *AccountingSystem) error {
 	return nil
 }
 
+// MarshalJSON implements the json.Marshaler interface for secCmd.
+func (t secCmd) MarshalJSON() ([]byte, error) {
+	var w jsonObjectWriter
+	w.EmbedFrom(t.baseCmd)
+	w.Append("security", t.Security)
+	return w.MarshalJSON()
+}
+
 // Buy represents a buy transaction.
 type Buy struct {
 	secCmd
 	Quantity float64 `json:"quantity"`
 	Amount   float64 `json:"amount"`
+}
+
+// MarshalJSON implements the json.Marshaler interface for Buy.
+func (t Buy) MarshalJSON() ([]byte, error) {
+	var w jsonObjectWriter
+	w.EmbedFrom(t.secCmd)
+	w.Append("quantity", t.Quantity)
+	w.Append("amount", t.Amount)
+	return w.MarshalJSON()
 }
 
 // NewBuy creates a new Buy transaction.
@@ -133,6 +159,15 @@ type Sell struct {
 	secCmd
 	Quantity float64 `json:"quantity"`
 	Amount   float64 `json:"amount"`
+}
+
+// MarshalJSON implements the json.Marshaler interface for Sell.
+func (t Sell) MarshalJSON() ([]byte, error) {
+	var w jsonObjectWriter
+	w.EmbedFrom(t.secCmd)
+	w.Append("quantity", t.Quantity)
+	w.Append("amount", t.Amount)
+	return w.MarshalJSON()
 }
 
 // NewSell creates a new Sell transaction.
@@ -186,6 +221,16 @@ type Declare struct {
 	Currency string `json:"currency"`
 }
 
+// MarshalJSON implements the json.Marshaler interface for Declare.
+func (t Declare) MarshalJSON() ([]byte, error) {
+	var w jsonObjectWriter
+	w.EmbedFrom(t.baseCmd)
+	w.Append("ticker", t.Ticker)
+	w.Append("id", t.ID)
+	w.Append("currency", t.Currency)
+	return w.MarshalJSON()
+}
+
 // NewDeclaration creates a new Declare transaction.
 func NewDeclaration(day date.Date, memo, ticker, id, currency string) Declare {
 	return Declare{
@@ -224,6 +269,14 @@ type Dividend struct {
 	Amount float64 `json:"amount"`
 }
 
+// MarshalJSON implements the json.Marshaler interface for Dividend.
+func (t Dividend) MarshalJSON() ([]byte, error) {
+	var w jsonObjectWriter
+	w.EmbedFrom(t.secCmd)
+	w.Append("amount", t.Amount)
+	return w.MarshalJSON()
+}
+
 // NewDividend creates a new Dividend transaction.
 func NewDividend(day date.Date, memo, security string, amount float64) Dividend {
 	return Dividend{
@@ -250,6 +303,15 @@ type Deposit struct {
 	baseCmd
 	Amount   float64 `json:"amount"`
 	Currency string  `json:"currency,omitempty"`
+}
+
+// MarshalJSON implements the json.Marshaler interface for Deposit.
+func (t Deposit) MarshalJSON() ([]byte, error) {
+	var w jsonObjectWriter
+	w.EmbedFrom(t.baseCmd)
+	w.Append("amount", t.Amount)
+	w.Optional("currency", t.Currency)
+	return w.MarshalJSON()
 }
 
 // NewDeposit creates a new Deposit transaction.
@@ -284,6 +346,15 @@ type Withdraw struct {
 	baseCmd
 	Amount   float64 `json:"amount"`
 	Currency string  `json:"currency,omitempty"`
+}
+
+// MarshalJSON implements the json.Marshaler interface for Withdraw.
+func (t Withdraw) MarshalJSON() ([]byte, error) {
+	var w jsonObjectWriter
+	w.EmbedFrom(t.baseCmd)
+	w.Append("amount", t.Amount)
+	w.Optional("currency", t.Currency)
+	return w.MarshalJSON()
 }
 
 // NewWithdraw creates a new Withdraw transaction.
@@ -334,6 +405,17 @@ type Convert struct {
 	FromAmount   float64 `json:"fromAmount"`
 	ToCurrency   string  `json:"toCurrency"`
 	ToAmount     float64 `json:"toAmount"`
+}
+
+// MarshalJSON implements the json.Marshaler interface for Convert.
+func (t Convert) MarshalJSON() ([]byte, error) {
+	var w jsonObjectWriter
+	w.EmbedFrom(t.baseCmd)
+	w.Append("fromCurrency", t.FromCurrency)
+	w.Append("fromAmount", t.FromAmount)
+	w.Append("toCurrency", t.ToCurrency)
+	w.Append("toAmount", t.ToAmount)
+	return w.MarshalJSON()
 }
 
 // NewConvert creates a new Convert transaction.

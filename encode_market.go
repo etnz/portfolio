@@ -234,12 +234,9 @@ func encodeSecurities(w io.Writer, m *MarketData) error {
 // encodeDailyPrices persists a single line in a security jsonl file.
 // Returns bare io errors.
 func encodeDailyPrices(w io.Writer, day date.Date, tickers []string, values []float64) error {
-	// json encoder cannot be used as it would require a map, and map order is not guaranteed.
-	// Instead fine grained formatting is done.
+	var jw jsonObjectWriter
+	jw.Append(attrOn, day.String())
 
-	if _, err := fmt.Fprintf(w, "{ %q:%q", attrOn, day.String()); err != nil {
-		return err
-	}
 	// Write all (ticker,price) pairs
 	for i, ticker := range tickers {
 		price := values[i]
@@ -248,14 +245,18 @@ func encodeDailyPrices(w io.Writer, day date.Date, tickers []string, values []fl
 		if math.IsNaN(price) {
 			continue
 		}
-
-		if _, err := fmt.Fprintf(w, ", %q:%v", ticker, price); err != nil {
-			return err
-		}
+		jw.Append(ticker, price)
 	}
-	if _, err := fmt.Fprintln(w, "}"); err != nil {
+
+	b, err := jw.MarshalJSON()
+	if err != nil {
 		return err
 	}
+
+	if _, err := w.Write(append(b, '\n')); err != nil {
+		return err
+	}
+
 	return nil
 }
 
