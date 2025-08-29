@@ -45,41 +45,41 @@ Here is a complete reference for all the commands available in `pcs`.
     * `-end`: The end date for automatic updates.
     * `-id`: The security ID for manual updates.
     * `-p`: The price for manual updates.
-    * `-d`: The date for manual updates.
+    * `-d`: The date for manual updates. See "Using Flexible Date Formats" for supported formats.
 * **`import-investing`**: Imports security prices from an investing.com CSV file.
     * `-file`: The input file path.
 
 ### Transaction Management
 
 * **`buy`**: Records the purchase of a security.
-    * `-d`: Transaction date (YYYY-MM-DD).
+    * `-d`: Transaction date. See "Using Flexible Date Formats" for supported formats.
     * `-s`: Security ticker.
     * `-q`: Number of shares.
     * `-a`: Total amount paid for the shares.
     * `-m`: An optional memo for the transaction.
 * **`sell`**: Records the sale of a security.
-    * `-d`: Transaction date (YYYY-MM-DD).
+    * `-d`: Transaction date. See "Using Flexible Date Formats" for supported formats.
     * `-s`: Security ticker.
     * `-a`: Total amount received for the shares.
     * `-q`: Number of shares (if omitted, all shares are sold).
     * `-m`: An optional memo for the transaction.
 * **`dividend`**: Records a dividend payment.
-    * `-d`: Transaction date (YYYY-MM-DD).
+    * `-d`: Transaction date. See "Using Flexible Date Formats" for supported formats.
     * `-s`: Security ticker receiving the dividend.
     * `-a`: Total dividend amount received.
     * `-m`: An optional memo.
 * **`deposit`**: Records a cash deposit.
-    * `-d`: Transaction date (YYYY-MM-DD).
+    * `-d`: Transaction date. See "Using Flexible Date Formats" for supported formats.
     * `-a`: Amount of cash to deposit.
     * `-c`: Currency of the deposit.
     * `-m`: An optional memo.
 * **`withdraw`**: Records a cash withdrawal.
-    * `-d`: Transaction date (YYYY-MM-DD).
+    * `-d`: Transaction date. See "Using Flexible Date Formats" for supported formats.
     * `-a`: Amount of cash to withdraw.
     * `-c`: Currency of the withdrawal.
     * `-m`: An optional memo.
 * **`convert`**: Converts cash from one currency to another.
-    * `-d`: Transaction date (YYYY-MM-DD).
+    * `-d`: Transaction date. See "Using Flexible Date Formats" for supported formats.
     * `-fc`: Source currency code.
     * `-fa`: Amount of cash to convert from the source currency.
     * `-tc`: Destination currency code.
@@ -89,17 +89,17 @@ Here is a complete reference for all the commands available in `pcs`.
     * `-s`: The ledger-internal ticker to define.
     * `-id`: The full, unique security ID.
     * `-c`: The currency of the security.
-    * `-d`: Transaction date (YYYY-MM-DD).
+    * `-d`: Transaction date. See "Using Flexible Date Formats" for supported formats.
     * `-m`: An optional memo.
 
 ### Analysis and Reporting
 
 * **`summary`**: Displays a portfolio performance summary.
-    * `-d`: The date for the summary.
+    * `-d`: The date for the summary. See "Using Flexible Date Formats" for supported formats.
     * `-c`: The reporting currency for the summary.
     * `-u`: Updates with the latest intraday prices before calculating the summary.
 * **`holding`**: Displays detailed holdings for a specific date.
-    * `-d`: The date for the holdings report.
+    * `-d`: The date for the holdings report. See "Using Flexible Date Formats" for supported formats.
     * `-c`: The reporting currency for market values.
     * `-u`: Updates with the latest intraday prices before calculating the report.
 * **`history`**: Displays the value of an asset or cash account over time.
@@ -107,8 +107,8 @@ Here is a complete reference for all the commands available in `pcs`.
     * `-c`: The currency of the cash account to report on.
 * **`gains`**: Provides realized and unrealized gain analysis.
     * `-period`: A predefined period (day, week, month, quarter, year).
-    * `-start`: The start date of the reporting period.
-    * `-end`: The end date of the reporting period.
+    * `-start`: The start date of the reporting period. See "Using Flexible Date Formats" for supported formats.
+    * `-end`: The end date of the reporting period. See "Using Flexible Date Formats" for supported formats.
     * `-c`: The reporting currency.
     * `-method`: The cost basis method (average, fifo).
     * `-u`: Updates with the latest intraday prices before calculating gains.
@@ -122,7 +122,7 @@ Here is a complete reference for all the commands available in `pcs`.
 
 * **`import-amundi`**: Converts an Amundi transactions JSON file to the standard JSONL format. This command takes the file path as a positional argument.
 * **`update-amundi`**: Updates security prices from the Amundi portal.
-    * `-start`: The start date (YYYY-MM-DD).
+    * `-start`: The start date. See "Using Flexible Date Formats" for supported formats.
     * `-H`: Passes headers to run the URI (for authentication).
 
 ## Advanced Concepts
@@ -168,3 +168,52 @@ The following environment variables are set:
 * `PCS_DEFAULT_CURRENCY`: The default currency (e.g., "EUR") set by the user.
 
 By reading these variables, your extension can operate on the same data as the core `pcs` tool without needing the user to specify file paths or API keys again.
+
+#### Using Flexible Date Formats
+
+To make entering dates faster and more intuitive, most commands that accept a date flag (like `-d` or `-end`) support several shorthand formats. You can use these formats instead of typing the full `YYYY-MM-DD` date.
+
+The formats are interpreted in the following order:
+
+1.  **Relative Duration Format**
+
+    You can specify a date relative to today using a signed integer and a unit. The sign is mandatory.
+
+    * **Format**: `[sign][number][unit]`
+    * **Sign**: `+` for a future date, `-` for a past date.
+    * **Unit**: `d` (days), `w` (weeks), `m` (months), `q` (quarters), `y` (years).
+
+    | Example | Assuming Today is 2025-08-29 | Resulting Date |
+    | :------ | :--------------------------- | :------------- |
+    | `-1d`   | Yesterday                    | `2025-08-28`   |
+    | `+1d`   | Tomorrow                     | `2025-08-30`   |
+    | `+0d`   | Today                        | `2025-08-29`   |
+    | `-2w`   | Two weeks ago                | `2025-08-15`   |
+    | `-1m`   | One month ago                | `2025-07-29`   |
+
+2.  **`[MM-]DD` Format**
+
+    You can specify a day, or a month and a day, and the current year will be assumed. This format also has special handling for `0`.
+
+    * **`DD`**: A day in the current month and year.
+    * **`MM-DD`**: A specific month and day in the current year.
+    * **`0` as the day**: Resolves to the last day of the *previous* month.
+    * **`0` as the month**: Resolves to the corresponding day in December of the *previous* year.
+
+    | Example | Assuming Today is 2025-08-29 | Resulting Date |
+    | :------ | :--------------------------- | :------------- |
+    | `27`    | The 27th of the current month | `2025-08-27`   |
+    | `1-15`  | January 15th of current year | `2025-01-15`   |
+    | `0`     | Last day of previous month   | `2025-07-31`   |
+    | `8-0`   | Last day of July (month 8-1) | `2025-07-31`   |
+    | `1-0`   | Last day of previous year    | `2024-12-31`   |
+    | `0-15`  | Dec 15th of the previous year | `2024-12-15`   |
+    | `0-0`   | Nov 30th of the previous year | `2024-11-30`   |
+
+3.  **`YYYY-MM-DD` Format**
+
+    If the input doesn't match any of the shorthand formats, `pcs` will try to parse it as a full standard date.
+
+    | Example      | Resulting Date |
+    | :----------- | :------------- |
+    | `2024-02-29` | `2024-02-29`   |

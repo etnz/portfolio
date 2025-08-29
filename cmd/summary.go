@@ -27,7 +27,7 @@ func (*summaryCmd) Usage() string {
 }
 
 func (c *summaryCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Date for the summary (YYYY-MM-DD)")
+	f.StringVar(&c.date, "d", date.Today().String(), "Date for the summary. See the user manual for supported date formats.")
 	f.StringVar(&c.currency, "c", "EUR", "Reporting currency for the summary")
 	f.BoolVar(&c.update, "u", false, "update with latest intraday prices before calculating summary")
 }

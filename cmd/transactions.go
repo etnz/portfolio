@@ -32,7 +32,7 @@ func (*buyCmd) Usage() string {
 }
 
 func (c *buyCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date (YYYY-MM-DD)")
+	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.StringVar(&c.security, "s", "", "Security ticker")
 	f.Float64Var(&c.quantity, "q", 0, "Number of shares")
 	f.Float64Var(&c.amount, "a", 0, "Total amount paid for the shares")
@@ -75,7 +75,7 @@ func (*sellCmd) Usage() string {
 `
 }
 func (c *sellCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date (YYYY-MM-DD)")
+	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.StringVar(&c.security, "s", "", "Security ticker")
 	f.Float64Var(&c.quantity, "q", 0, "Number of shares, if missing all shares are sold")
 	f.Float64Var(&c.amount, "a", 0, "Total amount received for the shares")
@@ -114,7 +114,7 @@ func (*dividendCmd) Usage() string {
 `
 }
 func (c *dividendCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date (YYYY-MM-DD)")
+	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.StringVar(&c.security, "s", "", "Security ticker receiving the dividend")
 	f.Float64Var(&c.amount, "a", 0, "Total dividend amount received")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
@@ -153,7 +153,7 @@ func (*depositCmd) Usage() string {
 `
 }
 func (c *depositCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date (YYYY-MM-DD)")
+	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.Float64Var(&c.amount, "a", 0, "Amount of cash to deposit")
 	f.StringVar(&c.currency, "c", "EUR", "Currency of the deposit (e.g., USD, EUR). Cash is kept in that currency")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
@@ -192,7 +192,7 @@ func (*withdrawCmd) Usage() string {
 `
 }
 func (c *withdrawCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date (YYYY-MM-DD)")
+	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.Float64Var(&c.amount, "a", 0, "Amount of cash to withdraw")
 	f.StringVar(&c.currency, "c", "EUR", "Currency of the withdrawal (e.g., USD, EUR)")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
@@ -237,7 +237,7 @@ func (*convertCmd) Usage() string {
 }
 
 func (c *convertCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date (YYYY-MM-DD)")
+	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.StringVar(&c.fromCurrency, "fc", "", "Source currency code (e.g., USD)")
 	f.Float64Var(&c.fromAmount, "fa", 0, "Amount of cash to convert from the source currency")
 	f.StringVar(&c.toCurrency, "tc", "", "Destination currency code (e.g., EUR)")
@@ -298,7 +298,7 @@ func (c *declareCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.ticker, "s", "", "Ledger-internal ticker to define (e.g., 'MY_AAPL')")
 	f.StringVar(&c.id, "id", "", "Full, unique security ID (e.g., 'US0378331005.XNAS')")
 	f.StringVar(&c.currency, "c", "", "The currency of the security (e.g., 'USD')")
-	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date (YYYY-MM-DD)")
+	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 }
 

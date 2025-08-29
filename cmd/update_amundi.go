@@ -76,7 +76,7 @@ func (*updateAmundiCmd) Usage() string {
 }
 
 func (c *updateAmundiCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.start, "start", date.Today().Add(-7).String(), "Start date (YYYY-MM-DD)")
+	f.StringVar(&c.start, "start", date.Today().Add(-7).String(), "Start date. See the user manual for supported date formats.")
 
 	f.Var(&HeaderVal{Header: &c.header}, "H", "pass headers to run the uri (use chrome copy as curl to help)")
 	s := "" // we complitely ignore those curl parameters.

@@ -27,7 +27,7 @@ func (*holdingCmd) Usage() string {
 }
 
 func (c *holdingCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Date for the holdings report (YYYY-MM-DD)")
+	f.StringVar(&c.date, "d", date.Today().String(), "Date for the holdings report. See the user manual for supported date formats.")
 	f.StringVar(&c.currency, "c", "EUR", "Reporting currency for market values")
 	f.BoolVar(&c.update, "u", false, "update with latest intraday prices before calculating the report")
 

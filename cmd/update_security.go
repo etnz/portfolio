@@ -34,13 +34,13 @@ Updates security prices.
 
 func (c *updateSecurityCmd) SetFlags(f *flag.FlagSet) {
 	// Flags for automatic mode
-	f.StringVar(&c.start, "start", date.New(2025, 01, 0).String(), "set a specific start date to update from")
-	f.StringVar(&c.end, "end", date.Today().Add(-1).String(), "set a specific end date")
+	f.StringVar(&c.start, "start", date.New(2025, 01, 0).String(), "Set a specific start date to update from. See the user manual for supported date formats.")
+	f.StringVar(&c.end, "end", date.Today().Add(-1).String(), "Set a specific end date. See the user manual for supported date formats.")
 
 	// Flags for manual mode
 	f.StringVar(&c.id, "id", "", "Unique security identifier (triggers manual mode)")
 	f.Float64Var(&c.price, "p", 0, "Price to set for the security (triggers manual mode)")
-	f.StringVar(&c.date, "d", date.Today().String(), "Date for the manual price update (optional, defaults to today)")
+	f.StringVar(&c.date, "d", date.Today().String(), "Date for the manual price update (optional, defaults to today). See the user manual for supported date formats.")
 }
 
 func (c *updateSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
