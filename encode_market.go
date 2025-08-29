@@ -30,9 +30,9 @@ const marketDataFilesGlob = "[0-9][0-9][0-9][0-9].jsonl"
 //            Then generate each file.
 //            Then using the same glob, create the list of all existing files on the disk, and compute which one is to be deleted.
 
-// decodeDefinition parses a single file containing the securities definition.
+// decodeSecurities parses a single file containing the securities definition.
 // filename is for error message only.
-func (m *MarketData) decodeDefinition(filename string, r io.Reader) error {
+func (m *MarketData) decodeSecurities(filename string, r io.Reader) error {
 	// to parse a json, we use a dedicated local struct with tag annotation.
 
 	// jsecurity is the object read from the file using json parser.
@@ -77,8 +77,8 @@ type fileLine struct {
 	txt      string
 }
 
-// decodeLines read all lines from a set of files and return them in list of structured lines.
-func decodeLines(filenames ...string) (list []fileLine, err error) {
+// loadLines read all lines from a set of files and return them in list of structured lines.
+func loadLines(filenames ...string) (list []fileLine, err error) {
 	list = make([]fileLine, 0, 100000)
 	for _, filename := range filenames {
 		i := 0
@@ -96,8 +96,8 @@ func decodeLines(filenames ...string) (list []fileLine, err error) {
 	return list, nil
 }
 
-// decodeLine decodes a single line from the database persisted files.
-func decodeLine(m *MarketData, l fileLine) error {
+// decodeDailyPrices decodes a single line from the database persisted files.
+func decodeDailyPrices(m *MarketData, l fileLine) error {
 
 	// Start simply ignoring empty lines.
 	if strings.TrimSpace(l.txt) == "" {
@@ -166,7 +166,7 @@ func DecodeMarketData(marketFile string) (*MarketData, error) {
 	}
 	defer f.Close()
 
-	if err := m.decodeDefinition(marketFile, f); err != nil {
+	if err := m.decodeSecurities(marketFile, f); err != nil {
 		return nil, fmt.Errorf("load error: cannot read market definition file: %w", err)
 	}
 
@@ -176,14 +176,14 @@ func DecodeMarketData(marketFile string) (*MarketData, error) {
 		return nil, fmt.Errorf("load error: cannot scan folder %q for market data files: %w", folder, err)
 	}
 
-	lines, err := decodeLines(filenames...)
+	lines, err := loadLines(filenames...)
 	if err != nil {
 		return nil, err // err is already a package error
 	}
 
 	for _, line := range lines {
 
-		if err := decodeLine(m, line); err != nil {
+		if err := decodeDailyPrices(m, line); err != nil {
 			return nil, err
 		}
 
@@ -193,8 +193,8 @@ func DecodeMarketData(marketFile string) (*MarketData, error) {
 
 // Persist section.
 
-// encodeDefinition encodes the securities definition into a jsonl stream.
-func encodeDefinition(w io.Writer, m *MarketData) error {
+// encodeSecurities encodes the securities definition into a jsonl stream.
+func encodeSecurities(w io.Writer, m *MarketData) error {
 	// jsecurity is the object to write to the file using json parser.
 	type jsecurity struct {
 		Ticker   string `json:"ticker"`
@@ -231,9 +231,9 @@ func encodeDefinition(w io.Writer, m *MarketData) error {
 	return nil
 }
 
-// encodeLine persists a single line in a security jsonl file.
+// encodeDailyPrices persists a single line in a security jsonl file.
 // Returns bare io errors.
-func encodeLine(w io.Writer, day date.Date, tickers []string, values []float64) error {
+func encodeDailyPrices(w io.Writer, day date.Date, tickers []string, values []float64) error {
 	// json encoder cannot be used as it would require a map, and map order is not guaranteed.
 	// Instead fine grained formatting is done.
 
@@ -298,7 +298,7 @@ func EncodeMarketData(definitionFile string, m *MarketData) error {
 	defer f.Close()
 	log.Printf("create-market-definition-file name=%q", definitionFile)
 
-	if err := encodeDefinition(f, m); err != nil {
+	if err := encodeSecurities(f, m); err != nil {
 		return err
 	}
 	// Add a trailing line at the end of the file.
@@ -338,13 +338,13 @@ func EncodeMarketData(definitionFile string, m *MarketData) error {
 			if err != nil {
 				return fmt.Errorf("persist error: cannot create file %q: %w", currentFilename, err)
 			}
-			createdFiles[currentFilename] = struct{}{} // Append this file to the list of created ones.
+			createdFiles[currentFilename] = struct{}{}
 			defer currentFile.Close()
 			log.Printf("create-market-data-file name=%q", currentFilename)
 		}
 
 		// Write line to currentFile.
-		if err := encodeLine(currentFile, l.day, l.tickers, l.prices); err != nil {
+		if err := encodeDailyPrices(currentFile, l.day, l.tickers, l.prices); err != nil {
 			return fmt.Errorf("persist error: write error on file %q: %w", currentFilename, err)
 		}
 	}
@@ -364,186 +364,5 @@ func EncodeMarketData(definitionFile string, m *MarketData) error {
 		}
 		log.Printf("delete-market-data-file name=%q", filename)
 	}
-	return nil
-}
-
-// DecodeLedger decodes transactions from a stream of JSONL data from an io.Reader,
-// decodes each line into the appropriate transaction struct, and returns a sorted Ledger.
-func DecodeLedger(r io.Reader) (*Ledger, error) {
-	ledger := NewLedger()
-	scanner := bufio.NewScanner(r)
-
-	for scanner.Scan() {
-		lineBytes := scanner.Bytes()
-		if len(lineBytes) == 0 {
-			continue // Skip empty lines
-		}
-
-		var identifier struct {
-			Command CommandType `json:"command"`
-		}
-		if err := json.Unmarshal(lineBytes, &identifier); err != nil {
-			return nil, fmt.Errorf("could not identify command in line %q: %w", string(lineBytes), err)
-		}
-
-		var decodedTx Transaction
-		var err error
-
-		switch identifier.Command {
-		case CmdBuy:
-			// Use a temporary type that has all possible fields.
-			var temp struct {
-				secCmd
-				Quantity float64 `json:"quantity"`
-				Price    float64 `json:"price"`  // Old field
-				Amount   float64 `json:"amount"` // New field
-			}
-			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
-			}
-
-			// Create the final transaction struct
-			buy := Buy{
-				secCmd:   temp.secCmd,
-				Quantity: temp.Quantity,
-			}
-
-			// Logic to handle both formats
-			if temp.Amount != 0 {
-				// New format: amount is present
-				buy.Amount = temp.Amount
-			} else {
-				// Old format: price is present, calculate amount
-				buy.Amount = temp.Price * temp.Quantity
-			}
-			decodedTx = buy
-		case CmdSell:
-			// Use a temporary type that has all possible fields.
-			var temp struct {
-				secCmd
-				Quantity float64 `json:"quantity"`
-				Price    float64 `json:"price"`  // Old field
-				Amount   float64 `json:"amount"` // New field
-			}
-			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
-			}
-
-			// Create the final transaction struct
-			sell := Sell{
-				secCmd:   temp.secCmd,
-				Quantity: temp.Quantity,
-			}
-
-			// Logic to handle both formats
-			if temp.Amount != 0 {
-				// New format: amount is present
-				sell.Amount = temp.Amount
-			} else {
-				// Old format: price is present, calculate amount
-				sell.Amount = temp.Price * temp.Quantity
-			}
-			decodedTx = sell
-		case CmdDividend:
-			var tx Dividend
-			err = json.Unmarshal(lineBytes, &tx)
-			decodedTx = tx
-		case CmdDeposit:
-			var tx Deposit
-			err = json.Unmarshal(lineBytes, &tx)
-			decodedTx = tx
-		case CmdWithdraw:
-			var tx Withdraw
-			err = json.Unmarshal(lineBytes, &tx)
-			decodedTx = tx
-		case CmdConvert:
-			var tx Convert
-			err = json.Unmarshal(lineBytes, &tx)
-			decodedTx = tx
-		case CmdDeclare:
-			var tx Declare
-			err = json.Unmarshal(lineBytes, &tx)
-			decodedTx = tx
-		default:
-			err = fmt.Errorf("unknown transaction command: %q", identifier.Command)
-		}
-
-		if err != nil {
-			return nil, err
-		}
-		ledger.Append(decodedTx)
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error reading from input: %w", err)
-	}
-
-	// Perform a stable sort on the ledger based on the transaction date.
-	ledger.stableSort()
-
-	return ledger, nil
-}
-
-// EncodeTransaction marshals a single transaction to JSON and writes it to the
-// writer, followed by a newline, in JSONL format.
-// It ensures that the JSON keys are sorted alphabetically for canonical output.
-func EncodeTransaction(w io.Writer, tx Transaction) error {
-	// Marshal the transaction into a generic map to get all fields.
-	// This step uses json.Marshal, which doesn't guarantee key order,
-	// but we'll re-order them manually afterwards.
-	tempData, err := json.Marshal(tx)
-	if err != nil {
-		return fmt.Errorf("failed to marshal transaction to temporary map: %w", err)
-	}
-
-	var rawMap map[string]interface{}
-	if err := json.Unmarshal(tempData, &rawMap); err != nil {
-		return fmt.Errorf("failed to unmarshal temporary data to map: %w", err)
-	}
-
-	// Extract keys and sort them alphabetically.
-	keys := make([]string, 0, len(rawMap))
-	for k := range rawMap {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	// Manually build the JSON string with sorted keys.
-	var b strings.Builder
-	b.WriteString("{")
-	for i, key := range keys {
-		if i > 0 {
-			b.WriteString(",")
-		}
-		// Marshal each value individually to handle different types correctly.
-		valData, err := json.Marshal(rawMap[key])
-		if err != nil {
-			return fmt.Errorf("failed to marshal value for key %q: %w", key, err)
-		}
-		fmt.Fprintf(&b, "%q:%s", key, valData)
-	}
-	b.WriteString("}")
-
-	// Write the JSON data followed by a newline to create the JSONL format.
-	if _, err := w.Write([]byte(b.String() + "\n")); err != nil {
-		return fmt.Errorf("failed to write transaction: %w", err)
-	}
-	return nil
-}
-
-// EncodeLedger reorders transactions by date and persists them to an io.Writer in JSONL format.
-// The sort is stable, meaning transactions on the same day maintain their original relative order.
-// It also ensures that the JSON keys within each transaction are sorted alphabetically for canonical output.
-func EncodeLedger(w io.Writer, ledger *Ledger) error {
-	// Perform a stable sort on the ledger based on the transaction date to ensure order.
-	ledger.stableSort()
-
-	// 2. Iterate through the sorted transactions and write each one as a JSON line.
-	for _, tx := range ledger.transactions {
-		if err := EncodeTransaction(w, tx); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
