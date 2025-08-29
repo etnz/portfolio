@@ -315,7 +315,7 @@ func EncodeMarketData(definitionFile string, m *MarketData) error {
 			filename: filepath.Join(folder, fmt.Sprintf("%v.jsonl", day.Year())),
 		}
 		// Append tickers that have values.
-		for _, sec := range m.securities {
+		for _, sec := range sortedSecurities {
 			if val, ok := m.read(sec.ID(), day); ok {
 				l.tickers = append(l.tickers, sec.Ticker())
 				l.prices = append(l.prices, val)
