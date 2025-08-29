@@ -31,6 +31,7 @@ func Register(c *subcommands.Commander) {
 	c.Register(&declareCmd{}, "transactions")
 	c.Register(&withdrawCmd{}, "transactions")
 	c.Register(&convertCmd{}, "transactions")
+	c.Register(&formatLedgerCmd{}, "transactions")
 
 	c.Register(&summaryCmd{}, "analysis")
 	c.Register(&holdingCmd{}, "analysis")

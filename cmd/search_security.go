@@ -11,7 +11,7 @@ import (
 	"github.com/google/subcommands"
 )
 
-type searchSecurityCmd struct{
+type searchSecurityCmd struct {
 	addSecurityCmd *addSecurityCmd
 	showErrors     bool
 }

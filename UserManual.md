@@ -91,6 +91,7 @@ Here is a complete reference for all the commands available in `pcs`.
     * `-c`: The currency of the security.
     * `-d`: Transaction date (YYYY-MM-DD).
     * `-m`: An optional memo.
+* **`format-ledger`**: Formats the ledger file into a canonical form.
 
 ### Analysis and Reporting
 

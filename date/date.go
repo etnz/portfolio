@@ -165,7 +165,5 @@ func Iterate[T float32 | float64](histories ...History[T]) iter.Seq[Date] {
 	return iterate(dates...)
 }
 
-
-
 // Range represents a range of dates.
 type Range struct{ From, To Date }

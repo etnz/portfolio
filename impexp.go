@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"strings"
 	"sort"
+	"strings"
 
 	"github.com/etnz/portfolio/date"
 )

@@ -24,13 +24,13 @@ type GainsReport struct {
 
 // SecurityGains holds the realized and unrealized gains for a single security.
 type SecurityGains struct {
-	Security         string
-	Realized         float64
-	Unrealized       float64
-	Total            float64
-	CostBasis        float64
-	MarketValue      float64
-	Quantity         float64
+	Security    string
+	Realized    float64
+	Unrealized  float64
+	Total       float64
+	CostBasis   float64
+	MarketValue float64
+	Quantity    float64
 }
 
 // Summary provides a comprehensive, at-a-glance overview of the portfolio's

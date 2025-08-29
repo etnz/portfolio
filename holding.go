@@ -23,7 +23,7 @@ type SecurityHolding struct {
 
 // CashHolding represents the balance of a single currency.
 type CashHolding struct {
-	Currency         string
-	Balance          float64
-	Value            float64 // In reporting currency
+	Currency string
+	Balance  float64
+	Value    float64 // In reporting currency
 }

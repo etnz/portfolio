@@ -2,7 +2,6 @@ package portfolio
 
 import (
 	"bytes"
-	"encoding/json"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -113,11 +112,12 @@ func TestEncodeLedger(t *testing.T) {
 
 	// Manually sort the transactions to build the expected output string.
 	expectedOrder := []Transaction{tx2, tx3, tx1}
-	var expectedOutput strings.Builder
+	var expectedOutputBuffer bytes.Buffer
 	for _, tx := range expectedOrder {
-		jsonData, _ := json.Marshal(tx)
-		expectedOutput.Write(jsonData)
-		expectedOutput.WriteString("\n")
+		// Use EncodeTransaction to generate canonical JSON for expected output
+		if err := EncodeTransaction(&expectedOutputBuffer, tx); err != nil {
+			t.Fatalf("Failed to encode expected transaction: %v", err)
+		}
 	}
 
 	var buffer bytes.Buffer
@@ -130,8 +130,8 @@ func TestEncodeLedger(t *testing.T) {
 		t.Fatalf("EncodeLedger() returned an unexpected error: %v", err)
 	}
 
-	if got := buffer.String(); got != expectedOutput.String() {
-		t.Errorf("EncodeLedger() produced incorrect output.\nGot:\n%s\nWant:\n%s", got, expectedOutput.String())
+	if got := buffer.String(); got != expectedOutputBuffer.String() {
+		t.Errorf("EncodeLedger() produced incorrect output.\nGot:\n%s\nWant:\n%s", got, expectedOutputBuffer.String())
 	}
 }
 
