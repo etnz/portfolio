@@ -91,7 +91,6 @@ Here is a complete reference for all the commands available in `pcs`.
     * `-c`: The currency of the security.
     * `-d`: Transaction date (YYYY-MM-DD).
     * `-m`: An optional memo.
-* **`format-ledger`**: Formats the ledger file into a canonical form.
 
 ### Analysis and Reporting
 
@@ -113,6 +112,11 @@ Here is a complete reference for all the commands available in `pcs`.
     * `-c`: The reporting currency.
     * `-method`: The cost basis method (average, fifo).
     * `-u`: Updates with the latest intraday prices before calculating gains.
+
+### Tools
+
+* **`format-ledger`**: Formats the ledger file into a canonical form, sorting transactions by date and JSON keys alphabetically.
+    * `-o`: Specifies the output file path. If omitted, the original ledger file is overwritten. Use `-o -` to write the output to `stdout`, which is useful for piping to other commands.
 
 ### Amundi Integration
 
