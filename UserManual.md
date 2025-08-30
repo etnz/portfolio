@@ -98,6 +98,10 @@ Here is a complete reference for all the commands available in `pcs`.
     * `-d`: The date for the summary. See "Using Flexible Date Formats" for supported formats.
     * `-c`: The reporting currency for the summary.
     * `-u`: Updates with the latest intraday prices before calculating the summary.
+* **`daily`**: Displays a daily portfolio performance report.
+    * `-d`: The date for the report. See "Using Flexible Date Formats" for supported formats.
+    * `-c`: The reporting currency for the report.
+    * `-u`: Updates with the latest intraday prices before calculating the report.
 * **`holding`**: Displays detailed holdings for a specific date.
     * `-d`: The date for the holdings report. See "Using Flexible Date Formats" for supported formats.
     * `-c`: The reporting currency for market values.

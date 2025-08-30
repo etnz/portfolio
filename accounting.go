@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"time"
 
 	"github.com/etnz/portfolio/date"
 )
@@ -45,6 +46,29 @@ type Summary struct {
 	QTD               Performance // Quarter-to-Date
 	YTD               Performance // Year-to-Date
 	Inception         Performance
+}
+
+// DailyReport provides a summary of a single day's portfolio changes, including
+// a per-asset breakdown of performance.
+type DailyReport struct {
+	Date              date.Date
+	Time              time.Time
+	ReportingCurrency string
+	ValueAtPrevClose  float64
+	ValueAtClose      float64
+	TotalGain         float64
+	MarketGains       float64
+	RealizedGains     float64
+	NetCashFlow       float64
+	ActiveAssets      []AssetGain
+	Transactions      []Transaction
+}
+
+// AssetGain represents the daily gain or loss for a single security.
+type AssetGain struct {
+	Security string
+	Gain     float64
+	Return   float64
 }
 
 // AccountingSystem encapsulates all the data required for portfolio management,
@@ -322,6 +346,139 @@ func (as *AccountingSystem) NewSummary(on date.Date) (*Summary, error) {
 	}
 
 	return summary, nil
+}
+
+// NewDailyReport calculates and returns a summary of the portfolio's performance for a single day.
+func (as *AccountingSystem) NewDailyReport(on date.Date, now time.Time) (*DailyReport, error) {
+	if as.ReportingCurrency == "" {
+		return nil, fmt.Errorf("reporting currency is not set in accounting system")
+	}
+
+	report := &DailyReport{
+		Date:              on,
+		Time:              now,
+		ReportingCurrency: as.ReportingCurrency,
+		ActiveAssets:      []AssetGain{},
+		Transactions:      []Transaction{},
+	}
+
+	// 1. Calculate value at previous day's close
+	prevDate := on.Add(-1)
+	valueAtPrevClose, err := as.TotalMarketValue(prevDate)
+	if err != nil {
+		return nil, fmt.Errorf("could not get value at previous close for %s: %w", prevDate, err)
+	}
+	report.ValueAtPrevClose = valueAtPrevClose
+
+	// 2. Calculate value at the specified day's close
+	valueAtClose, err := as.TotalMarketValue(on)
+	if err != nil {
+		return nil, fmt.Errorf("could not get value at close for %s: %w", on, err)
+	}
+	report.ValueAtClose = valueAtClose
+
+	// 3. Get all transactions for the specified day
+	for _, tx := range as.Ledger.transactions {
+		if tx.When() == on {
+			report.Transactions = append(report.Transactions, tx)
+		}
+	}
+
+	// 4. Calculate Net Cash Flow and Realized Gains for the day
+	var netCashFlow, realizedGains float64
+	for _, tx := range report.Transactions {
+		switch v := tx.(type) {
+		case Deposit:
+			amount, err := as.ConvertCurrency(v.Amount, v.Currency, as.ReportingCurrency, on)
+			if err != nil {
+				return nil, err
+			}
+			netCashFlow += amount
+		case Withdraw:
+			amount, err := as.ConvertCurrency(v.Amount, v.Currency, as.ReportingCurrency, on)
+			if err != nil {
+				return nil, err
+			}
+			netCashFlow -= amount
+		case Sell:
+			gain, err := as.Ledger.RealizedGain(v.Security, on, FIFO)
+			if err != nil {
+				return nil, err
+			}
+			prevDayGain, err := as.Ledger.RealizedGain(v.Security, prevDate, FIFO)
+			if err != nil {
+				return nil, err
+			}
+			realizedGains += gain - prevDayGain
+		}
+	}
+	report.NetCashFlow = netCashFlow
+	report.RealizedGains = realizedGains
+
+	// 5. Calculate Total Gain and Market Gains
+	report.TotalGain = report.ValueAtClose - report.ValueAtPrevClose
+	report.MarketGains = report.TotalGain - report.RealizedGains - report.NetCashFlow
+
+	// 6. Calculate Active Asset Gains
+	for sec := range as.Ledger.AllSecurities() {
+		posPrev := as.Ledger.Position(sec.Ticker(), prevDate)
+		if posPrev > 0 {
+			pricePrev, ok := as.MarketData.PriceAsOf(sec.ID(), prevDate)
+			if !ok {
+				log.Printf("Warning: could not find price for %s on %s", sec.Ticker(), prevDate)
+				continue
+			}
+			valuePrev, err := as.ConvertCurrency(posPrev*pricePrev, sec.Currency(), as.ReportingCurrency, prevDate)
+			if err != nil {
+				return nil, err
+			}
+
+			posToday := as.Ledger.Position(sec.Ticker(), on)
+			priceToday, ok := as.MarketData.PriceAsOf(sec.ID(), on)
+			if !ok {
+				log.Printf("Warning: could not find price for %s on %s", sec.Ticker(), on)
+				continue
+			}
+			valueToday, err := as.ConvertCurrency(posToday*priceToday, sec.Currency(), as.ReportingCurrency, on)
+			if err != nil {
+				return nil, err
+			}
+
+			gain := valueToday - valuePrev
+			// Adjust for buys/sells during the day
+			for _, tx := range report.Transactions {
+				switch v := tx.(type) {
+				case Buy:
+					if v.Security == sec.Ticker() {
+						cost, err := as.ConvertCurrency(v.Amount, sec.Currency(), as.ReportingCurrency, on)
+						if err != nil {
+							return nil, err
+						}
+						gain -= cost
+					}
+				case Sell:
+					if v.Security == sec.Ticker() {
+						proceeds, err := as.ConvertCurrency(v.Amount, sec.Currency(), as.ReportingCurrency, on)
+						if err != nil {
+							return nil, err
+						}
+						gain += proceeds
+					}
+				}
+			}
+
+			assetGain := AssetGain{
+				Security: sec.Ticker(),
+				Gain:     gain,
+			}
+			if valuePrev > 0 {
+				assetGain.Return = gain / valuePrev
+			}
+			report.ActiveAssets = append(report.ActiveAssets, assetGain)
+		}
+	}
+
+	return report, nil
 }
 
 // ConvertCurrency converts an amount from a source currency to a target currency as of a given date.
