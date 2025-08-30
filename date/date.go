@@ -179,7 +179,8 @@ func (j *Date) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 	// Keep this parsing strict, as it's for data files.
-	on, err := time.Parse(DateFormat, str)
+	// But not too strict, also supports 2025-7-1
+	on, err := time.Parse(readDateFormat, str)
 	if err != nil {
 		return fmt.Errorf("invalid date %q in data file, want format %q: %w", str, DateFormat, err)
 	}
