@@ -206,6 +206,20 @@ func (as *AccountingSystem) TotalMarketValue(on date.Date) (float64, error) {
 		totalValue += convertedBalance
 	}
 
+	// Add counterparty account balances
+	for account := range as.Ledger.AllCounterpartyAccounts() {
+		balance, currency := as.Ledger.CounterpartyAccountBalance(account, on)
+		if balance == 0 {
+			continue
+		}
+
+		convertedBalance, err := as.ConvertCurrency(balance, currency, as.ReportingCurrency, on)
+		if err != nil {
+			return 0, err
+		}
+		totalValue += convertedBalance
+	}
+
 	return totalValue, nil
 }
 
@@ -637,6 +651,7 @@ func (as *AccountingSystem) NewHoldingReport(on date.Date) (*HoldingReport, erro
 		ReportingCurrency: as.ReportingCurrency,
 		Securities:        []SecurityHolding{},
 		Cash:              []CashHolding{},
+		Counterparties:    []CounterpartyHolding{},
 	}
 
 	// Securities
@@ -681,6 +696,25 @@ func (as *AccountingSystem) NewHoldingReport(on date.Date) (*HoldingReport, erro
 			continue
 		}
 		report.Cash = append(report.Cash, CashHolding{
+			Currency: currency,
+			Balance:  balance,
+			Value:    convertedBalance,
+		})
+	}
+
+	// Counterparties
+	for account := range as.Ledger.AllCounterpartyAccounts() {
+		balance, currency := as.Ledger.CounterpartyAccountBalance(account, on)
+		if balance == 0 {
+			continue
+		}
+		convertedBalance, err := as.ConvertCurrency(balance, currency, as.ReportingCurrency, on)
+		if err != nil {
+			log.Printf("Warning: could not convert currency for counterparty %s: %v", account, err)
+			continue
+		}
+		report.Counterparties = append(report.Counterparties, CounterpartyHolding{
+			Name:     account,
 			Currency: currency,
 			Balance:  balance,
 			Value:    convertedBalance,

@@ -8,6 +8,7 @@ type HoldingReport struct {
 	ReportingCurrency string
 	Securities        []SecurityHolding
 	Cash              []CashHolding
+	Counterparties    []CounterpartyHolding
 	TotalValue        float64
 }
 
@@ -23,6 +24,14 @@ type SecurityHolding struct {
 
 // CashHolding represents the balance of a single currency.
 type CashHolding struct {
+	Currency string
+	Balance  float64
+	Value    float64 // In reporting currency
+}
+
+// CounterpartyHolding represents the balance of a single counterparty account.
+type CounterpartyHolding struct {
+	Name     string
 	Currency string
 	Balance  float64
 	Value    float64 // In reporting currency

@@ -192,6 +192,71 @@ func (l *Ledger) CashBalance(currency string, on date.Date) float64 {
 	return balance
 }
 
+// CounterpartyAccountBalance computes the balance of a counterparty account on a specific date.
+func (l *Ledger) CounterpartyAccountBalance(account string, on date.Date) (float64, string) {
+	var balance float64
+	var currency string
+	for _, tx := range l.transactions {
+		if tx.When().After(on) {
+			break
+		}
+		switch v := tx.(type) {
+		case Accrue:
+			if v.Counterparty == account {
+				balance += v.Amount
+				currency = v.Currency
+			}
+		case Deposit:
+			if v.Settles == account {
+				balance -= v.Amount
+				currency = v.Currency
+			}
+		case Withdraw:
+			if v.Settles == account {
+				balance += v.Amount
+				currency = v.Currency
+			}
+		}
+	}
+	return balance, currency
+}
+
+// AllCounterpartyAccounts returns a sequence of all unique counterparty account names.
+func (l *Ledger) AllCounterpartyAccounts() iter.Seq[string] {
+	return func(yield func(string) bool) {
+		visited := make(map[string]struct{})
+		for _, tx := range l.transactions {
+			switch v := tx.(type) {
+			case Accrue:
+				if _, ok := visited[v.Counterparty]; !ok {
+					visited[v.Counterparty] = struct{}{}
+					if !yield(v.Counterparty) {
+						return
+					}
+				}
+			case Deposit:
+				if v.Settles != "" {
+					if _, ok := visited[v.Settles]; !ok {
+						visited[v.Settles] = struct{}{}
+						if !yield(v.Settles) {
+							return
+						}
+					}
+				}
+			case Withdraw:
+				if v.Settles != "" {
+					if _, ok := visited[v.Settles]; !ok {
+						visited[v.Settles] = struct{}{}
+						if !yield(v.Settles) {
+							return
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 // CostBasis calculates the total cost basis of the remaining holdings for a given security
 // on a specific date, using the specified method.
 func (l *Ledger) CostBasis(ticker string, on date.Date, method CostBasisMethod) (float64, error) {

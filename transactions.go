@@ -341,13 +341,13 @@ func (t *Deposit) Validate(as *AccountingSystem) error {
 			return fmt.Errorf("invalid currency for deposit: %w", err)
 		}
 	}
-	/*
-		if t.Settles != "" {
-			if balance, _ := as.Ledger.CounterpartyAccountBalance(t.Settles, t.Date); balance == 0 {
-				// maybe we should check there was at least one transaction ?
+	if t.Settles != "" {
+			if balance, currency := as.Ledger.CounterpartyAccountBalance(t.Settles, t.Date); balance != 0 {
+				if currency != t.Currency {
+					return fmt.Errorf("settlement currency %s does not match counterparty account currency %s", t.Currency, currency)
+				}
 			}
 		}
-	*/
 	return nil
 }
 
@@ -407,13 +407,13 @@ func (t *Withdraw) Validate(as *AccountingSystem) error {
 	if cash < cost {
 		return fmt.Errorf("cannot withdraw for %f %s cash balance is %f %s", cost, t.Currency, cash, t.Currency)
 	}
-	/*
-		if t.Settles != "" {
-			if balance, _ := as.Ledger.CounterpartyAccountBalance(t.Settles, t.Date); balance == 0 {
-				// maybe we should check there was at least one transaction ?
+	if t.Settles != "" {
+			if balance, currency := as.Ledger.CounterpartyAccountBalance(t.Settles, t.Date); balance != 0 {
+				if currency != t.Currency {
+					return fmt.Errorf("settlement currency %s does not match counterparty account currency %s", t.Currency, currency)
+				}
 			}
 		}
-	*/
 	return nil
 }
 
@@ -460,6 +460,11 @@ func (t *Accrue) Validate(as *AccountingSystem) error {
 	}
 	if err := ValidateCurrency(t.Currency); err != nil {
 		return fmt.Errorf("invalid currency for accrue: %w", err)
+	}
+	if balance, currency := as.Ledger.CounterpartyAccountBalance(t.Counterparty, t.Date); balance != 0 {
+		if currency != t.Currency {
+			return fmt.Errorf("new accrue currency %s does not match counterparty account currency %s", t.Currency, currency)
+		}
 	}
 	return nil
 }
