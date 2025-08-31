@@ -14,6 +14,7 @@ func (c CommandType) IsCashFlow() bool { return c == CmdDeposit || c == CmdWithd
 
 // Command types used for identifying transactions.
 const (
+	CmdAccrue   CommandType = "accrue"
 	CmdBuy      CommandType = "buy"
 	CmdSell     CommandType = "sell"
 	CmdDividend CommandType = "dividend"
@@ -303,6 +304,7 @@ type Deposit struct {
 	baseCmd
 	Amount   float64 `json:"amount"`
 	Currency string  `json:"currency,omitempty"`
+	Settles  string  `json:"settles,omitempty"`
 }
 
 // MarshalJSON implements the json.Marshaler interface for Deposit.
@@ -311,6 +313,7 @@ func (t Deposit) MarshalJSON() ([]byte, error) {
 	w.EmbedFrom(t.baseCmd)
 	w.Append("amount", t.Amount)
 	w.Optional("currency", t.Currency)
+	w.Optional("settles", t.Settles)
 	return w.MarshalJSON()
 }
 
@@ -338,6 +341,13 @@ func (t *Deposit) Validate(as *AccountingSystem) error {
 			return fmt.Errorf("invalid currency for deposit: %w", err)
 		}
 	}
+	/*
+		if t.Settles != "" {
+			if balance, _ := as.Ledger.CounterpartyAccountBalance(t.Settles, t.Date); balance == 0 {
+				// maybe we should check there was at least one transaction ?
+			}
+		}
+	*/
 	return nil
 }
 
@@ -346,6 +356,7 @@ type Withdraw struct {
 	baseCmd
 	Amount   float64 `json:"amount"`
 	Currency string  `json:"currency,omitempty"`
+	Settles  string  `json:"settles,omitempty"`
 }
 
 // MarshalJSON implements the json.Marshaler interface for Withdraw.
@@ -354,6 +365,7 @@ func (t Withdraw) MarshalJSON() ([]byte, error) {
 	w.EmbedFrom(t.baseCmd)
 	w.Append("amount", t.Amount)
 	w.Optional("currency", t.Currency)
+	w.Optional("settles", t.Settles)
 	return w.MarshalJSON()
 }
 
@@ -395,8 +407,63 @@ func (t *Withdraw) Validate(as *AccountingSystem) error {
 	if cash < cost {
 		return fmt.Errorf("cannot withdraw for %f %s cash balance is %f %s", cost, t.Currency, cash, t.Currency)
 	}
+	/*
+		if t.Settles != "" {
+			if balance, _ := as.Ledger.CounterpartyAccountBalance(t.Settles, t.Date); balance == 0 {
+				// maybe we should check there was at least one transaction ?
+			}
+		}
+	*/
 	return nil
 }
+
+// Accrue represents a non-cash transaction that affects a counterparty account.
+type Accrue struct {
+	baseCmd
+	Counterparty string  `json:"counterparty"`
+	Amount       float64 `json:"amount"`
+	Currency     string  `json:"currency"`
+}
+
+// MarshalJSON implements the json.Marshaler interface for Accrue.
+func (t Accrue) MarshalJSON() ([]byte, error) {
+	var w jsonObjectWriter
+	w.EmbedFrom(t.baseCmd)
+	w.Append("counterparty", t.Counterparty)
+	w.Append("amount", t.Amount)
+	w.Append("currency", t.Currency)
+	return w.MarshalJSON()
+}
+
+// NewAccrue creates a new Accrue transaction.
+// A positive amount indicates a receivable (an asset), meaning the counterparty owes the user money.
+// A negative amount indicates a payable (a liability), meaning the user owes the counterparty money.
+func NewAccrue(day date.Date, memo, counterparty string, amount float64, currency string) Accrue {
+	return Accrue{
+		baseCmd:      baseCmd{Command: CmdAccrue, Date: day, Memo: memo},
+		Counterparty: counterparty,
+		Amount:       amount,
+		Currency:     currency,
+	}
+}
+
+// Validate checks the Accrue transaction's fields.
+func (t *Accrue) Validate(as *AccountingSystem) error {
+	if err := t.baseCmd.Validate(as); err != nil {
+		return err
+	}
+	if t.Counterparty == "" {
+		return errors.New("accrue transaction counterparty is missing")
+	}
+	if t.Amount == 0 {
+		return errors.New("accrue transaction amount cannot be zero")
+	}
+	if err := ValidateCurrency(t.Currency); err != nil {
+		return fmt.Errorf("invalid currency for accrue: %w", err)
+	}
+	return nil
+}
+
 
 // Convert represents an internal currency conversion.
 type Convert struct {
