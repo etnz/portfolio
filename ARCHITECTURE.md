@@ -20,6 +20,7 @@ This section defines the key conceptual entities that form the domain language o
 * **Ledger (`ledger.go`, `transactions.go`):** The immutable, chronological record of all user-initiated actions (buys, sells, deposits). It represents the user's input and financial history.
 * **Market Data (`market.go`):** A database of security information and their historical prices. It represents data from the external financial world.
 * **Security ID (`security.go`):** The crucial, unambiguous link between the **Ledger** and **Market Data**. It decouples the user's personal, short-hand tickers from the global, canonical identifiers of financial assets.
+* **Counterparty Account:** A new core concept representing the financial balance with a specific external entity (e.g., "Landlord", "John Doe", "ClientX").
 * **Accounting System (`accounting.go`):** The stateless "brain" of the application. It is a pure function that takes the **Ledger** and **Market Data** as input and produces insights (e.g., holdings, gains, performance summaries) as output.
 
 ---

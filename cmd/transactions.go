@@ -50,7 +50,8 @@ func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) s
 	}
 
 	tx := portfolio.NewBuy(day, c.memo, c.security, c.quantity, c.amount)
-	return handleTransaction(tx, f)
+	_, status := handleTransaction(tx, f)
+	return status
 }
 
 // --- Sell Command ---
@@ -90,7 +91,8 @@ func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return subcommands.ExitUsageError
 	}
 	tx := portfolio.NewSell(day, c.memo, c.security, c.quantity, c.amount)
-	return handleTransaction(tx, f)
+	_, status := handleTransaction(tx, f)
+	return status
 }
 
 // --- Dividend Command ---
@@ -128,7 +130,8 @@ func (c *dividendCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 	}
 
 	tx := portfolio.NewDividend(day, c.memo, c.security, c.amount)
-	return handleTransaction(tx, f)
+	_, status := handleTransaction(tx, f)
+	return status
 }
 
 // --- Deposit Command ---
@@ -169,7 +172,8 @@ func (c *depositCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 
 	tx := portfolio.NewDeposit(day, c.memo, c.currency, c.amount)
 	tx.Settles = c.settles
-	return handleTransaction(tx, f)
+	_, status := handleTransaction(tx, f)
+	return status
 }
 
 // --- Withdraw Command ---
@@ -210,7 +214,8 @@ func (c *withdrawCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 
 	tx := portfolio.NewWithdraw(day, c.memo, c.currency, c.amount)
 	tx.Settles = c.settles
-	return handleTransaction(tx, f)
+	_, status := handleTransaction(tx, f)
+	return status
 }
 
 // --- Convert Command ---
@@ -257,7 +262,8 @@ func (c *convertCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	}
 
 	tx := portfolio.NewConvert(day, c.memo, c.fromCurrency, c.fromAmount, c.toCurrency, c.toAmount)
-	return handleTransaction(tx, f)
+	_, status := handleTransaction(tx, f)
+	return status
 }
 
 // --- Accrue Command ---
@@ -316,21 +322,37 @@ func (c *accrueCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 	}
 
 	tx := portfolio.NewAccrue(day, c.memo, account, amount, c.currency)
-	return handleTransaction(tx, f)
+
+	// Call handleTransaction and receive the validated transaction
+	validatedTx, status := handleTransaction(tx, f)
+	if status != subcommands.ExitSuccess {
+		return status
+	}
+
+	// Check if it's an Accrue transaction and if a new account was created
+	if accrueTx, ok := validatedTx.(portfolio.Accrue); ok {
+		if accrueTx.Create {
+			fmt.Printf("A new counterparty account '%s' will be created.\n", accrueTx.Counterparty)
+		}
+	}
+
+	fmt.Printf("Successfully appended transaction to %s\n", *ledgerFile)
+	return subcommands.ExitSuccess
 }
 
 // handleTransaction calls the core EncodeTransaction function and manages the
 // CLI feedback, printing errors or a success message and returning the
 // appropriate exit status.
-func handleTransaction(tx portfolio.Transaction, f *flag.FlagSet) subcommands.ExitStatus {
-	if err := EncodeTransaction(tx); err != nil {
+func handleTransaction(tx portfolio.Transaction, f *flag.FlagSet) (portfolio.Transaction, subcommands.ExitStatus) {
+	validatedTx, err := EncodeTransaction(tx)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		f.Usage()
-		return subcommands.ExitUsageError
+		return nil, subcommands.ExitUsageError
 	}
 
 	fmt.Printf("Successfully appended transaction to %s\n", *ledgerFile)
-	return subcommands.ExitSuccess
+	return validatedTx, subcommands.ExitSuccess
 }
 
 type declareCmd struct {
@@ -372,6 +394,6 @@ func (c *declareCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitUsageError
 	}
 	tx := portfolio.NewDeclaration(day, c.memo, c.ticker, c.id, c.currency)
-
-	return handleTransaction(tx, f)
+	_, status := handleTransaction(tx, f)
+	return status
 }

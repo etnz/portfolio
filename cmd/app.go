@@ -103,36 +103,36 @@ func EncodeMarketData(s *portfolio.MarketData) error {
 
 // EncodeTransaction validates a transaction against the market data and existing
 // ledger, then appends it to the ledger file.
-func EncodeTransaction(tx portfolio.Transaction) error {
+func EncodeTransaction(tx portfolio.Transaction) (portfolio.Transaction, error) {
 	market, err := DecodeMarketData()
 	if err != nil {
-		return fmt.Errorf("could not load securities database: %w", err)
+		return nil, fmt.Errorf("could not load securities database: %w", err)
 	}
 	ledger, err := DecodeLedger()
 	if err != nil {
-		return fmt.Errorf("could not load ledger: %w", err)
+		return nil, fmt.Errorf("could not load ledger: %w", err)
 	}
 
 	// For validation, a reporting currency is not needed. We pass an empty string.
 	as, err := portfolio.NewAccountingSystem(ledger, market, "")
 	if err != nil {
 		// This error is unexpected here since we pass an empty currency.
-		return fmt.Errorf("could not create accounting system: %w", err)
+		return nil, fmt.Errorf("could not create accounting system: %w", err)
 	}
 	tx, err = as.Validate(tx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Open the file in append mode, creating it if it doesn't exist.
 	f, err := os.OpenFile(*ledgerFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return fmt.Errorf("error opening portfolio file %q: %w", *ledgerFile, err)
+		return nil, fmt.Errorf("error opening portfolio file %q: %w", *ledgerFile, err)
 	}
 	defer f.Close()
 
 	if err := portfolio.EncodeTransaction(f, tx); err != nil {
-		return fmt.Errorf("error writing to portfolio file %q: %w", *ledgerFile, err)
+		return nil, fmt.Errorf("error writing to portfolio file %q: %w", *ledgerFile, err)
 	}
-	return nil
+	return tx, nil
 }

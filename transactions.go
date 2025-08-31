@@ -434,6 +434,7 @@ type Accrue struct {
 	Counterparty string  `json:"counterparty"`
 	Amount       float64 `json:"amount"`
 	Currency     string  `json:"currency"`
+	Create       bool    `json:"-"` // Not persisted
 }
 
 // MarshalJSON implements the json.Marshaler interface for Accrue.
@@ -472,6 +473,21 @@ func (t *Accrue) Validate(as *AccountingSystem) error {
 	if err := ValidateCurrency(t.Currency); err != nil {
 		return fmt.Errorf("invalid currency for accrue: %w", err)
 	}
+
+	// Check if the account already exists in the ledger at any point in time
+	accountExistsInLedger := false
+	for existingAccount := range as.Ledger.AllCounterpartyAccounts() {
+		if existingAccount == t.Counterparty {
+			accountExistsInLedger = true
+			break
+		}
+	}
+
+	// If the account does not exist in the ledger at all, then it's a new creation.
+	if !accountExistsInLedger {
+		t.Create = true
+	}
+
 	if balance, currency := as.Ledger.CounterpartyAccountBalance(t.Counterparty, t.Date); balance != 0 {
 		if currency != t.Currency {
 			return fmt.Errorf("new accrue currency %s does not match counterparty account currency %s", t.Currency, currency)

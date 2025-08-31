@@ -155,6 +155,9 @@ func (as *AccountingSystem) Validate(tx Transaction) (Transaction, error) {
 	case Declare:
 		err = v.Validate(as)
 		return v, err
+	case Accrue:
+		err = v.Validate(as)
+		return v, err
 	default:
 		return tx, fmt.Errorf("unsupported transaction type for validation: %T", tx)
 	}

@@ -104,6 +104,10 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 			var tx Declare
 			err = json.Unmarshal(lineBytes, &tx)
 			decodedTx = tx
+		case CmdAccrue:
+			var tx Accrue
+			err = json.Unmarshal(lineBytes, &tx)
+			decodedTx = tx
 		default:
 			err = fmt.Errorf("unknown transaction command: %q", identifier.Command)
 		}
