@@ -24,7 +24,7 @@ type gainsCmd struct {
 func (*gainsCmd) Name() string     { return "gains" }
 func (*gainsCmd) Synopsis() string { return "realized and unrealized gain analysis" }
 func (*gainsCmd) Usage() string {
-	return `pcs gains [-period <period>] [-start <date>] [-end <date>] [-c <currency>] [-method <method>] [-u]
+	return `pcs gains [-period <period>] [-s <date>] [-d <date>] [-c <currency>] [-method <method>] [-u]
 
   Calculates and displays realized and unrealized gains for each security.
 `
@@ -32,8 +32,8 @@ func (*gainsCmd) Usage() string {
 
 func (c *gainsCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.period, "period", "", "Predefined period (day, week, month, quarter, year)")
-	f.StringVar(&c.start, "start", "", "Start date of the reporting period. See the user manual for supported date formats.")
-	f.StringVar(&c.end, "end", date.Today().String(), "End date of the reporting period. See the user manual for supported date formats.")
+	f.StringVar(&c.start, "s", "", "Start date of the reporting period. See the user manual for supported date formats.")
+	f.StringVar(&c.end, "d", date.Today().String(), "End date of the reporting period. See the user manual for supported date formats.")
 	f.StringVar(&c.currency, "c", "EUR", "Reporting currency")
 	f.StringVar(&c.method, "method", "average", "Cost basis method (average, fifo)")
 	f.BoolVar(&c.update, "u", false, "update with latest intraday prices before calculating gains")

@@ -187,7 +187,7 @@ Total Portfolio Value: 10355.00 EUR
 And gains on the portfolio:
 
 ```bash
-pcs gains -period=day -end 2025-08-27
+pcs gains -period=day -d 2025-08-27
 ```
 
 ```console
