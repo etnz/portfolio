@@ -29,105 +29,50 @@ The ID can take several forms:
 
 ## Command Reference
 
-Here is a complete reference for all the commands available in `pcs`.
+```bash
+pcs help
+```
 
-### Securities Management
+```console
+Usage: pcs <flags> <subcommand> <subcommand args>
 
-* **`add-security`**: Adds a new security to the market data file.
-    * `-s`: The ticker symbol for the security.
-    * `-id`: The unique identifier for the security.
-    * `-c`: The 3-letter currency code for the security.
-    * `-from-ledger`: Adds all securities declared in the ledger file.
-* **`search-security`**: Searches for securities using the EODHD API.
-    * `-show-errors`: Displays entries with invalid ISINs.
-* **`update-security`**: Updates security prices.
-    * `-start`: The start date for automatic updates.
-    * `-end`: The end date for automatic updates.
-    * `-id`: The security ID for manual updates.
-    * `-p`: The price for manual updates.
-    * `-d`: The date for manual updates. See "Using Flexible Date Formats" for supported formats.
-* **`import-investing`**: Imports security prices from an investing.com CSV file.
-    * `-file`: The input file path.
+Subcommands:
+        commands         list all command names
+        flags            describe all known top-level flags
+        help             describe subcommands and their syntax
 
-### Transaction Management
+Subcommands for amundi:
+        import-amundi    converts an Amundi transactions JSON file to JSONL format
+        update-amundi    import transactions from an amundi jsonl file
 
-* **`buy`**: Records the purchase of a security.
-    * `-d`: Transaction date. See "Using Flexible Date Formats" for supported formats.
-    * `-s`: Security ticker.
-    * `-q`: Number of shares.
-    * `-a`: Total amount paid for the shares.
-    * `-m`: An optional memo for the transaction.
-* **`sell`**: Records the sale of a security.
-    * `-d`: Transaction date. See "Using Flexible Date Formats" for supported formats.
-    * `-s`: Security ticker.
-    * `-a`: Total amount received for the shares.
-    * `-q`: Number of shares (if omitted, all shares are sold).
-    * `-m`: An optional memo for the transaction.
-* **`dividend`**: Records a dividend payment.
-    * `-d`: Transaction date. See "Using Flexible Date Formats" for supported formats.
-    * `-s`: Security ticker receiving the dividend.
-    * `-a`: Total dividend amount received.
-    * `-m`: An optional memo.
-* **`deposit`**: Records a cash deposit.
-    * `-d`: Transaction date. See "Using Flexible Date Formats" for supported formats.
-    * `-a`: Amount of cash to deposit.
-    * `-c`: Currency of the deposit.
-    * `-m`: An optional memo.
-* **`withdraw`**: Records a cash withdrawal.
-    * `-d`: Transaction date. See "Using Flexible Date Formats" for supported formats.
-    * `-a`: Amount of cash to withdraw.
-    * `-c`: Currency of the withdrawal.
-    * `-m`: An optional memo.
-* **`convert`**: Converts cash from one currency to another.
-    * `-d`: Transaction date. See "Using Flexible Date Formats" for supported formats.
-    * `-fc`: Source currency code.
-    * `-fa`: Amount of cash to convert from the source currency.
-    * `-tc`: Destination currency code.
-    * `-ta`: Amount of cash received in the destination currency.
-    * `-m`: An optional memo.
-* **`declare`**: Declares a new security in the ledger.
-    * `-s`: The ledger-internal ticker to define.
-    * `-id`: The full, unique security ID.
-    * `-c`: The currency of the security.
-    * `-d`: Transaction date. See "Using Flexible Date Formats" for supported formats.
-    * `-m`: An optional memo.
+Subcommands for analysis:
+        daily            display a daily portfolio performance report
+        gains            realized and unrealized gain analysis
+        history          display asset value history
+        holding          display detailed holdings for a specific date
+        summary          display a portfolio performance summary
 
-### Analysis and Reporting
+Subcommands for securities:
+        add-security     add a new security to the market data
+        import-investing  import public security prices from investing.com's CSV format
+        search-security  search for securities using EODHD API
+        update-security  update security prices, either automatically or manually
 
-* **`summary`**: Displays a portfolio performance summary.
-    * `-d`: The date for the summary. See "Using Flexible Date Formats" for supported formats.
-    * `-c`: The reporting currency for the summary.
-    * `-u`: Updates with the latest intraday prices before calculating the summary.
-* **`daily`**: Displays a daily portfolio performance report.
-    * `-d`: The date for the report. See "Using Flexible Date Formats" for supported formats.
-    * `-c`: The reporting currency for the report.
-    * `-u`: Updates with the latest intraday prices before calculating the report.
-* **`holding`**: Displays detailed holdings for a specific date.
-    * `-d`: The date for the holdings report. See "Using Flexible Date Formats" for supported formats.
-    * `-c`: The reporting currency for market values.
-    * `-u`: Updates with the latest intraday prices before calculating the report.
-* **`history`**: Displays the value of an asset or cash account over time.
-    * `-s`: The security ticker to report on.
-    * `-c`: The currency of the cash account to report on.
-* **`gains`**: Provides realized and unrealized gain analysis.
-    * `-period`: A predefined period (day, week, month, quarter, year).
-    * `-start`: The start date of the reporting period. See "Using Flexible Date Formats" for supported formats.
-    * `-end`: The end date of the reporting period. See "Using Flexible Date Formats" for supported formats.
-    * `-c`: The reporting currency.
-    * `-method`: The cost basis method (average, fifo).
-    * `-u`: Updates with the latest intraday prices before calculating gains.
+Subcommands for tools:
+        format-ledger    formats the ledger file into a canonical form
 
-### Tools
+Subcommands for transactions:
+        buy              record the purchase of a security
+        convert          converts cash from one currency to another within the portfolio
+        declare          declare a new security
+        deposit          record a cash deposit into the portfolio
+        dividend         record a dividend payment for a security
+        sell             record the sale of a security
+        withdraw         record a cash withdrawal from the portfolio
 
-* **`format-ledger`**: Formats the ledger file into a canonical form, sorting transactions by date and JSON keys alphabetically.
-    * `-o`: Specifies the output file path. If omitted, the original ledger file is overwritten. Use `-o -` to write the output to `stdout`, which is useful for piping to other commands.
 
-### Amundi Integration
-
-* **`import-amundi`**: Converts an Amundi transactions JSON file to the standard JSONL format. This command takes the file path as a positional argument.
-* **`update-amundi`**: Updates security prices from the Amundi portal.
-    * `-start`: The start date. See "Using Flexible Date Formats" for supported formats.
-    * `-H`: Passes headers to run the URI (for authentication).
+Use "pcs flags" for a list of top-level flags
+```
 
 ## Advanced Concepts
 
