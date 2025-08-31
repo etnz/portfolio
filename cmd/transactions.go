@@ -26,8 +26,7 @@ func (*buyCmd) Synopsis() string { return "record the purchase of a security" }
 func (*buyCmd) Usage() string {
 	return `pcs buy -d <date> -s <security> -q <quantity> -p <price> [-m <memo>]
 
-
-  Purchases shares of a security. The total cost is debited from the cash account in the security's currency.
+Purchases shares of a security. The total cost is debited from the cash account in the security's currency.
 `
 }
 
@@ -69,7 +68,6 @@ func (*sellCmd) Synopsis() string { return "record the sale of a security" }
 func (*sellCmd) Usage() string {
 	return `pcs sell -d <date> -s <security> -p <price> [-q <quantity>] [-m <memo>]
 
-
   Sells shares of a security. The proceeds are credited to the cash account in the security's currency.
   If -q is not specified, all shares of the security are sold.
 `
@@ -109,7 +107,6 @@ func (*dividendCmd) Synopsis() string { return "record a dividend payment for a 
 func (*dividendCmd) Usage() string {
 	return `pcs dividend -d <date> -s <security> -a <amount> [-m <memo>]
 
-
   Records a dividend payment. The amount is credited to the cash account in the security's currency.
 `
 }
@@ -141,13 +138,13 @@ type depositCmd struct {
 	amount   float64
 	currency string
 	memo     string
+	settles  string
 }
 
 func (*depositCmd) Name() string     { return "deposit" }
 func (*depositCmd) Synopsis() string { return "record a cash deposit into the portfolio" }
 func (*depositCmd) Usage() string {
-	return `pcs deposit -d <date> -a <amount> -c <currency> [-m <memo>]
-
+	return `pcs deposit -d <date> -a <amount> -c <currency> [-m <memo>] [-settles <account>]
 
   Records a cash deposit into the portfolio's cash account.
 `
@@ -157,6 +154,7 @@ func (c *depositCmd) SetFlags(f *flag.FlagSet) {
 	f.Float64Var(&c.amount, "a", 0, "Amount of cash to deposit")
 	f.StringVar(&c.currency, "c", "EUR", "Currency of the deposit (e.g., USD, EUR). Cash is kept in that currency")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
+	f.StringVar(&c.settles, "settles", "", "Settle a counterparty account")
 }
 func (c *depositCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if c.amount == 0 {
@@ -170,6 +168,7 @@ func (c *depositCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	}
 
 	tx := portfolio.NewDeposit(day, c.memo, c.currency, c.amount)
+	tx.Settles = c.settles
 	return handleTransaction(tx, f)
 }
 
@@ -180,13 +179,13 @@ type withdrawCmd struct {
 	amount   float64
 	currency string
 	memo     string
+	settles  string
 }
 
 func (*withdrawCmd) Name() string     { return "withdraw" }
 func (*withdrawCmd) Synopsis() string { return "record a cash withdrawal from the portfolio" }
 func (*withdrawCmd) Usage() string {
-	return `pcs withdraw -d <date> -a <amount> -c <currency> [-m <memo>]
-
+	return `pcs withdraw -d <date> -a <amount> -c <currency> [-m <memo>] [-settles <account>]
 
   Records a cash withdrawal from the portfolio's cash account.
 `
@@ -196,6 +195,7 @@ func (c *withdrawCmd) SetFlags(f *flag.FlagSet) {
 	f.Float64Var(&c.amount, "a", 0, "Amount of cash to withdraw")
 	f.StringVar(&c.currency, "c", "EUR", "Currency of the withdrawal (e.g., USD, EUR)")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
+	f.StringVar(&c.settles, "settles", "", "Settle a counterparty account")
 }
 func (c *withdrawCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if c.amount == 0 {
@@ -209,6 +209,7 @@ func (c *withdrawCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 	}
 
 	tx := portfolio.NewWithdraw(day, c.memo, c.currency, c.amount)
+	tx.Settles = c.settles
 	return handleTransaction(tx, f)
 }
 
@@ -230,7 +231,6 @@ func (*convertCmd) Synopsis() string {
 func (*convertCmd) Usage() string {
 	return `pcs convert -d <date> -fc <currency> -fa <amount> -tc <currency> -ta <amount> [-m <memo>]
 
-
   Records an internal cash conversion between two currency accounts.
   This does not represent a net portfolio deposit or withdrawal.
 `
@@ -240,7 +240,7 @@ func (c *convertCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.StringVar(&c.fromCurrency, "fc", "", "Source currency code (e.g., USD)")
 	f.Float64Var(&c.fromAmount, "fa", 0, "Amount of cash to convert from the source currency")
-	f.StringVar(&c.toCurrency, "tc", "", "Destination currency code (e.g., EUR)")
+	f.StringVar(&c.toCurrency, "tc", "", "Destination currency code (e.g., EUR")
 	f.Float64Var(&c.toAmount, "ta", 0, "Amount of cash received in the destination currency")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 }
@@ -257,6 +257,65 @@ func (c *convertCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	}
 
 	tx := portfolio.NewConvert(day, c.memo, c.fromCurrency, c.fromAmount, c.toCurrency, c.toAmount)
+	return handleTransaction(tx, f)
+}
+
+// --- Accrue Command ---
+
+type accrueCmd struct {
+	date       string
+	payable    string
+	receivable string
+	amount     float64
+	currency   string
+	memo       string
+}
+
+func (*accrueCmd) Name() string     { return "accrue" }
+func (*accrueCmd) Synopsis() string { return "record a non-cash transaction with a counterparty" }
+func (*accrueCmd) Usage() string {
+	return `pcs accrue -d <date> (-payable <account> | -receivable <account>) -a <amount> -c <currency> [-m <memo>]
+
+  Records a non-cash transaction with a counterparty, such as a loan or rent.
+`
+}
+
+func (c *accrueCmd) SetFlags(f *flag.FlagSet) {
+	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
+	f.StringVar(&c.payable, "payable", "", "The counterparty account to which the user owes money")
+	f.StringVar(&c.receivable, "receivable", "", "The counterparty account that owes money to the user")
+	f.Float64Var(&c.amount, "a", 0, "Amount of cash to accrue")
+	f.StringVar(&c.currency, "c", "EUR", "Currency of the accrual (e.g., USD, EUR)")
+	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
+}
+
+func (c *accrueCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	if (c.payable == "" && c.receivable == "") || (c.payable != "" && c.receivable != "") {
+		fmt.Fprintln(os.Stderr, "Error: either -payable or -receivable must be specified.")
+		return subcommands.ExitUsageError
+	}
+	if c.amount <= 0 {
+		fmt.Fprintln(os.Stderr, "Error: -a flag must be a positive amount.")
+		return subcommands.ExitUsageError
+	}
+	day, err := date.Parse(c.date) // Validate date format
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
+		return subcommands.ExitUsageError
+	}
+
+	var account string
+	var amount float64
+	switch {
+	case c.payable != "":
+		account = c.payable
+		amount = -c.amount
+	case c.receivable != "":
+		account = c.receivable
+		amount = c.amount
+	}
+
+	tx := portfolio.NewAccrue(day, c.memo, account, amount, c.currency)
 	return handleTransaction(tx, f)
 }
 
@@ -286,7 +345,6 @@ func (*declareCmd) Name() string     { return "declare" }
 func (*declareCmd) Synopsis() string { return "declare a new security" }
 func (*declareCmd) Usage() string {
 	return `pcs declare -s <ticker> -id <security-id> -c <currency> [-d <date>] [-m <memo>]
-
 
   Declares a security, creating a mapping from a ledger-internal ticker to a
   globally unique security ID and its currency. This declaration is required

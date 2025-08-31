@@ -62,6 +62,7 @@ Subcommands for tools:
         format-ledger    formats the ledger file into a canonical form
 
 Subcommands for transactions:
+        accrue           record a non-cash transaction with a counterparty
         buy              record the purchase of a security
         convert          converts cash from one currency to another within the portfolio
         declare          declare a new security

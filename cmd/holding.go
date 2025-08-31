@@ -77,24 +77,37 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	// Securities
 	fmt.Println("Securities:")
 	fmt.Println("-----------------------------------------------------------------")
-	fmt.Printf("%-10s %15s %15s %15s\n", "Ticker", "Quantity", "Price", "Market Value")
+	fmt.Printf("% -10s %15s %15s %15s\n", "Ticker", "Quantity", "Price", "Market Value")
 	fmt.Println("-----------------------------------------------------------------")
 
 	for _, h := range report.Securities {
-		fmt.Printf("%-10s %15.4f %15.4f %15.2f\n", h.Ticker, h.Quantity, h.Price, h.MarketValue)
+		fmt.Printf("% -10s %15.4f %15.4f %15.2f\n", h.Ticker, h.Quantity, h.Price, h.MarketValue)
 	}
 	fmt.Println("-----------------------------------------------------------------")
 
 	// Cash
 	fmt.Println("\nCash Balances:")
 	fmt.Println("-------------------------------------------------")
-	fmt.Printf("%-10s %15s %15s\n", "Currency", "Balance", "Value")
+	fmt.Printf("% -10s %15s %15s\n", "Currency", "Balance", "Value")
 	fmt.Println("-------------------------------------------------")
 
 	for _, h := range report.Cash {
-		fmt.Printf("%-10s %15.2f %15.2f\n", h.Currency, h.Balance, h.Value)
+		fmt.Printf("% -10s %15.2f %15.2f\n", h.Currency, h.Balance, h.Value)
 	}
 	fmt.Println("-------------------------------------------------")
+
+	// Counterparties
+	if len(report.Counterparties) > 0 {
+		fmt.Println("\nCounterparty Accounts:")
+		fmt.Println("-------------------------------------------------")
+		fmt.Printf("% -20s %10s %15s %15s\n", "Account", "Currency", "Balance", "Value")
+		fmt.Println("-------------------------------------------------")
+
+		for _, h := range report.Counterparties {
+			fmt.Printf("% -20s %10s %15.2f %15.2f\n", h.Name, h.Currency, h.Balance, h.Value)
+		}
+		fmt.Println("-------------------------------------------------")
+	}
 
 	fmt.Printf("\nTotal Portfolio Value: %.2f %s\n", report.TotalValue, report.ReportingCurrency)
 

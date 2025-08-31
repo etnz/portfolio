@@ -3,6 +3,7 @@ package portfolio
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/etnz/portfolio/date"
 )
@@ -342,12 +343,17 @@ func (t *Deposit) Validate(as *AccountingSystem) error {
 		}
 	}
 	if t.Settles != "" {
-			if balance, currency := as.Ledger.CounterpartyAccountBalance(t.Settles, t.Date); balance != 0 {
-				if currency != t.Currency {
-					return fmt.Errorf("settlement currency %s does not match counterparty account currency %s", t.Currency, currency)
-				}
+		accounts := slices.Collect(as.Ledger.AllCounterpartyAccounts())
+		if !slices.Contains(accounts, t.Settles) {
+			return fmt.Errorf("counterparty account %q not found", t.Settles)
+		}
+
+		if balance, currency := as.Ledger.CounterpartyAccountBalance(t.Settles, t.Date); balance != 0 {
+			if currency != t.Currency {
+				return fmt.Errorf("settlement currency %s does not match counterparty account currency %s", t.Currency, currency)
 			}
 		}
+	}
 	return nil
 }
 
@@ -408,12 +414,17 @@ func (t *Withdraw) Validate(as *AccountingSystem) error {
 		return fmt.Errorf("cannot withdraw for %f %s cash balance is %f %s", cost, t.Currency, cash, t.Currency)
 	}
 	if t.Settles != "" {
-			if balance, currency := as.Ledger.CounterpartyAccountBalance(t.Settles, t.Date); balance != 0 {
-				if currency != t.Currency {
-					return fmt.Errorf("settlement currency %s does not match counterparty account currency %s", t.Currency, currency)
-				}
+		accounts := slices.Collect(as.Ledger.AllCounterpartyAccounts())
+		if !slices.Contains(accounts, t.Settles) {
+			return fmt.Errorf("counterparty account %q not found", t.Settles)
+		}
+
+		if balance, currency := as.Ledger.CounterpartyAccountBalance(t.Settles, t.Date); balance != 0 {
+			if currency != t.Currency {
+				return fmt.Errorf("settlement currency %s does not match counterparty account currency %s", t.Currency, currency)
 			}
 		}
+	}
 	return nil
 }
 
