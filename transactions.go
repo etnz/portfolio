@@ -25,18 +25,23 @@ const (
 	CmdDeclare  CommandType = "declare"
 )
 
+// Transaction defines the common interface for all types of financial transactions
+// that can be recorded in the ledger.
 type Transaction interface {
-	What() CommandType // Returns the command type of the transaction
-	When() date.Date   // Returns the date of the transaction
-	Rationale() string // Returns the memo or rationale for the transaction
+	What() CommandType // What returns the command type of the transaction (e.g., "buy", "sell").
+	When() date.Date   // When returns the date on which the transaction occurred.
+	Rationale() string // Rationale returns an optional memo or explanation for the transaction.
 }
 
 // baseCmd contains fields common to all transaction types.
+// baseCmd contains fields common to all transaction types. It is typically
+// embedded within more specific transaction structs.
 type baseCmd struct {
-	Command CommandType `json:"command"`
-	Date    date.Date   `json:"date"`
-	Memo    string      `json:"memo,omitempty"`
+	Command CommandType `json:"command"`      // Command specifies the type of transaction (e.g., "buy", "sell").
+	Date    date.Date   `json:"date"`         // Date is the date when the transaction took place.
+	Memo    string      `json:"memo,omitempty"` // Memo provides an optional rationale or note for the transaction.
 }
+
 
 // What returns the command name for the transaction, which is used to identify the type of transaction.
 func (t baseCmd) What() CommandType {
@@ -72,10 +77,13 @@ func (t *baseCmd) Validate(as *AccountingSystem) error {
 }
 
 // secCmd is a component for security-based transactions (buy, sell, dividend).
+// secCmd is a component for security-based transactions (buy, sell, dividend).
+// It embeds baseCmd and adds a Security field.
 type secCmd struct {
 	baseCmd
-	Security string `json:"security"`
+	Security string `json:"security"` // Security is the ticker symbol of the security involved in the transaction.
 }
+
 
 // Validate checks the security command fields. It validates the base command,
 // ensures a security ticker is present, and attempts to auto-populate the
@@ -107,11 +115,14 @@ func (t secCmd) MarshalJSON() ([]byte, error) {
 }
 
 // Buy represents a buy transaction.
+// Buy represents a transaction where a quantity of a security is purchased
+// for a specified amount.
 type Buy struct {
 	secCmd
-	Quantity float64 `json:"quantity"`
-	Amount   float64 `json:"amount"`
+	Quantity float64 `json:"quantity"` // Quantity is the number of shares or units bought.
+	Amount   float64 `json:"amount"`   // Amount is the total cost of the purchase.
 }
+
 
 // MarshalJSON implements the json.Marshaler interface for Buy.
 func (t Buy) MarshalJSON() ([]byte, error) {
@@ -157,11 +168,14 @@ func (t *Buy) Validate(as *AccountingSystem) error {
 }
 
 // Sell represents a sell transaction.
+// Sell represents a transaction where a quantity of a security is sold
+// for a specified amount.
 type Sell struct {
 	secCmd
-	Quantity float64 `json:"quantity"`
-	Amount   float64 `json:"amount"`
+	Quantity float64 `json:"quantity"` // Quantity is the number of shares or units sold.
+	Amount   float64 `json:"amount"`   // Amount is the total proceeds from the sale.
 }
+
 
 // MarshalJSON implements the json.Marshaler interface for Sell.
 func (t Sell) MarshalJSON() ([]byte, error) {
@@ -216,12 +230,15 @@ func (t *Sell) Validate(as *AccountingSystem) error {
 
 // Declare represents a transaction to declare a security for use in the ledger.
 // This maps a ledger-internal ticker to a globally unique security ID and its currency.
+// Declare represents a transaction to declare a security for use in the ledger.
+// This maps a ledger-internal ticker to a globally unique security ID and its currency.
 type Declare struct {
 	baseCmd
 	Ticker   string `json:"ticker"`
 	ID       ID     `json:"id"`
 	Currency string `json:"currency"`
 }
+
 
 // MarshalJSON implements the json.Marshaler interface for Declare.
 func (t Declare) MarshalJSON() ([]byte, error) {
@@ -266,10 +283,13 @@ func (t *Declare) Validate(as *AccountingSystem) error {
 }
 
 // Dividend represents a dividend payment.
+// Dividend represents a transaction where a dividend payment is received
+// for a held security.
 type Dividend struct {
 	secCmd
-	Amount float64 `json:"amount"`
+	Amount float64 `json:"amount"` // Amount is the total dividend amount received.
 }
+
 
 // MarshalJSON implements the json.Marshaler interface for Dividend.
 func (t Dividend) MarshalJSON() ([]byte, error) {
@@ -301,12 +321,15 @@ func (t *Dividend) Validate(as *AccountingSystem) error {
 }
 
 // Deposit represents a cash deposit.
+// Deposit represents a transaction where cash is added to a currency account
+// within the portfolio.
 type Deposit struct {
 	baseCmd
-	Amount   float64 `json:"amount"`
-	Currency string  `json:"currency,omitempty"`
-	Settles  string  `json:"settles,omitempty"`
+	Amount   float64 `json:"amount"`         // Amount is the quantity of cash deposited.
+	Currency string  `json:"currency,omitempty"` // Currency is the currency of the deposited amount.
+	Settles  string  `json:"settles,omitempty"`  // Settles is an optional counterparty account that this deposit settles.
 }
+
 
 // MarshalJSON implements the json.Marshaler interface for Deposit.
 func (t Deposit) MarshalJSON() ([]byte, error) {
@@ -358,12 +381,15 @@ func (t *Deposit) Validate(as *AccountingSystem) error {
 }
 
 // Withdraw represents a cash withdrawal.
+// Withdraw represents a transaction where cash is removed from a currency account
+// within the portfolio.
 type Withdraw struct {
 	baseCmd
-	Amount   float64 `json:"amount"`
-	Currency string  `json:"currency,omitempty"`
-	Settles  string  `json:"settles,omitempty"`
+	Amount   float64 `json:"amount"`         // Amount is the quantity of cash withdrawn.
+	Currency string  `json:"currency,omitempty"` // Currency is the currency of the withdrawn amount.
+	Settles  string  `json:"settles,omitempty"`  // Settles is an optional counterparty account that this withdrawal settles.
 }
+
 
 // MarshalJSON implements the json.Marshaler interface for Withdraw.
 func (t Withdraw) MarshalJSON() ([]byte, error) {
@@ -429,13 +455,16 @@ func (t *Withdraw) Validate(as *AccountingSystem) error {
 }
 
 // Accrue represents a non-cash transaction that affects a counterparty account.
+// Accrue represents a non-cash transaction that affects a counterparty account,
+// such as a loan or an accrued expense/income.
 type Accrue struct {
 	baseCmd
-	Counterparty string  `json:"counterparty"`
-	Amount       float64 `json:"amount"`
-	Currency     string  `json:"currency"`
-	Create       bool    `json:"-"` // Not persisted
+	Counterparty string  `json:"counterparty"` // Counterparty is the name of the entity with whom the accrual is made.
+	Amount       float64 `json:"amount"`       // Amount is the value of the accrual. Positive for receivables, negative for payables.
+	Currency     string  `json:"currency"`     // Currency is the currency of the accrued amount.
+	Create       bool    `json:"-"`            // Create is a transient field, true if this accrual creates a new counterparty account. Not persisted.
 }
+
 
 // MarshalJSON implements the json.Marshaler interface for Accrue.
 func (t Accrue) MarshalJSON() ([]byte, error) {
@@ -498,6 +527,7 @@ func (t *Accrue) Validate(as *AccountingSystem) error {
 
 
 // Convert represents an internal currency conversion.
+// Convert represents an internal currency conversion.
 type Convert struct {
 	baseCmd
 	FromCurrency string  `json:"fromCurrency"`
@@ -505,6 +535,7 @@ type Convert struct {
 	ToCurrency   string  `json:"toCurrency"`
 	ToAmount     float64 `json:"toAmount"`
 }
+
 
 // MarshalJSON implements the json.Marshaler interface for Convert.
 func (t Convert) MarshalJSON() ([]byte, error) {

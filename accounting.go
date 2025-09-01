@@ -104,8 +104,10 @@ func NewAccountingSystem(ledger *Ledger, marketData *MarketData, reportingCurren
 	return as, nil
 }
 
-// declareSecurities scan all securities (and currencies) in the ledger and
-// make sure they are declared in the marketdata
+// DeclareSecurities scans all securities (and currencies) in the ledger and
+// ensures they are declared in the marketdata. This function is crucial for
+// maintaining consistency between the ledger's transactional records and the
+// market data's security definitions.
 func DeclareSecurities(ledger *Ledger, marketData *MarketData, defaultCurrency string) error {
 	if err := ValidateCurrency(defaultCurrency); err != nil {
 		return fmt.Errorf("invalid default currency: %w", err)

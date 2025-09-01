@@ -10,6 +10,7 @@ import (
 	"github.com/google/subcommands"
 )
 
+// addSecurityCmd holds the flags for the 'add-security' subcommand.
 type addSecurityCmd struct {
 	ticker     string
 	id         string
@@ -55,10 +56,16 @@ func (c *addSecurityCmd) SetFlags(f *flag.FlagSet) {
 }
 
 // GenerateAddCommand generates the 'pcs add-security' command string with the given parameters.
+// This function is primarily used by the 'search-security' command to construct the
+// command needed to add a selected security. It's crucial to keep the flags and
+// their names in sync with the 'add-security' command's SetFlags method.
 func (c *addSecurityCmd) GenerateAddCommand(ticker, id, currency string) string {
 	return fmt.Sprintf("pcs add-security -%s='%s' -%s='%s' -%s='%s'", c.tickerFlagName, ticker, c.idFlagName, id, c.currencyFlagName, currency)
 }
 
+// Execute runs the add-security command. It either adds a single security
+// based on provided flags or adds all securities found in the ledger to the
+// market data.
 func (c *addSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 
 	// If there is at least one of the three simple definition argument consider

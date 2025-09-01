@@ -16,6 +16,7 @@ import (
 )
 
 // importInvestingCmd imports public security prices from investing.com's CSV format.
+// importInvestingCmd imports public security prices from investing.com's CSV format.
 type importInvestingCmd struct {
 	file string
 }

@@ -52,6 +52,9 @@ var (
 	Verbose         = flag.Bool("v", false, "enable verbose logging")
 )
 
+// DecodeAccountingSystem decodes the market data and the ledger to create a new
+// AccountingSystem. This system provides a comprehensive view of the portfolio
+// by combining transactional history with market information.
 func DecodeAccountingSystem() (*portfolio.AccountingSystem, error) {
 	market, err := DecodeMarketData()
 	if err != nil {

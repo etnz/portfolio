@@ -12,6 +12,7 @@ import (
 	"github.com/google/subcommands"
 )
 
+// dailyCmd holds the flags for the 'daily' subcommand.
 type dailyCmd struct {
 	date     string
 	currency string

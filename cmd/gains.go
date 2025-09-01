@@ -12,6 +12,7 @@ import (
 	"github.com/google/subcommands"
 )
 
+// gainsCmd holds the flags for the 'gains' subcommand.
 type gainsCmd struct {
 	period   string
 	start    string

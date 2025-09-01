@@ -46,6 +46,7 @@ func ParseCostBasisMethod(s string) (CostBasisMethod, error) {
 }
 
 // lot represents a single purchase of a security.
+// lot represents a single purchase of a security, used for cost basis calculations.
 type lot struct {
 	Date     date.Date
 	Quantity decimal.Decimal
@@ -58,9 +59,9 @@ type lot struct {
 type Ledger struct {
 	transactions []Transaction
 	securities   map[string]Security // index securities by ticker
-	// For cost basis tracking
-	// A map from security ticker to a slice of its open lots (purchases not yet fully sold).
-	// Lots are kept sorted by date for FIFO.
+	// lots is a map from security ticker to a slice of its open lots (purchases not yet fully sold).
+	// These lots are used for cost basis calculations (e.g., FIFO, AverageCost) and are kept
+	// sorted by date for FIFO accounting.
 	lots map[string][]lot
 }
 

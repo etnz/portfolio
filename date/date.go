@@ -19,9 +19,9 @@ const Day = 24 * time.Hour
 
 // Date represents a date with day-level granularity.
 type Date struct {
-	y int
-	m time.Month
-	d int
+	y int        // year
+	m time.Month // month
+	d int        // day
 }
 
 // Month returns the month of the date.

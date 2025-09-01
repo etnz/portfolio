@@ -10,6 +10,7 @@ import (
 	"github.com/google/subcommands"
 )
 
+// historyCmd holds the flags for the 'history' subcommand.
 type historyCmd struct {
 	security string
 	currency string

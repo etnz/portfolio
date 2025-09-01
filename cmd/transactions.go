@@ -13,6 +13,7 @@ import (
 
 // --- Buy Command ---
 
+// buyCmd holds the flags for the 'buy' subcommand.
 type buyCmd struct {
 	date     string
 	security string
@@ -56,6 +57,7 @@ func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) s
 
 // --- Sell Command ---
 
+// sellCmd holds the flags for the 'sell' subcommand.
 type sellCmd struct {
 	date     string
 	security string
@@ -97,6 +99,7 @@ func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 
 // --- Dividend Command ---
 
+// dividendCmd holds the flags for the 'dividend' subcommand.
 type dividendCmd struct {
 	date     string
 	security string
@@ -136,6 +139,7 @@ func (c *dividendCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 
 // --- Deposit Command ---
 
+// depositCmd holds the flags for the 'deposit' subcommand.
 type depositCmd struct {
 	date     string
 	amount   float64
@@ -178,6 +182,7 @@ func (c *depositCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 
 // --- Withdraw Command ---
 
+// withdrawCmd holds the flags for the 'withdraw' subcommand.
 type withdrawCmd struct {
 	date     string
 	amount   float64
@@ -220,6 +225,7 @@ func (c *withdrawCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 
 // --- Convert Command ---
 
+// convertCmd holds the flags for the 'convert' subcommand.
 type convertCmd struct {
 	date         string
 	fromCurrency string
@@ -268,6 +274,7 @@ func (c *convertCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 
 // --- Accrue Command ---
 
+// accrueCmd holds the flags for the 'accrue' subcommand.
 type accrueCmd struct {
 	date       string
 	payable    string
@@ -340,9 +347,18 @@ func (c *accrueCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 	return subcommands.ExitSuccess
 }
 
-// handleTransaction calls the core EncodeTransaction function and manages the
-// CLI feedback, printing errors or a success message and returning the
+// handleTransaction processes a transaction by validating it against the current
+// accounting system and then encoding it to the ledger file. It also manages
+// the CLI feedback, printing errors or a success message and returning the
 // appropriate exit status.
+//
+// This function also applies "quick fixes" during validation, such as resolving
+// "sell all" quantities. The returned `portfolio.Transaction` is the validated
+// and potentially modified transaction.
+//
+// TODO(etnz): Make this function more generic to handle different types of
+// encoding and feedback, possibly by passing in an interface for output.
+// Create a GitHub issue for this refactoring.
 func handleTransaction(tx portfolio.Transaction, f *flag.FlagSet) (portfolio.Transaction, subcommands.ExitStatus) {
 	validatedTx, err := EncodeTransaction(tx)
 	if err != nil {
@@ -355,6 +371,7 @@ func handleTransaction(tx portfolio.Transaction, f *flag.FlagSet) (portfolio.Tra
 	return validatedTx, subcommands.ExitSuccess
 }
 
+// declareCmd holds the flags for the 'declare' subcommand.
 type declareCmd struct {
 	ticker   string
 	id       string

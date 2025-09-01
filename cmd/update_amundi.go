@@ -32,11 +32,17 @@ var (
 )
 
 // HeaderVal support dynamic -H options to mimic curl command line
+// HeaderVal is a custom flag.Value implementation to support dynamic -H options
+// similar to curl's command line. It parses header strings and populates
+// an http.Header map.
 type HeaderVal struct {
 	buf    bytes.Buffer
 	Header *http.Header
 }
 
+// Set parses a header string (e.g., "Content-Type: application/json") and
+// adds it to the http.Header map. It appends the new value to an internal
+// buffer to allow multiple -H flags.
 func (h *HeaderVal) Set(val string) error {
 
 	reader := bufio.NewReader(strings.NewReader(h.buf.String() + val + "\n\n"))
@@ -51,6 +57,7 @@ func (h *HeaderVal) Set(val string) error {
 	*h.Header = http.Header(mimeHeader)
 	return nil
 }
+// String returns the concatenated string of all headers set so far.
 func (h *HeaderVal) String() string { return h.buf.String() }
 
 type updateAmundiCmd struct {

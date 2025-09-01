@@ -11,6 +11,7 @@ import (
 	"github.com/google/subcommands"
 )
 
+// holdingCmd holds the flags for the 'holding' subcommand.
 type holdingCmd struct {
 	date     string
 	currency string

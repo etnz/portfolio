@@ -11,6 +11,7 @@ import (
 	"github.com/google/subcommands"
 )
 
+// summaryCmd holds the flags for the 'summary' subcommand.
 type summaryCmd struct {
 	date     string
 	currency string

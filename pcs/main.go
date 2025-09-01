@@ -1,3 +1,6 @@
+// Package main provides the entry point for the `pcs` command-line tool.
+// It initializes the subcommand system, registers all available commands,
+// and handles the execution of both built-in and external extension commands.
 package main
 
 import (
@@ -12,6 +15,10 @@ import (
 	"github.com/google/subcommands"
 )
 
+// main is the entry point of the `pcs` application. It sets up the command
+// line parser, registers all subcommands, and executes the requested command.
+// It also handles the execution of external commands if a matching built-in
+// command is not found.
 func main() {
 	commander := subcommands.NewCommander(flag.CommandLine, path.Base(os.Args[0]))
 

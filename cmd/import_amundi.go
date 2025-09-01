@@ -59,6 +59,7 @@ type AmundiReglement struct {
 // this one for the other type (assurance)
 // https://epargnant.amundi-ee.com/api/individu/operations?metier=ASSU&offset=0&flagFiltrageWebSalarie=true&flagInfoOC=Y&filtreStatutModeExclusion=false&flagRu=true&limit=100
 
+// importAmundiCmd holds the flags for the 'import-amundi' subcommand.
 type importAmundiCmd struct{}
 
 func (*importAmundiCmd) Name() string { return "import-amundi" }

@@ -10,12 +10,16 @@ import (
 )
 
 // Command holds a command and its expected output.
+// Command represents a shell command to be executed and its expected output,
+// used for testing purposes.
 type Command struct {
 	Cmd      string
 	Expected string
 }
 
-// buildPcs builds the pcs command and returns the path to the executable.
+// buildPcs builds the `pcs` command-line executable and returns the absolute
+// path to the compiled binary. It uses a temporary directory for the build
+// output.
 func buildPcs(t *testing.T, tmp string) string {
 	t.Helper()
 
@@ -31,7 +35,9 @@ func buildPcs(t *testing.T, tmp string) string {
 	return output
 }
 
-// parseTestableCommands parses a markdown file to extract commands and their expected outputs.
+// parseTestableCommands parses a markdown file (e.g., README.md) to extract
+// shell commands and their corresponding expected console outputs. These are
+// used to create testable `Command` structs.
 func parseTestableCommands(t *testing.T, file string) []Command {
 	t.Helper()
 
@@ -54,7 +60,10 @@ func parseTestableCommands(t *testing.T, file string) []Command {
 	return commands
 }
 
-// runTestableCommands runs the testable commands from a given markdown file.
+// runTestableCommands executes a series of shell commands extracted from a
+// markdown file and compares their actual output against the expected output
+// defined in the markdown. This function is used for integration testing
+// of the `pcs` command-line tool.
 func runTestableCommands(t *testing.T, file string) {
 	t.Helper()
 

@@ -106,7 +106,9 @@ func newDailyCachingClient() *http.Client {
 	return client
 }
 
-// jwget performs an HTTP GET request and unmarshals the JSON response into the provided data structure.
+// jwget performs an HTTP GET request to the given address and unmarshals the
+// JSON response body into the provided data structure. It uses the provided
+// http.Client for the request.
 func jwget(client *http.Client, addr string, data interface{}) error {
 	resp, err := client.Get(addr)
 	if err != nil {
