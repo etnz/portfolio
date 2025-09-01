@@ -7,11 +7,19 @@ import (
 	"github.com/etnz/portfolio/date"
 )
 
+// Split represents a stock split event.
+type Split struct {
+	Date        date.Date `json:"date"`
+	Numerator   int       `json:"num"`
+	Denominator int       `json:"den"`
+}
+
 // MarketData holds all the market data, including security definitions and their price histories.
 type MarketData struct {
 	securities map[ID]Security
 	tickers    map[string]ID
 	prices     map[ID]*date.History[float64]
+	splits     map[ID][]Split
 }
 
 // NewMarketData creates an empty MarketData store.
@@ -20,6 +28,7 @@ func NewMarketData() *MarketData {
 		securities: make(map[ID]Security),
 		tickers:    make(map[string]ID),
 		prices:     make(map[ID]*date.History[float64]),
+		splits:     make(map[ID][]Split),
 	}
 }
 
@@ -31,6 +40,7 @@ func (m *MarketData) Add(s Security) {
 	m.securities[s.ID()] = s
 	m.tickers[s.Ticker()] = s.ID()
 	m.prices[s.ID()] = &date.History[float64]{}
+	m.splits[s.ID()] = []Split{}
 }
 
 // Get retrieves a security by its ID. It returns zero if the security is not found.
