@@ -77,7 +77,7 @@ func (m *MarketData) Update(start, end date.Date) error {
 		// Determine the start date for fetching new prices.
 		// If no prices exist, use the default origin. Otherwise, start from the day after the latest price.
 		fetchFrom := start
-		if !latest.Before(start) {
+		if latest.Before(start) {
 			fetchFrom = latest.Add(1)
 		}
 
