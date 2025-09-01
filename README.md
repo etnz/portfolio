@@ -203,7 +203,7 @@ Total                                0.00               355.00               355
 
 ## User Manual
 
-For a detailed guide on all the features and commands, please refer to the [User Manual](./UserManual.md).
+For a detailed guide on all the features and commands, please refer to the [User Manual](./docs/UserManual.md).
 
 ## About This Project
 

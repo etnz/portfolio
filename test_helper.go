@@ -69,7 +69,9 @@ func parseMarkdown(t *testing.T, file string) []*Block {
 		}
 
 		if fcb, ok := n.(*ast.FencedCodeBlock); ok {
-			lang := string(fcb.Language(content))
+			lang := string(fcb.Info.Segment.Value(content))
+
+			// lang := string(fcb.Language(content))
 			var blockContent strings.Builder
 			for i := 0; i < fcb.Lines().Len(); i++ {
 				line := fcb.Lines().At(i)
@@ -134,7 +136,7 @@ func (r *runner) runBlock(t *testing.T, block *Block) {
 	}
 
 	// Execute bash.
-	cmd := exec.Command("bash", "-c", "set -ex; "+block.Content)
+	cmd := exec.Command("bash", "-c", "set -e; "+block.Content)
 	cmd.Dir = r.tmpFolder
 	cmd.Env = r.env
 	output, err := cmd.CombinedOutput()
@@ -176,9 +178,7 @@ func runTestableCommands(t *testing.T, file string) {
 		env:       baseEnv,
 		tmpFolder: t.TempDir(),
 	}
-	for i, block := range blocks {
-		t.Run(fmt.Sprintf("Block %d", i+1), func(t *testing.T) {
-			r.runBlock(t, block)
-		})
+	for _, block := range blocks {
+		r.runBlock(t, block)
 	}
 }
