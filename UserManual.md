@@ -29,11 +29,11 @@ The ID can take several forms:
 
 ## Command Reference
 
-```bash
+```bash run
 pcs help
 ```
 
-```console
+```console check
 Usage: pcs <flags> <subcommand> <subcommand args>
 
 Subcommands:

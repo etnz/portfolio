@@ -8,4 +8,7 @@ require (
 	github.com/shopspring/decimal v1.4.0
 )
 
-require github.com/PaesslerAG/gval v1.0.0 // indirect
+require (
+	github.com/PaesslerAG/gval v1.0.0 // indirect
+	github.com/yuin/goldmark v1.7.13 // indirect
+)

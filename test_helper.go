@@ -1,20 +1,32 @@
 package portfolio
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/text"
 )
 
-// Command holds a command and its expected output.
-// Command represents a shell command to be executed and its expected output,
-// used for testing purposes.
-type Command struct {
-	Cmd      string
-	Expected string
+const (
+	bashSetup    = "bash setup"
+	bashRun      = "bash run"
+	consoleCheck = "console check"
+	bashCheck    = "bash check"
+)
+
+// Block represents a fenced code block in the markdown file.
+type Block struct {
+	Type    string
+	Content string
+	File    string
+	Line    int
 }
 
 // buildPcs builds the `pcs` command-line executable and returns the absolute
@@ -35,58 +47,138 @@ func buildPcs(t *testing.T, tmp string) string {
 	return output
 }
 
-// parseTestableCommands parses a markdown file (e.g., README.md) to extract
-// shell commands and their corresponding expected console outputs. These are
-// used to create testable `Command` structs.
-func parseTestableCommands(t *testing.T, file string) []Command {
+// parseMarkdown parses a markdown file and returns a list of scenarios.
+func parseMarkdown(t *testing.T, file string) []*Block {
 	t.Helper()
 
-	// Read the file
 	content, err := os.ReadFile(file)
 	if err != nil {
 		t.Fatalf("failed to read %s: %v", file, err)
 	}
 
-	// Parse the file
-	repo := string(content)
-	re := regexp.MustCompile("(?m)```bash\\n(pcs.*?)\\n```\\n\\n```console\n((.|\\n)*?)```")
-	matches := re.FindAllStringSubmatch(repo, -1)
+	mdParser := goldmark.DefaultParser()
+	root := mdParser.Parse(text.NewReader(content))
 
-	var commands []Command
-	for _, match := range matches {
-		commands = append(commands, Command{Cmd: match[1], Expected: match[2]})
-	}
+	// Read all blocks.
 
-	return commands
+	var blocks []*Block
+
+	ast.Walk(root, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+
+		if fcb, ok := n.(*ast.FencedCodeBlock); ok {
+			lang := string(fcb.Language(content))
+			var blockContent strings.Builder
+			for i := 0; i < fcb.Lines().Len(); i++ {
+				line := fcb.Lines().At(i)
+				blockContent.WriteString(string(line.Value(content)))
+			}
+
+			// Get the line number of the block
+			startOffset := fcb.Info.Segment.Start
+
+			switch lang {
+			case bashCheck, bashSetup, bashRun, consoleCheck:
+				blocks = append(blocks, &Block{
+					Type:    lang,
+					Content: blockContent.String(),
+					File:    file,
+					Line:    lineNumber(content, startOffset),
+				})
+			}
+		}
+		return ast.WalkContinue, nil
+	})
+
+	return blocks
 }
 
-// runTestableCommands executes a series of shell commands extracted from a
-// markdown file and compares their actual output against the expected output
-// defined in the markdown. This function is used for integration testing
-// of the `pcs` command-line tool.
+// lineNumber computes the lineNumber for a given offset AST offset
+func lineNumber(source []byte, offset int) (lineNumber int) {
+	newline := []byte{'\n'}
+	// Create a slice of the source from the beginning to the node's offset.
+	sourceToNode := source[:offset]
+
+	// Count the number of newlines in that slice.
+	lineCount := bytes.Count(sourceToNode, newline)
+
+	// The line number is the number of newlines + 1.
+	return lineCount + 1
+}
+
+type runner struct {
+	env            []string // env use to execute commands
+	previousOutput string
+	tmpFolder      string
+}
+
+func (r *runner) runBlock(t *testing.T, block *Block) {
+	t.Helper()
+
+	// Check don't need execution.
+	if block.Type == consoleCheck {
+		expected := strings.TrimSpace(block.Content)
+		actual := strings.TrimSpace(r.previousOutput)
+		// replace tabs with spaces for consistent comparison
+		actual = strings.ReplaceAll(actual, "	", "        ")
+		if expected != actual {
+			t.Errorf("%s:%d: output mismatch:\ngot:\n\n%s\n\nwant:\n\n%s\n\n", block.File, block.Line, actual, expected)
+		}
+		return
+	}
+	// Create a new execution folder on a new setup.
+	if block.Type == bashSetup {
+		r.tmpFolder = t.TempDir() // new scenario temp folder
+	}
+
+	// Execute bash.
+	cmd := exec.Command("bash", "-c", "set -ex; "+block.Content)
+	cmd.Dir = r.tmpFolder
+	cmd.Env = r.env
+	output, err := cmd.CombinedOutput()
+
+	// Record last run output.
+	if block.Type == bashRun {
+		r.previousOutput = string(output)
+	}
+
+	// Handling bash errors.
+	if err != nil {
+		switch block.Type {
+		case bashSetup, bashRun:
+			t.Fatalf("%s:%d: %s failed: %v with output:\n%s\n", block.File, block.Line, block.Type, err, output)
+		case bashCheck:
+			t.Errorf("%s:%d: %s failed: %v with output:\n%s\n", block.File, block.Line, block.Type, err, output)
+			return
+		default:
+			t.Fatalf("%s:%d: unknown block type: %s", block.File, block.Line, block.Type)
+		}
+	}
+}
+
+// runTestableCommands executes a series of scenarios extracted from a
+// markdown file.
 func runTestableCommands(t *testing.T, file string) {
 	t.Helper()
 
-	tmp := t.TempDir()
-	pcsPath := buildPcs(t, tmp)
+	globalTmp := t.TempDir()
+	pcsPath := buildPcs(t, globalTmp)
+	pcsDir := filepath.Dir(pcsPath)
 
-	commands := parseTestableCommands(t, file)
+	newPath := fmt.Sprintf("PATH=%s%c%s", pcsDir, os.PathListSeparator, os.Getenv("PATH"))
+	baseEnv := append(os.Environ(), newPath)
 
-	for _, cmd := range commands {
-		args := strings.Fields(cmd.Cmd)
-		t.Log("Running command:", pcsPath, args)
-		command := exec.Command(pcsPath, args[1:]...)
-		command.Dir = tmp
-		output, err := command.CombinedOutput()
-		if err != nil {
-			t.Fatalf("failed to run command: %v, output: \n%s", err, output)
-		}
-		result := string(output)
-		// replace tabs with spaces for consistent comparison
-		result = strings.ReplaceAll(result, "\t", "        ")
+	blocks := parseMarkdown(t, file)
 
-		if cmd.Expected != result {
-			t.Errorf("expected output:\n%q\nbut got:\n%q", cmd.Expected, result)
-		}
+	r := runner{
+		env:       baseEnv,
+		tmpFolder: t.TempDir(),
+	}
+	for i, block := range blocks {
+		t.Run(fmt.Sprintf("Block %d", i+1), func(t *testing.T) {
+			r.runBlock(t, block)
+		})
 	}
 }

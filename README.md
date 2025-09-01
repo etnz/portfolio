@@ -43,11 +43,11 @@ Before you can track an asset, it needs to be declared in the `market.jsonl` fil
 Let's declare a public stock (Apple) and a private fund in your corporate savings plan.
 
 
-```bash
+```bash run
 pcs add-security -s AAPL -id US0378331005.XETR -c EUR
 ```
 
-```console
+```console check
 ✅ Successfully added security 'AAPL' to the market data.
 ```
 
@@ -57,11 +57,11 @@ pcs add-security -s AAPL -id US0378331005.XETR -c EUR
 
 Your corporate savings plan let you buy shares of funds that unfortunately are publicly traded. You can still track it by giving it a unique identifier, and updating them manually:
 
-```bash
+```bash run
 pcs add-security -s BankFund1 -id My-bank-Fund1 -c EUR
 ```
 
-```console
+```console check
 ✅ Successfully added security 'BankFund1' to the market data.
 ```
 
@@ -74,19 +74,19 @@ Public securities will have their prices fetched automatically, while private se
 
 Also it might look redundant, but you need to declare your assets in your ledger as well. This is because you might have multiple ledgers holding the same security, and you want to track them separately.
 
-```bash
+```bash run
 pcs declare -s AAPL -id US0378331005.XETR -c EUR
 ```
 
-```console
+```console check
 Successfully appended transaction to transactions.jsonl
 ```
 
-```bash
+```bash run
 pcs declare -s BankFund1 -id My-bank-Fund1 -c EUR
 ```
 
-```console
+```console check
 Successfully appended transaction to transactions.jsonl
 ```
 
@@ -94,31 +94,31 @@ Successfully appended transaction to transactions.jsonl
 
 Let's deposit some cash into your account.
 
-```bash
+```bash run
 pcs deposit -d 2025-08-27 -a 10000 -c EUR
 ```
 
-```console
+```console check
 Successfully appended transaction to transactions.jsonl
 ```
 
 Let's buy some Apple stock.
 
-```bash
+```bash run
 pcs buy -d 2025-08-27 -s AAPL -q 10 -a 1500.0
 ```
 
-```console
+```console check
 Successfully appended transaction to transactions.jsonl
 ```
 
 Let's record a buy in the corporate savings plan.
 
-```bash
+```bash run
 pcs buy -d 2025-08-27 -s BankFund1 -q 100 -a 1200.0
 ```
 
-```console
+```console check
 Successfully appended transaction to transactions.jsonl
 ```
 
@@ -131,21 +131,21 @@ For publicly traded securities or assets you can get the latest prices automatic
 
 However for the purpose of this tutorial only, let's manually set the price for Apple stock to its closing price on 2025-08-27:
 
-```bash
+```bash run
 pcs update-security -id US0378331005.XETR -d 2025-08-27 -p 193.20
 ```
 
-```console
+```console check
 Successfully set price for US0378331005.XETR on 2025-08-27 to 193.20.
 ```
 
 For private assets, you have to manually update their price using the same command. Or write your own command to fetch prices from your bank's API if they provide one. Here we'll set the price for your corporate savings plan fund to its value on 2025-08-27:
 
-```bash
+```bash run
 pcs update-security -id My-bank-Fund1 -d 2025-08-27 -p 11.23
 ```
 
-```console
+```console check
 Successfully set price for My-bank-Fund1 on 2025-08-27 to 11.23.
 ```
 
@@ -158,11 +158,11 @@ Successfully set price for My-bank-Fund1 on 2025-08-27 to 11.23.
 
 Now, you can see a unified view of your portfolio:
 
-```bash
+```bash run
 pcs holding -d 2025-08-27
 ```
 
-```console
+```console check
 Holdings on 2025-08-27 in reporting currency EUR
 
 Securities:
@@ -186,11 +186,11 @@ Total Portfolio Value: 10355.00 EUR
 
 And gains on the portfolio:
 
-```bash
+```bash run
 pcs gains -period=day -d 2025-08-27
 ```
 
-```console
+```console check
 Capital Gains Report (Method: average) for 2025-08-27 to 2025-08-27 (in EUR)
 --------------------------------------------------------------------------------
 Security               Realized Gain/Loss Unrealized Gain/Loss      Total Gain/Loss
