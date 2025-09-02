@@ -19,7 +19,7 @@ import (
 // The import format is a JSONL file, where each line is a JSON object representing a security.
 // For example:
 //
-//	{"ticker":"AAPL","id":"US0378331005.XNAS","currency":"USD","history":{"2023-01-02":130.28,"2023-01-03":125.07}}
+// 	{"ticker":"AAPL","id":"US0378331005.XNAS","currency":"USD","history":{"2023-01-02":130.28,"2023-01-03":125.07}}
 //
 // A security is a single json object whose property 'ticker' contains the security ticker, 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
 //
@@ -32,6 +32,7 @@ func ImportMarketData(r io.Reader) (*MarketData, error) {
 		ID       string             `json:"id"`
 		Currency string             `json:"currency"`
 		History  map[string]float64 `json:"history"`
+		Splits   []Split            `json:"splits,omitempty"`
 	}
 
 	var jsecurities []jsecurity
@@ -66,6 +67,9 @@ func ImportMarketData(r io.Reader) (*MarketData, error) {
 			d, _ := date.Parse(day)
 			m.Append(sec.ID(), d, value)
 		}
+		for _, split := range js.Splits {
+			m.AddSplit(sec.ID(), split)
+		}
 	}
 	return m, nil
 }
@@ -75,7 +79,7 @@ func ImportMarketData(r io.Reader) (*MarketData, error) {
 // The format is a JSONL file, where each line is a JSON object representing a security.
 // For example:
 //
-//	{"ticker":"AAPL","id":"US0378331005.XNAS","currency":"USD","history":{"2023-01-02":130.28,"2023-01-03":125.07}}
+// 	{"ticker":"AAPL","id":"US0378331005.XNAS","currency":"USD","history":{"2023-01-02":130.28,"2023-01-03":125.07}}
 //
 // A security is a single json object whose property 'ticker' contains the security ticker, 'id' contains the security ID as string, and property 'history' contains a single json object representing the security history.
 //
@@ -87,6 +91,7 @@ func ExportMarketData(w io.Writer, m *MarketData) error {
 		ID       string             `json:"id"`
 		Currency string             `json:"currency,omitempty"`
 		History  map[string]float64 `json:"history"`
+		Splits   []Split            `json:"splits,omitempty"`
 	}
 
 	// Collect securities and sort them by ticker for stable output.
@@ -105,6 +110,7 @@ func ExportMarketData(w io.Writer, m *MarketData) error {
 			ID:       sec.ID().String(),
 			Currency: sec.currency,
 			History:  make(map[string]float64),
+			Splits:   m.Splits(sec.ID()),
 		}
 
 		for day, value := range m.Prices(sec.ID()) {

@@ -37,10 +37,10 @@ func (m *MarketData) decodeSecurities(filename string, r io.Reader) error {
 
 	// jsecurity is the object read from the file using json parser.
 	type jsecurity struct {
-		Ticker   string `json:"ticker"`
-		ID       string `json:"id"`
-		Currency string `json:"currency"`
-		//more to come when the security definition grows.
+		Ticker   string  `json:"ticker"`
+		ID       string  `json:"id"`
+		Currency string  `json:"currency"`
+		Splits   []Split `json:"splits,omitempty"`
 	}
 
 	// The definition file is a JSONL file, one security per line.
@@ -66,6 +66,9 @@ func (m *MarketData) decodeSecurities(filename string, r io.Reader) error {
 			currency: js.Currency,
 		}
 		m.Add(sec)
+		for _, split := range js.Splits {
+			m.AddSplit(sec.ID(), split)
+		}
 	}
 	return nil
 }
@@ -197,10 +200,10 @@ func DecodeMarketData(marketFile string) (*MarketData, error) {
 func encodeSecurities(w io.Writer, m *MarketData) error {
 	// jsecurity is the object to write to the file using json parser.
 	type jsecurity struct {
-		Ticker   string `json:"ticker"`
-		ID       string `json:"id"`
-		Currency string `json:"currency"`
-		//more to come when the security definition grows.
+		Ticker   string  `json:"ticker"`
+		ID       string  `json:"id"`
+		Currency string  `json:"currency"`
+		Splits   []Split `json:"splits,omitempty"`
 	}
 
 	// Collect securities and sort them by ticker for stable output.
@@ -217,6 +220,7 @@ func encodeSecurities(w io.Writer, m *MarketData) error {
 			Ticker:   sec.Ticker(),
 			ID:       string(sec.ID()),
 			Currency: sec.currency,
+			Splits:   m.Splits(sec.ID()),
 		}
 
 		data, err := json.Marshal(js)
@@ -230,6 +234,7 @@ func encodeSecurities(w io.Writer, m *MarketData) error {
 	}
 	return nil
 }
+
 
 // encodeDailyPrices persists a single line in a security jsonl file.
 // Returns bare io errors.

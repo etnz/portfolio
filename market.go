@@ -107,3 +107,13 @@ func (m *MarketData) read(id ID, day date.Date) (float64, bool) {
 	}
 	return prices.Get(day)
 }
+
+// AddSplit adds a split to the market data for a given security.
+func (m *MarketData) AddSplit(id ID, split Split) {
+	m.splits[id] = append(m.splits[id], split)
+}
+
+// Splits returns all splits for a given security.
+func (m *MarketData) Splits(id ID) []Split {
+	return m.splits[id]
+}
