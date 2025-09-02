@@ -54,9 +54,10 @@ Subcommands for analysis:
 
 Subcommands for securities:
         add-security     add a new security to the market data
+        fetch-security   fetches and updates market data from external providers
         import-investing  import public security prices from investing.com's CSV format
         search-security  search for securities using EODHD API
-        update-security  update security prices, either automatically or manually
+        update-security  manually update a security's price or add a stock split
 
 Subcommands for tools:
         format-ledger    formats the ledger file into a canonical form

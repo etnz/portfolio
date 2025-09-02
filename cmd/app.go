@@ -20,6 +20,7 @@ func Register(c *subcommands.Commander) {
 	c.Register(&updateSecurityCmd{}, "securities")
 	c.Register(NewAddSecurityCmd(), "securities")
 	c.Register(&searchSecurityCmd{addSecurityCmd: NewAddSecurityCmd()}, "securities")
+	c.Register(&fetchSecurityCmd{}, "securities")
 
 	c.Register(&updateAmundiCmd{}, "amundi")
 	c.Register(&importAmundiCmd{}, "amundi")
