@@ -9,14 +9,17 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/etnz/portfolio/date"
+	"github.com/shopspring/decimal"
 )
 
 const eodhd_api_key = "EODHD_API_KEY"
@@ -347,6 +350,76 @@ func eodhdDaily(apiKey, ticker string, from, to date.Date) (open, close date.His
 		open.Append(info.Date, info.Open)
 	}
 	return
+}
+
+// simplifyDecimalRatio converts a ratio of decimals into a simplified integer fraction.
+func simplifyDecimalRatio(numDecimal, denDecimal decimal.Decimal) (num, den int) {
+	// To convert the decimal ratio to a simple integer fraction,
+	// we find a common multiplier to make both numerator and denominator integers.
+	// We use the exponent of the decimal (number of digits after the decimal point).
+	numExp := -numDecimal.Exponent()
+	denExp := -denDecimal.Exponent()
+	multiplier := decimal.NewFromInt(1)
+	if numExp > 0 {
+		multiplier = multiplier.Mul(decimal.NewFromInt(10).Pow(decimal.NewFromInt32(numExp)))
+	}
+	if denExp > numExp {
+		multiplier = decimal.NewFromInt(10).Pow(decimal.NewFromInt32(denExp))
+	}
+
+	numInt := numDecimal.Mul(multiplier).BigInt()
+	denInt := denDecimal.Mul(multiplier).BigInt()
+
+	// Simplify the fraction by dividing by the greatest common divisor.
+	commonDivisor := new(big.Int).GCD(nil, nil, numInt, denInt)
+
+	num = int(new(big.Int).Div(numInt, commonDivisor).Int64())
+	den = int(new(big.Int).Div(denInt, commonDivisor).Int64())
+	return
+}
+
+// eodhdSplits returns the split history for a given EODHD ticker.
+func eodhdSplits(apiKey, ticker string) ([]Split, error) {
+	addr := fmt.Sprintf("https://eodhd.com/api/splits/%s?fmt=json&api_token=%s", ticker, apiKey)
+
+	type apiSplit struct {
+		Date  date.Date `json:"date"`
+		Split string    `json:"split"`
+	}
+
+	content := make([]apiSplit, 0)
+	if err := jwget(newDailyCachingClient(), addr, &content); err != nil {
+		return nil, err
+	}
+
+	splits := make([]Split, 0, len(content))
+	for _, s := range content {
+		parts := strings.Split(s.Split, "/")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid split format from API: %q", s.Split)
+		}
+
+		numDecimal, err := decimal.NewFromString(parts[0])
+		if err != nil {
+			return nil, fmt.Errorf("invalid numerator in split %q: %w", s.Split, err)
+		}
+		denDecimal, err := decimal.NewFromString(parts[1])
+		if err != nil {
+			return nil, fmt.Errorf("invalid denominator in split %q: %w", s.Split, err)
+		}
+
+		num, den := simplifyDecimalRatio(numDecimal, denDecimal)
+		split := Split{
+			Date:        s.Date,
+			Numerator:   num,
+			Denominator: den,
+		}
+		splits = append(splits, split)
+	}
+	sort.SliceStable(splits, func(i, j int) bool {
+		return splits[i].Date.Before(splits[j].Date)
+	})
+	return splits, nil
 }
 
 // SearchResult matches the structure of a single item in the EODHD search API response.

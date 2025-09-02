@@ -57,11 +57,11 @@ func updateSecurityPrices(sec Security, prices *date.History[float64], from, to 
 	return nil
 }
 
-// Update iterates through all securities in the market data and fetches the latest
+// UpdatePrices iterates through all securities in the market data and fetches the latest
 // prices for each updatable security (i.e., those with an MSSI or CurrencyPair ID).
 // It fetches prices from the day after the last known price up to yesterday.
 // It returns a joined error if any updates fail.
-func (m *MarketData) Update(start, end date.Date) error {
+func (m *MarketData) UpdatePrices(start, end date.Date) error {
 
 	var errs error
 
@@ -89,6 +89,63 @@ func (m *MarketData) Update(start, end date.Date) error {
 		if err := updateSecurityPrices(sec, prices, fetchFrom, end); err != nil {
 			errs = errors.Join(errs, err)
 			continue
+		}
+	}
+	return errs
+}
+
+// updateSecuritySplits attempts to fetch and update splits for a single security.
+// updateSecuritySplits attempts to fetch and update splits for a single security.
+func updateSecuritySplits(sec Security) ([]Split, error) {
+	apiKey := eodhdApiKey()
+	if apiKey == "" {
+		return nil, errors.New("EODHD API key is not set. Use -eodhd-api-key flag or EODHD_API_KEY environment variable")
+	}
+
+	var ticker string
+	var err error
+
+	// Determine security type and fetch ticker accordingly.
+	if isin, mic, mssiErr := sec.ID().MSSI(); mssiErr == nil {
+		// This is an MSSI security.
+		ticker, err = eodhdSearchByMSSI(apiKey, isin, mic)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get ticker for MSSI %s (%s): %w", sec.Ticker(), sec.ID(), err)
+		}
+	} else if isin, fundErr := sec.ID().ISIN(); fundErr == nil {
+		// This is a Fund.
+		ticker, err = eodhdSearchByISIN(apiKey, isin)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get ticker for ISIN %s (%s): %w", sec.Ticker(), sec.ID(), err)
+		}
+	} else {
+		// This is a private or unsupported security type for updates.
+		return nil, nil // Not an error, just nothing to do.
+	}
+
+	if ticker == "" {
+		return nil, nil // No ticker found, nothing to do.
+	}
+
+	return eodhdSplits(apiKey, ticker)
+}
+
+// UpdateSplits iterates through all securities in the market data and fetches the latest
+// splits for each updatable security.
+func (m *MarketData) UpdateSplits() error {
+	var errs error
+
+	for id, sec := range m.securities {
+		newSplits, err := updateSecuritySplits(sec)
+		if err != nil {
+			log.Printf("failed to update splits for security %q (%v): %v", sec.Ticker(), sec.ID(), err)
+			errs = errors.Join(errs, err)
+			continue
+		}
+
+		if len(newSplits) > 0 {
+			log.Printf("found %d splits for security %q (%v)", len(newSplits), sec.Ticker(), sec.ID())
+			m.SetSplits(id, newSplits)
 		}
 	}
 	return errs

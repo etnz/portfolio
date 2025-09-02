@@ -78,16 +78,17 @@ func (c *fetchSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...inte
 	}
 
 	if c.prices {
-		if err := market.Update(start, end); err != nil {
+		if err := market.UpdatePrices(start, end); err != nil {
 			fmt.Fprintln(os.Stderr, "Error: failed to automatically update securities:", err)
 			// continue to fetch splits
 		}
 	}
 
 	if c.splits {
-		// TODO: implement fetching for splits
-		fmt.Fprintln(os.Stderr, "Error: fetching for splits is not yet implemented")
-		return subcommands.ExitFailure
+		if err := market.UpdateSplits(); err != nil {
+			fmt.Fprintln(os.Stderr, "Error: failed to update splits:", err)
+			return subcommands.ExitFailure
+		}
 	}
 
 	if err := EncodeMarketData(market); err != nil {

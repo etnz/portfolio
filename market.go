@@ -117,3 +117,8 @@ func (m *MarketData) AddSplit(id ID, split Split) {
 func (m *MarketData) Splits(id ID) []Split {
 	return m.splits[id]
 }
+
+// SetSplits sets the splits for a given security, replacing any existing ones.
+func (m *MarketData) SetSplits(id ID, splits []Split) {
+	m.splits[id] = splits
+}

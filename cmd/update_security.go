@@ -101,24 +101,3 @@ func (c *updateSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...int
 
 	return subcommands.ExitSuccess
 }
-
-// executeAutomatic remains for later use by another command.
-func (c *updateSecurityCmd) executeAutomatic(start, end date.Date) subcommands.ExitStatus {
-	market, err := DecodeMarketData()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return subcommands.ExitFailure
-	}
-
-	if err := market.Update(start, end); err != nil {
-		fmt.Fprintln(os.Stderr, "Error: failed to automatically update securities:", err)
-		return subcommands.ExitFailure
-	}
-
-	if err := EncodeMarketData(market); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return subcommands.ExitFailure
-	}
-	fmt.Println("Successfully updated all public securities.")
-	return subcommands.ExitSuccess
-}
