@@ -599,39 +599,3 @@ func (t *Convert) Validate(as *AccountingSystem) error {
 
 	return nil
 }
-
-// BySecurity returns a predicate that filters transactions by security ticker.
-func BySecurity(ticker string) func(Transaction) bool {
-	return func(tx Transaction) bool {
-		switch v := tx.(type) {
-		case Buy:
-			return v.Security == ticker
-		case Sell:
-			return v.Security == ticker
-		case Dividend:
-			return v.Security == ticker
-		case Declare:
-			return v.Ticker == ticker
-		default:
-			return false
-		}
-	}
-}
-
-// ByCurrency returns a predicate that filters transactions by currency.
-func ByCurrency(currency string) func(Transaction) bool {
-	return func(tx Transaction) bool {
-		switch v := tx.(type) {
-		case Deposit:
-			return v.Currency == currency
-		case Withdraw:
-			return v.Currency == currency
-		case Convert:
-			return v.FromCurrency == currency || v.ToCurrency == currency
-		case Declare:
-			return v.Currency == currency
-		default:
-			return false
-		}
-	}
-}

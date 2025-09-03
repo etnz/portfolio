@@ -8,67 +8,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// Performance holds the starting value and the calculated return for a specific period.
-type Performance struct {
-	StartValue float64
-	Return     float64 // Return is a ratio (e.g., 0.05 for 5%)
-}
-
-// GainsReport contains the results of a capital gains calculation.
-type GainsReport struct {
-	Range             date.Range
-	Method            CostBasisMethod
-	ReportingCurrency string
-	Securities        []SecurityGains
-}
-
-// SecurityGains holds the realized and unrealized gains for a single security.
-type SecurityGains struct {
-	Security    string
-	Realized    float64
-	Unrealized  float64
-	Total       float64
-	CostBasis   float64
-	MarketValue float64
-	Quantity    float64
-}
-
-// Summary provides a comprehensive, at-a-glance overview of the portfolio's
-// state and performance on a given date.
-type Summary struct {
-	Date              date.Date
-	ReportingCurrency string
-	TotalMarketValue  float64
-	Daily             Performance
-	WTD               Performance // Week-to-Date
-	MTD               Performance // Month-to-Date
-	QTD               Performance // Quarter-to-Date
-	YTD               Performance // Year-to-Date
-	Inception         Performance
-}
-
-// DailyReport provides a summary of a single day's portfolio changes, including
-// a per-asset breakdown of performance.
-type DailyReport struct {
-	Date              date.Date
-	Time              time.Time
-	ReportingCurrency string
-	ValueAtPrevClose  float64
-	ValueAtClose      float64
-	TotalGain         float64
-	MarketGains       float64
-	RealizedGains     float64
-	NetCashFlow       float64
-	ActiveAssets      []AssetGain
-	Transactions      []Transaction
-}
-
-// AssetGain represents the daily gain or loss for a single security.
-type AssetGain struct {
-	Security string
-	Gain     float64
-	Return   float64
-}
 
 // AccountingSystem encapsulates all the data required for portfolio management,
 // combining transactional data with market data. It serves as a central point
@@ -181,7 +120,7 @@ func (as *AccountingSystem) Balance(on date.Date) (*Balance, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not get journal: %w", err)
 	}
-	balance, err := NewBalanceFromJournal(j, on, FIFO) // TODO: Make cost basis method configurable
+	balance, err := NewBalance(j, on, FIFO) // TODO: Make cost basis method configurable
 	if err != nil {
 		return nil, fmt.Errorf("could not create balance from journal: %w", err)
 	}
@@ -302,7 +241,7 @@ func (as *AccountingSystem) NewDailyReport(on date.Date) (*DailyReport, error) {
 	for sec := range endBalance.Securities() {
 		ticker := sec.Ticker()
 		gain := endBalance.RealizedGain(ticker).Sub(startBalance.RealizedGain(ticker))
-		gain = endBalance.convert(gain, sec.Currency())
+		gain = endBalance.Convert(gain, sec.Currency())
 		totalRealized = totalRealized.Add(gain)
 	}
 	report.RealizedGains = totalRealized.InexactFloat64()
@@ -344,7 +283,7 @@ func (as *AccountingSystem) NewDailyReport(on date.Date) (*DailyReport, error) {
 		}
 
 		// convert to reporting currency
-		gain = endBalance.convert(gain, sec.Currency())
+		gain = endBalance.Convert(gain, sec.Currency())
 		assetGain := AssetGain{
 			Security: sec.Ticker(),
 			Gain:     gain.InexactFloat64(),
@@ -387,11 +326,11 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 		return nil, fmt.Errorf("could not get journal: %w", err)
 	}
 
-	endBalance, err := NewBalanceFromJournal(journal, period.To, method)
+	endBalance, err := NewBalance(journal, period.To, method)
 	if err != nil {
 		return nil, fmt.Errorf("could not create balance from journal: %w", err)
 	}
-	startBalance, err := NewBalanceFromJournal(journal, period.From.Add(-1), method)
+	startBalance, err := NewBalance(journal, period.From.Add(-1), method)
 	if err != nil {
 		return nil, fmt.Errorf("could not create balance from journal: %w", err)
 	}
@@ -458,7 +397,7 @@ func (as *AccountingSystem) NewHoldingReport(on date.Date) (*HoldingReport, erro
 		}
 		price := balance.Price(ticker)
 		value := balance.MarketValue(ticker)
-		convertedValue := balance.convert(value, currency)
+		convertedValue := balance.Convert(value, currency)
 		report.Securities = append(report.Securities, SecurityHolding{
 			Ticker:      ticker,
 			ID:          id.String(),
@@ -475,7 +414,7 @@ func (as *AccountingSystem) NewHoldingReport(on date.Date) (*HoldingReport, erro
 		if bal.IsZero() {
 			continue
 		}
-		convertedBalance := balance.convert(bal, currency)
+		convertedBalance := balance.Convert(bal, currency)
 		report.Cash = append(report.Cash, CashHolding{
 			Currency: currency,
 			Balance:  bal.InexactFloat64(),
@@ -489,7 +428,7 @@ func (as *AccountingSystem) NewHoldingReport(on date.Date) (*HoldingReport, erro
 		if bal.IsZero() {
 			continue
 		}
-		convertedBalance := balance.convert(bal, currency)
+		convertedBalance := balance.Convert(bal, currency)
 		report.Counterparties = append(report.Counterparties, CounterpartyHolding{
 			Name:     account,
 			Currency: currency,

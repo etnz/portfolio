@@ -45,7 +45,6 @@ func ParseCostBasisMethod(s string) (CostBasisMethod, error) {
 	}
 }
 
-
 // Ledger represents a list of transactions.
 //
 // In a Ledger transactions are always in chronological order.
@@ -292,11 +291,6 @@ func (l *Ledger) AllCounterpartyAccounts() iter.Seq[string] {
 	}
 }
 
-
-
-
-
-
 // SecurityTransactions returns an iterator over transactions related to a specific
 // security (Buy, Sell, Dividend) up to and including a given date.
 // The ledger must be sorted by date for this to work correctly.
@@ -380,6 +374,42 @@ func (l *Ledger) AllCurrencies() iter.Seq[string] {
 			if !yield(currency) {
 				return
 			}
+		}
+	}
+}
+
+// BySecurity returns a predicate that filters transactions by security ticker.
+func BySecurity(ticker string) func(Transaction) bool {
+	return func(tx Transaction) bool {
+		switch v := tx.(type) {
+		case Buy:
+			return v.Security == ticker
+		case Sell:
+			return v.Security == ticker
+		case Dividend:
+			return v.Security == ticker
+		case Declare:
+			return v.Ticker == ticker
+		default:
+			return false
+		}
+	}
+}
+
+// ByCurrency returns a predicate that filters transactions by currency.
+func ByCurrency(currency string) func(Transaction) bool {
+	return func(tx Transaction) bool {
+		switch v := tx.(type) {
+		case Deposit:
+			return v.Currency == currency
+		case Withdraw:
+			return v.Currency == currency
+		case Convert:
+			return v.FromCurrency == currency || v.ToCurrency == currency
+		case Declare:
+			return v.Currency == currency
+		default:
+			return false
 		}
 	}
 }

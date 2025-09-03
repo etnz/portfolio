@@ -107,7 +107,7 @@ func TestBalance_Position(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			balance, err := NewBalanceFromJournal(journal, tc.date, FIFO)
+			balance, err := NewBalance(journal, tc.date, FIFO)
 			if err != nil {
 				t.Fatalf("NewBalanceFromJournal() error = %v", err)
 			}
@@ -230,7 +230,7 @@ func TestBalance_CashBalance(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			balance, err := NewBalanceFromJournal(journal, tc.date, FIFO)
+			balance, err := NewBalance(journal, tc.date, FIFO)
 			if err != nil {
 				t.Fatalf("NewBalanceFromJournal() error = %v", err)
 			}
@@ -282,7 +282,7 @@ func TestBalance_CounterpartyAccountBalance(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			balance, err := NewBalanceFromJournal(journal, tc.date, FIFO)
+			balance, err := NewBalance(journal, tc.date, FIFO)
 			if err != nil {
 				t.Fatalf("NewBalanceFromJournal() error = %v", err)
 			}
@@ -332,7 +332,7 @@ func TestBalance_TotalMarketValue(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			balance, err := NewBalanceFromJournal(journal, tc.date, FIFO)
+			balance, err := NewBalance(journal, tc.date, FIFO)
 			if err != nil {
 				t.Fatalf("NewBalanceFromJournal() error = %v", err)
 			}

@@ -63,7 +63,7 @@ func TestBalance_TotalPortfolioValue(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			balance, err := NewBalanceFromJournal(journal, tc.date, FIFO)
+			balance, err := NewBalance(journal, tc.date, FIFO)
 			if err != nil {
 				t.Fatalf("NewBalanceFromJournal() error = %v", err)
 			}

@@ -33,8 +33,7 @@ type Balance struct {
 
 	// linkedTWR are percentages, not currency or quantities, and therefore are better represented as float64
 	linkedTWR     float64
-	lastValuation float64         // The total portfolio value at the last cash flow event.
-	initialValue  decimal.Decimal // First cash deposit, or accrued value
+	lastValuation float64 // The total portfolio value at the last cash flow event.
 }
 
 // Price returns the current price for a given ticker.
@@ -42,8 +41,8 @@ func (b *Balance) Price(ticker string) decimal.Decimal {
 	return b.prices[ticker]
 }
 
-// NewBalance creates an initialized, empty Balance object.
-func NewBalance() *Balance {
+// newBalance creates an initialized, empty Balance object.
+func newBalance() *Balance {
 	return &Balance{
 		cashAccounts:         make(map[string]decimal.Decimal),
 		counterpartyAccounts: make(map[string]decimal.Decimal),
@@ -58,10 +57,10 @@ func NewBalance() *Balance {
 	}
 }
 
-// NewBalanceFromJournal calculates the portfolio's state by processing all journal events
+// NewBalance calculates the portfolio's state by processing all journal events
 // up to and including the specified date 'on'.
-func NewBalanceFromJournal(j *Journal, on date.Date, method CostBasisMethod) (*Balance, error) {
-	balance := NewBalance()
+func NewBalance(j *Journal, on date.Date, method CostBasisMethod) (*Balance, error) {
+	balance := newBalance()
 	balance.cur = j.cur
 	for _, e := range j.events {
 		if e.date().After(on) {
@@ -97,9 +96,6 @@ func (b *Balance) computeTWR(cashFlowAmount decimal.Decimal) {
 func (b *Balance) apply(e event, method CostBasisMethod) error {
 	switch v := e.(type) {
 	case creditCash:
-		if b.initialValue.IsZero() {
-			b.initialValue = v.amount
-		}
 		b.computeTWR(v.amount)
 		b.cashAccounts[v.currency] = b.cashAccounts[v.currency].Add(v.amount)
 	case debitCash:
@@ -130,9 +126,6 @@ func (b *Balance) apply(e event, method CostBasisMethod) error {
 		b.realizedGains[v.security] = b.realizedGains[v.security].Add(gain)
 
 	case creditCounterparty:
-		if b.initialValue.IsZero() {
-			b.initialValue = v.amount
-		}
 		b.counterpartyAccounts[v.account] = b.counterpartyAccounts[v.account].Add(v.amount)
 	case debitCounterparty:
 		b.counterpartyAccounts[v.account] = b.counterpartyAccounts[v.account].Sub(v.amount)
@@ -233,12 +226,11 @@ func (b *Balance) Return() float64 {
 	return b.linkedTWR - 1.0
 }
 
-// ConvertedMarketValue returns the total market value of a security in the reporting currency.
+// secCurrency return the security's currency
 func (b *Balance) secCurrency(ticker string) string { return b.securities[ticker].currency }
 
-// Cash returns the balance of a specific currency.
-// convert amount in 'currency' to the reporting currency.
-func (b *Balance) convert(amount decimal.Decimal, currency string) decimal.Decimal {
+// Convert amount in 'currency' to the reporting currency.
+func (b *Balance) Convert(amount decimal.Decimal, currency string) decimal.Decimal {
 	if currency == b.cur {
 		return amount
 	} else {
@@ -247,6 +239,7 @@ func (b *Balance) convert(amount decimal.Decimal, currency string) decimal.Decim
 	}
 }
 
+// Cash returns the balance of a specific currency.
 func (b *Balance) Cash(currency string) decimal.Decimal {
 	return b.cashAccounts[currency]
 }
@@ -265,7 +258,7 @@ func (b *Balance) CounterpartyCurrency(account string) string {
 func (b *Balance) TotalRealizedGain() decimal.Decimal {
 	total := decimal.Zero
 	for sec, gain := range b.realizedGains {
-		gain = b.convert(gain, b.secCurrency(sec))
+		gain = b.Convert(gain, b.secCurrency(sec))
 		total = total.Add(gain)
 	}
 	return total
@@ -276,7 +269,7 @@ func (b *Balance) TotalMarketValue() decimal.Decimal {
 	total := decimal.Zero
 	for ticker := range b.securities {
 		mv := b.MarketValue(ticker)
-		mv = b.convert(mv, b.secCurrency(ticker))
+		mv = b.Convert(mv, b.secCurrency(ticker))
 		total = total.Add(mv)
 	}
 	return total
@@ -286,7 +279,7 @@ func (b *Balance) TotalCostBasis() decimal.Decimal {
 	total := decimal.Zero
 	for ticker := range b.securities {
 		mv := b.CostBasis(ticker)
-		mv = b.convert(mv, b.secCurrency(ticker))
+		mv = b.Convert(mv, b.secCurrency(ticker))
 		total = total.Add(mv)
 	}
 	return total
@@ -296,7 +289,7 @@ func (b *Balance) TotalCostBasis() decimal.Decimal {
 func (b *Balance) TotalCash() decimal.Decimal {
 	total := decimal.Zero
 	for currency, amount := range b.cashAccounts {
-		total = total.Add(b.convert(amount, currency))
+		total = total.Add(b.Convert(amount, currency))
 	}
 	return total
 }
@@ -306,7 +299,7 @@ func (b *Balance) TotalCounterparty() decimal.Decimal {
 	total := decimal.Zero
 	for acc, amount := range b.counterpartyAccounts {
 		cur := b.counterpartyCur[acc]
-		total = total.Add(b.convert(amount, cur))
+		total = total.Add(b.Convert(amount, cur))
 	}
 	return total
 }

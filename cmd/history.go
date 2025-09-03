@@ -57,19 +57,19 @@ func (c *historyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 
 	for _, tx := range as.Ledger.Transactions(predicate) {
 		on := tx.When()
+		balance, err := as.Balance(on)
 		if c.security != "" {
-			position := as.Ledger.Position(c.security, on, as.MarketData)
-			sec := as.Ledger.Get(c.security)
-			price, ok := as.MarketData.PriceAsOf(sec.ID(), on)
-			if !ok {
-				fmt.Printf("%s\t\t%.2f\tN/A\tN/A\n", on, position)
-			} else {
-				value := position * price
-				fmt.Printf("%s\t\t%.2f\t%.2f\t%.2f\n", on, position, price, value)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error calculating balance: %v\n", err)
+				return subcommands.ExitFailure
 			}
+			position := balance.Position(c.security)
+			price := balance.Price(c.security)
+			value := balance.MarketValue(c.security)
+			fmt.Printf("%s    %-10s %-10s %-10s\n", on, position, price, value)
 		} else {
-			value := as.Ledger.CashBalance(c.currency, on)
-			fmt.Printf("%s\t%.2f\n", on, value)
+			value := balance.Cash(c.currency)
+			fmt.Printf("%s    %-10s\n", on, value)
 		}
 	}
 
