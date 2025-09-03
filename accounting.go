@@ -177,7 +177,7 @@ func (as *AccountingSystem) TotalMarketValue(on date.Date) (float64, error) {
 
 	// Calculate value of all security positions
 	for sec := range as.Ledger.AllSecurities() {
-		position := as.Ledger.Position(sec.Ticker(), on)
+		position := as.Ledger.Position(sec.Ticker(), on, as.MarketData)
 		if position <= 0 {
 			continue
 		}
@@ -440,7 +440,7 @@ func (as *AccountingSystem) NewDailyReport(on date.Date, now time.Time) (*DailyR
 
 	// 6. Calculate Active Asset Gains
 	for sec := range as.Ledger.AllSecurities() {
-		posPrev := as.Ledger.Position(sec.Ticker(), prevDate)
+		posPrev := as.Ledger.Position(sec.Ticker(), prevDate, as.MarketData)
 		if posPrev > 0 {
 			pricePrev, ok := as.MarketData.PriceAsOf(sec.ID(), prevDate)
 			if !ok {
@@ -452,14 +452,14 @@ func (as *AccountingSystem) NewDailyReport(on date.Date, now time.Time) (*DailyR
 				return nil, err
 			}
 
-			posToday := as.Ledger.Position(sec.Ticker(), on)
+			posToday := as.Ledger.Position(sec.Ticker(), on, as.MarketData)
 			priceToday, ok := as.MarketData.PriceAsOf(sec.ID(), on)
-			if !ok {
+		if !ok {
 				log.Printf("Warning: could not find price for %s on %s", sec.Ticker(), on)
 				continue
 			}
 			valueToday, err := as.ConvertCurrency(posToday*priceToday, sec.Currency(), as.ReportingCurrency, on)
-			if err != nil {
+		if err != nil {
 				return nil, err
 			}
 
@@ -587,7 +587,7 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 
 	for sec := range as.Ledger.AllSecurities() {
 		ticker := sec.Ticker()
-		position := as.Ledger.Position(ticker, period.To)
+		position := as.Ledger.Position(ticker, period.To, as.MarketData)
 
 		realizedGainEnd, err := as.Ledger.RealizedGain(ticker, period.To, method)
 		if err != nil {
@@ -615,7 +615,7 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 		marketValueEnd := position * priceEnd
 		unrealizedGainEnd := marketValueEnd - costBasisEnd
 
-		positionStart := as.Ledger.Position(ticker, period.From.Add(-1))
+		positionStart := as.Ledger.Position(ticker, period.From.Add(-1), as.MarketData)
 		costBasisStart, err := as.Ledger.CostBasis(ticker, period.From.Add(-1), method)
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate cost basis for %q: %w", ticker, err)
@@ -664,7 +664,7 @@ func (as *AccountingSystem) NewHoldingReport(on date.Date) (*HoldingReport, erro
 		ticker := sec.Ticker()
 		id := sec.ID()
 		currency := sec.Currency()
-		position := as.Ledger.Position(ticker, on)
+		position := as.Ledger.Position(ticker, on, as.MarketData)
 		if position <= 1e-9 {
 			continue
 		}

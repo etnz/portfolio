@@ -66,27 +66,15 @@ func (m *MarketData) UpdatePrices(start, end date.Date) error {
 	var errs error
 
 	for id, prices := range m.prices {
-		latest, _ := prices.Latest()
+		//latest, _ := prices.Latest()
 		sec := m.Get(id)
 
-		// If we already have yesterday's price, we are up-to-date.
-		if !latest.Before(end) {
-			continue
-		}
-
-		// Determine the start date for fetching new prices.
-		// If no prices exist, use the default origin. Otherwise, start from the day after the latest price.
-		fetchFrom := start
-		if latest.Before(start) {
-			fetchFrom = latest.Add(1)
-		}
-
 		// Don't try to fetch from the future.
-		if fetchFrom.After(end) {
+		if start.After(end) {
 			continue
 		}
 
-		if err := updateSecurityPrices(sec, prices, fetchFrom, end); err != nil {
+		if err := updateSecurityPrices(sec, prices, start, end); err != nil {
 			errs = errors.Join(errs, err)
 			continue
 		}
@@ -94,8 +82,6 @@ func (m *MarketData) UpdatePrices(start, end date.Date) error {
 	return errs
 }
 
-// updateSecuritySplits attempts to fetch and update splits for a single security.
-// updateSecuritySplits attempts to fetch and update splits for a single security.
 func updateSecuritySplits(sec Security) ([]Split, error) {
 	apiKey := eodhdApiKey()
 	if apiKey == "" {

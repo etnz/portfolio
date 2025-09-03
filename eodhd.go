@@ -48,7 +48,7 @@ func (c *diskCache) RoundTrip(req *http.Request) (resp *http.Response, err error
 	// get from disk
 	// diskcache implements a unique key per day, so the local tmp expires every day.
 	key := fmt.Sprintf("%s %s %s", date.Today().String(), req.Method, req.URL.String())
-	key = fmt.Sprintf("%x", sha1.Sum([]byte(key)))
+	key = fmt.Sprintf("daily-%x", sha1.Sum([]byte(key)))
 	//key = url.PathEscape(key)
 
 	cachedResp, err := c.get(key, req)
@@ -271,6 +271,8 @@ func eodhdSearchByISIN(apiKey string, isin string) (ticker string, err error) {
 	return content[0].Code + "." + content[0].Exchange, nil
 }
 
+var AdjustedPrices = false
+
 // eodhdDailyMSSI returns the daily prices for a given ISIN and MIC.
 func eodhdDailyMSSI(apiKey, isin, mic string, from, to date.Date) (prices date.History[float64], err error) {
 	// find the eodhd ticker for the given isin and mic
@@ -334,26 +336,32 @@ func eodhdDaily(apiKey, ticker string, from, to date.Date) (open, close date.His
 
 	addr := fmt.Sprintf("https://eodhd.com/api/eod/%s?fmt=json&api_token=%s&from=%s&to=%s", ticker, apiKey, from, to)
 	type Info struct {
-		Date  date.Date `json:"date"`
-		Close float64   `json:"close"`
-		Open  float64   `json:"open"`
+		Date          date.Date `json:"date"`
+		Close         float64   `json:"close"`
+		Open          float64   `json:"open"`
+		AdjustedClose float64   `json:"adjusted_close"`
 	}
 
 	// that's the payload
 	content := make([]Info, 0)
 	if err := jwget(newDailyCachingClient(), addr, &content); err != nil {
+		//log.Printf("failed to jwget %s: %v", addr, err)
 		return open, close, err
 	}
 
 	for _, info := range content {
-		close.Append(info.Date, info.Close)
+		if AdjustedPrices {
+			close.Append(info.Date, info.AdjustedClose)
+		} else {
+			close.Append(info.Date, info.Close)
+		}
 		open.Append(info.Date, info.Open)
 	}
 	return
 }
 
 // simplifyDecimalRatio converts a ratio of decimals into a simplified integer fraction.
-func simplifyDecimalRatio(numDecimal, denDecimal decimal.Decimal) (num, den int) {
+func simplifyDecimalRatio(numDecimal, denDecimal decimal.Decimal) (num, den int64) {
 	// To convert the decimal ratio to a simple integer fraction,
 	// we find a common multiplier to make both numerator and denominator integers.
 	// We use the exponent of the decimal (number of digits after the decimal point).
@@ -373,8 +381,8 @@ func simplifyDecimalRatio(numDecimal, denDecimal decimal.Decimal) (num, den int)
 	// Simplify the fraction by dividing by the greatest common divisor.
 	commonDivisor := new(big.Int).GCD(nil, nil, numInt, denInt)
 
-	num = int(new(big.Int).Div(numInt, commonDivisor).Int64())
-	den = int(new(big.Int).Div(denInt, commonDivisor).Int64())
+	num = new(big.Int).Div(numInt, commonDivisor).Int64()
+	den = new(big.Int).Div(denInt, commonDivisor).Int64()
 	return
 }
 

@@ -8,8 +8,11 @@ import (
 	"github.com/etnz/portfolio/date"
 )
 
+// TODO: add a Position test with some splits
+
 func TestLedger_Position(t *testing.T) {
 	ledger := NewLedger()
+	market := NewMarketData()
 	o := date.New(2025, time.January, 1)
 	ledger.Append(
 		NewDeclaration(o, "", "AAPL", "US0378331005.XNAS", "EUR"),
@@ -100,7 +103,7 @@ func TestLedger_Position(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			gotPosition := ledger.Position(tc.ticker, tc.date)
+			gotPosition := ledger.Position(tc.ticker, tc.date, market)
 			if gotPosition != tc.wantPosition {
 				t.Errorf("Position(%q, %s) = %v, want %v", tc.ticker, tc.date, gotPosition, tc.wantPosition)
 			}

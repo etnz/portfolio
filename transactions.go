@@ -208,7 +208,7 @@ func (t *Sell) Validate(as *AccountingSystem) error {
 	}
 	if t.Quantity == 0 {
 		// quick fix, sell all.
-		t.Quantity = as.Ledger.Position(t.Security, t.Date)
+		t.Quantity = as.Ledger.Position(t.Security, t.Date, as.MarketData)
 	}
 
 	if t.Quantity <= 0 {
@@ -219,8 +219,8 @@ func (t *Sell) Validate(as *AccountingSystem) error {
 		return fmt.Errorf("sell transaction price must be positive, got %f", t.Amount/t.Quantity)
 	}
 
-	if as.Ledger.Position(t.Security, t.Date) < t.Quantity {
-		return fmt.Errorf("cannot sell %f of %s, position is only %f", t.Quantity, t.Security, as.Ledger.Position(t.Security, t.Date))
+	if as.Ledger.Position(t.Security, t.Date, as.MarketData) < t.Quantity {
+		return fmt.Errorf("cannot sell %f of %s, position is only %f", t.Quantity, t.Security, as.Ledger.Position(t.Security, t.Date, as.MarketData))
 	}
 
 	return nil

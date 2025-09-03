@@ -65,6 +65,17 @@ type Ledger struct {
 	lots map[string][]lot
 }
 
+// Declared return a iterator over all declared securities in the ledger.
+func (l *Ledger) Declared() iter.Seq[Security] {
+	// Put securities in a slice.
+	securities := slices.Collect(maps.Values(l.securities))
+	// Sort securities by ticker.
+	sort.Slice(securities, func(i, j int) bool {
+		return securities[i].Ticker() < securities[j].Ticker()
+	})
+	return slices.Values(securities)
+}
+
 // NewLedger creates an empty ledger.
 func NewLedger() *Ledger {
 	return &Ledger{
@@ -134,22 +145,50 @@ func (l *Ledger) stableSort() {
 	})
 }
 
-// Position computes the total quantity of a security held on a specific date by
-// summing up all buy and sell transactions for that security up to and including that date.
-func (l *Ledger) Position(ticker string, on date.Date) float64 {
-	var quantity float64
+// Position computes the total quantity of a security held on a specific date.
+// It now requires market data to correctly adjust for any stock splits that
+// have occurred.
+func (l *Ledger) Position(ticker string, on date.Date, market *MarketData) float64 {
+	totalPosition := decimal.NewFromInt(0)
+	secID := l.securities[ticker].ID()
+	splits := market.Splits(secID)
+
 	for _, tx := range l.SecurityTransactions(ticker, on) {
+		var quantity decimal.Decimal
+		var txDate date.Date
+
 		switch v := tx.(type) {
 		case Buy:
-			quantity += v.Quantity
+			quantity = decimal.NewFromFloat(v.Quantity)
+			txDate = v.When()
 		case Sell:
-			// The quantity for a Sell transaction should have been resolved to a
-			// concrete value during validation. A quantity of 0 in a Sell
-			// transaction means "sell all" and is resolved before being stored.
-			quantity -= v.Quantity
+			quantity = decimal.NewFromFloat(v.Quantity).Neg() // Sell is a negative quantity
+			txDate = v.When()
+		default:
+			continue // Not a position-affecting transaction
 		}
+
+		// Hack: the global variable change how the whole portfolio handles splits
+		if !AdjustedPrices {
+			// Calculate the adjustment factor for this specific transaction
+			adjustmentFactor := decimal.NewFromInt(1)
+			for _, split := range splits {
+				// A split applies if it happened AFTER the transaction but ON OR BEFORE the query date
+				if split.Date.After(txDate) && !split.Date.After(on) {
+					num := decimal.NewFromInt(split.Numerator)
+					den := decimal.NewFromInt(split.Denominator)
+					splitRatio := num.Div(den)
+					adjustmentFactor = adjustmentFactor.Mul(splitRatio)
+				}
+			}
+
+			quantity = quantity.Mul(adjustmentFactor)
+		}
+		totalPosition = totalPosition.Add(quantity)
 	}
-	return quantity
+
+	pos, _ := totalPosition.Float64()
+	return pos
 }
 
 // CashBalance computes the total cash in a specific currency on a specific date.

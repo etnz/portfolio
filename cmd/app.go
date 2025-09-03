@@ -73,6 +73,7 @@ func DecodeMarketData() (*portfolio.MarketData, error) {
 	// Load the portfolio database from the specified file.
 	m, err := portfolio.DecodeMarketData(*marketFile)
 	if errors.Is(err, fs.ErrNotExist) {
+		// TODO:We cannot only print a warning, it must exists.
 		log.Println("warning, database does not exist, creating an empty database instead")
 		return portfolio.NewMarketData(), nil
 	}

@@ -15,8 +15,8 @@ type updateSecurityCmd struct {
 	id    string
 	date  string
 	price float64
-	num   int
-	den   int
+	num   int64
+	den   int64
 }
 
 func (*updateSecurityCmd) Name() string { return "update-security" }
@@ -39,8 +39,8 @@ func (c *updateSecurityCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.id, "id", "", "Unique security identifier (required)")
 	f.StringVar(&c.date, "d", date.Today().String(), "Date for the update")
 	f.Float64Var(&c.price, "p", 0, "Price to set for the security")
-	f.IntVar(&c.num, "num", 1, "Split numerator")
-	f.IntVar(&c.den, "den", 1, "Split denominator")
+	f.Int64Var(&c.num, "num", 1, "Split numerator")
+	f.Int64Var(&c.den, "den", 1, "Split denominator")
 }
 
 func (c *updateSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {

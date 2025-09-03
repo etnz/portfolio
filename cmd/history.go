@@ -58,7 +58,7 @@ func (c *historyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	for _, tx := range as.Ledger.Transactions(predicate) {
 		on := tx.When()
 		if c.security != "" {
-			position := as.Ledger.Position(c.security, on)
+			position := as.Ledger.Position(c.security, on, as.MarketData)
 			sec := as.Ledger.Get(c.security)
 			price, ok := as.MarketData.PriceAsOf(sec.ID(), on)
 			if !ok {

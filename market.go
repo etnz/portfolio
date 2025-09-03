@@ -10,8 +10,8 @@ import (
 // Split represents a stock split event.
 type Split struct {
 	Date        date.Date `json:"date"`
-	Numerator   int       `json:"num"`
-	Denominator int       `json:"den"`
+	Numerator   int64     `json:"num"`
+	Denominator int64     `json:"den"`
 }
 
 // MarketData holds all the market data, including security definitions and their price histories.
@@ -29,6 +29,17 @@ func NewMarketData() *MarketData {
 		tickers:    make(map[string]ID),
 		prices:     make(map[ID]*date.History[float64]),
 		splits:     make(map[ID][]Split),
+	}
+}
+
+// Securities returns an iterator over all securities in the market data.
+func (m *MarketData) Securities() iter.Seq[Security] {
+	return func(yield func(Security) bool) {
+		for _, sec := range m.securities {
+			if !yield(sec) {
+				break
+			}
+		}
 	}
 }
 
