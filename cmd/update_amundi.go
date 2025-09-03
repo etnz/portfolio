@@ -57,6 +57,7 @@ func (h *HeaderVal) Set(val string) error {
 	*h.Header = http.Header(mimeHeader)
 	return nil
 }
+
 // String returns the concatenated string of all headers set so far.
 func (h *HeaderVal) String() string { return h.buf.String() }
 
@@ -122,7 +123,7 @@ func (c *updateAmundiCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...inter
 		fmt.Println("updating", dispo.Name, dispo.ID)
 
 		// fetch days starting from start to end
-		for day := start; day.Before(end); day = day.Add(1) {
+		for day := start; !day.After(end); day = day.Add(1) {
 			// query the dispositif detailed info (if only the api was REST I could find the next uri inside it)
 			uri := uriDispositif + url.PathEscape(dispo.ID) + "?date=" + url.QueryEscape(day.Format("2006-01-02T15:04:05Z"))
 			data, err := c.query(uri)
@@ -296,8 +297,8 @@ func parseAmundiSnapshot(market *portfolio.MarketData, data []byte) (err error) 
 		ticker := fund.CodeFonds // Using the codeFonds as a unique ticker.
 		day := fund.DateVL
 		price := fund.VL
-		log.Println("received market point", ticker, day, price)
-		if err := appendMarketPoint(market, fund.LibelleFonds, ticker, day, price); err != nil {
+		log.Println("received market point", ticker, day, price, fund.LibelleFonds)
+		if err := appendMarketPoint(market, ticker, day, price); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			errs = errors.Join(errs, err)
 			continue
@@ -307,10 +308,10 @@ func parseAmundiSnapshot(market *portfolio.MarketData, data []byte) (err error) 
 }
 
 // appendMarketPoint add the (ticker, day, price) found from amundi portal.
-func appendMarketPoint(market *portfolio.MarketData, fundName, ticker string, day date.Date, price float64) error {
-	id, err := portfolio.NewPrivate(fundName)
+func appendMarketPoint(market *portfolio.MarketData, ticker string, day date.Date, price float64) error {
+	id, err := portfolio.NewPrivate("Amundi-" + ticker)
 	if err != nil {
-		return fmt.Errorf("cannot create ID from fund name %q: %w", fundName, err)
+		return fmt.Errorf("cannot create ID from fund name %q: %w", ticker, err)
 	}
 
 	sec := market.Get(id)
@@ -318,7 +319,7 @@ func appendMarketPoint(market *portfolio.MarketData, fundName, ticker string, da
 		sec = portfolio.NewSecurity(id, ticker, "EUR")
 		market.Add(sec)
 	}
-	log.Println("appending market point", sec.Ticker(), day, price)
+	log.Println("appending market point", day, ticker, price)
 	market.Append(id, day, price)
 	return nil
 
