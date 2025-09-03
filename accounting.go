@@ -420,11 +420,11 @@ func (as *AccountingSystem) NewDailyReport(on date.Date, now time.Time) (*DailyR
 			}
 			netCashFlow -= amount
 		case Sell:
-			gain, err := as.Ledger.RealizedGain(v.Security, on, FIFO)
+			gain, err := as.Ledger.RealizedGain(v.Security, on, FIFO, as.MarketData)
 			if err != nil {
 				return nil, err
 			}
-			prevDayGain, err := as.Ledger.RealizedGain(v.Security, prevDate, FIFO)
+			prevDayGain, err := as.Ledger.RealizedGain(v.Security, prevDate, FIFO, as.MarketData)
 			if err != nil {
 				return nil, err
 			}
@@ -454,12 +454,12 @@ func (as *AccountingSystem) NewDailyReport(on date.Date, now time.Time) (*DailyR
 
 			posToday := as.Ledger.Position(sec.Ticker(), on, as.MarketData)
 			priceToday, ok := as.MarketData.PriceAsOf(sec.ID(), on)
-		if !ok {
+			if !ok {
 				log.Printf("Warning: could not find price for %s on %s", sec.Ticker(), on)
 				continue
 			}
 			valueToday, err := as.ConvertCurrency(posToday*priceToday, sec.Currency(), as.ReportingCurrency, on)
-		if err != nil {
+			if err != nil {
 				return nil, err
 			}
 
@@ -589,12 +589,12 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 		ticker := sec.Ticker()
 		position := as.Ledger.Position(ticker, period.To, as.MarketData)
 
-		realizedGainEnd, err := as.Ledger.RealizedGain(ticker, period.To, method)
+		realizedGainEnd, err := as.Ledger.RealizedGain(ticker, period.To, method, as.MarketData)
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate realized gain for %q at end of period: %w", ticker, err)
 		}
 
-		realizedGainStart, err := as.Ledger.RealizedGain(ticker, period.From.Add(-1), method)
+		realizedGainStart, err := as.Ledger.RealizedGain(ticker, period.From.Add(-1), method, as.MarketData)
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate realized gain for %q at start of period: %w", ticker, err)
 		}
@@ -602,7 +602,7 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 		realizedGain := realizedGainEnd - realizedGainStart
 
 		// Unrealized Gain
-		costBasisEnd, err := as.Ledger.CostBasis(ticker, period.To, method)
+		costBasisEnd, err := as.Ledger.CostBasis(ticker, period.To, method, as.MarketData)
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate cost basis for %q: %w", ticker, err)
 		}
@@ -616,7 +616,7 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 		unrealizedGainEnd := marketValueEnd - costBasisEnd
 
 		positionStart := as.Ledger.Position(ticker, period.From.Add(-1), as.MarketData)
-		costBasisStart, err := as.Ledger.CostBasis(ticker, period.From.Add(-1), method)
+		costBasisStart, err := as.Ledger.CostBasis(ticker, period.From.Add(-1), method, as.MarketData)
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate cost basis for %q: %w", ticker, err)
 		}

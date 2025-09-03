@@ -168,27 +168,29 @@ func (l *Ledger) Position(ticker string, on date.Date, market *MarketData) float
 			continue // Not a position-affecting transaction
 		}
 
-		// Hack: the global variable change how the whole portfolio handles splits
-		if !AdjustedPrices {
-			// Calculate the adjustment factor for this specific transaction
-			adjustmentFactor := decimal.NewFromInt(1)
-			for _, split := range splits {
-				// A split applies if it happened AFTER the transaction but ON OR BEFORE the query date
-				if split.Date.After(txDate) && !split.Date.After(on) {
-					num := decimal.NewFromInt(split.Numerator)
-					den := decimal.NewFromInt(split.Denominator)
-					splitRatio := num.Div(den)
-					adjustmentFactor = adjustmentFactor.Mul(splitRatio)
-				}
-			}
-
-			quantity = quantity.Mul(adjustmentFactor)
-		}
+		quantity = adjustForSplits(quantity, txDate, on, splits)
 		totalPosition = totalPosition.Add(quantity)
 	}
 
 	pos, _ := totalPosition.Float64()
 	return pos
+}
+
+func adjustForSplits(quantity decimal.Decimal, txDate date.Date, on date.Date, splits []Split) decimal.Decimal {
+	if AdjustedPrices {
+		return quantity
+	}
+	adjustmentFactor := decimal.NewFromInt(1)
+	for _, split := range splits {
+		// A split applies if it happened AFTER the transaction but ON OR BEFORE the query date
+		if split.Date.After(txDate) && !split.Date.After(on) {
+			num := decimal.NewFromInt(split.Numerator)
+			den := decimal.NewFromInt(split.Denominator)
+			splitRatio := num.Div(den)
+			adjustmentFactor = adjustmentFactor.Mul(splitRatio)
+		}
+	}
+	return quantity.Mul(adjustmentFactor)
 }
 
 // CashBalance computes the total cash in a specific currency on a specific date.
@@ -299,8 +301,8 @@ func (l *Ledger) AllCounterpartyAccounts() iter.Seq[string] {
 
 // CostBasis calculates the total cost basis of the remaining holdings for a given security
 // on a specific date, using the specified method.
-func (l *Ledger) CostBasis(ticker string, on date.Date, method CostBasisMethod) (float64, error) {
-	remainingLots, _, err := l.calculateRemainingLots(ticker, on, method)
+func (l *Ledger) CostBasis(ticker string, on date.Date, method CostBasisMethod, market *MarketData) (float64, error) {
+	remainingLots, _, err := l.calculateRemainingLots(ticker, on, method, market.Splits(l.securities[ticker].ID()))
 	if err != nil {
 		return 0, err
 	}
@@ -315,15 +317,16 @@ func (l *Ledger) CostBasis(ticker string, on date.Date, method CostBasisMethod) 
 
 // RealizedGain calculates the total realized gain or loss for a given security
 // on a specific date, using the specified method.
-func (l *Ledger) RealizedGain(ticker string, on date.Date, method CostBasisMethod) (float64, error) {
-	_, realizedGain, err := l.calculateRemainingLots(ticker, on, method)
+func (l *Ledger) RealizedGain(ticker string, on date.Date, method CostBasisMethod, market *MarketData) (float64, error) {
+	_, realizedGain, err := l.calculateRemainingLots(ticker, on, method, market.Splits(l.securities[ticker].ID()))
 	if err != nil {
 		return 0, err
 	}
 	return realizedGain.InexactFloat64(), nil
 }
 
-func (l *Ledger) calculateRemainingLots(ticker string, on date.Date, method CostBasisMethod) ([]lot, decimal.Decimal, error) {
+// calculateRemainingLots return adjusted quantities for split
+func (l *Ledger) calculateRemainingLots(ticker string, on date.Date, method CostBasisMethod, splits []Split) ([]lot, decimal.Decimal, error) {
 	var currentLots []lot
 	var realizedGain decimal.Decimal
 
@@ -335,9 +338,10 @@ func (l *Ledger) calculateRemainingLots(ticker string, on date.Date, method Cost
 		switch v := tx.(type) {
 		case Buy:
 			if v.Security == ticker {
+				q := adjustForSplits(decimal.NewFromFloat(v.Quantity), v.When(), on, splits)
 				newLot := lot{
 					Date:     v.When(),
-					Quantity: decimal.NewFromFloat(v.Quantity),
+					Quantity: q,
 					Cost:     decimal.NewFromFloat(v.Amount),
 				}
 				currentLots = append(currentLots, newLot)
@@ -347,7 +351,7 @@ func (l *Ledger) calculateRemainingLots(ticker string, on date.Date, method Cost
 			}
 		case Sell:
 			if v.Security == ticker {
-				soldQuantity := decimal.NewFromFloat(v.Quantity)
+				soldQuantity := adjustForSplits(decimal.NewFromFloat(v.Quantity), v.When(), on, splits)
 				proceeds := decimal.NewFromFloat(v.Amount)
 				costOfSoldShares, newLots, err := l.reduceLots(currentLots, soldQuantity, method)
 				if err != nil {

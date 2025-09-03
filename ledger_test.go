@@ -315,6 +315,7 @@ func TestLedger_CashBalance(t *testing.T) {
 
 func TestLedger_CostBasisAndRealizedGain(t *testing.T) {
 	ledger := NewLedger()
+	market := NewMarketData()
 	o := date.New(2025, time.January, 1)
 	ledger.Append(
 		NewDeclaration(o, "", "AAPL", "US0378331005.XNAS", "USD"),
@@ -369,7 +370,7 @@ func TestLedger_CostBasisAndRealizedGain(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			costBasis, err := ledger.CostBasis(tc.ticker, tc.date, tc.method)
+			costBasis, err := ledger.CostBasis(tc.ticker, tc.date, tc.method, market)
 			if err != nil {
 				t.Errorf("CostBasis() error = %v", err)
 			}
@@ -377,7 +378,7 @@ func TestLedger_CostBasisAndRealizedGain(t *testing.T) {
 				t.Errorf("CostBasis() = %v, want %v", costBasis, tc.wantCostBasis)
 			}
 
-			realizedGain, err := ledger.RealizedGain(tc.ticker, tc.date, tc.method)
+			realizedGain, err := ledger.RealizedGain(tc.ticker, tc.date, tc.method, market)
 			if err != nil {
 				t.Errorf("RealizedGain() error = %v", err)
 			}
