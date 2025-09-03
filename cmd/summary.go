@@ -74,9 +74,6 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 
 	// Helper to format performance percentages
 	formatPerf := func(p portfolio.Performance) string {
-		if p.StartValue == 0 {
-			return "N/A"
-		}
 		return fmt.Sprintf("%+.2f%%", p.Return*100)
 	}
 

@@ -30,6 +30,16 @@ type Balance struct {
 	prices map[string]decimal.Decimal
 	// forex rate to convert to the reporting currency.
 	forex map[string]decimal.Decimal
+
+	// linkedTWR are percentages, not currency or quantities, and therefore are better represented as float64
+	linkedTWR     float64
+	lastValuation float64         // The total portfolio value at the last cash flow event.
+	initialValue  decimal.Decimal // First cash deposit, or accrued value
+}
+
+// Price returns the current price for a given ticker.
+func (b *Balance) Price(ticker string) decimal.Decimal {
+	return b.prices[ticker]
 }
 
 // NewBalance creates an initialized, empty Balance object.
@@ -43,6 +53,8 @@ func NewBalance() *Balance {
 		realizedGains:        make(map[string]decimal.Decimal),
 		prices:               make(map[string]decimal.Decimal),
 		forex:                make(map[string]decimal.Decimal),
+		linkedTWR:            1.0,
+		lastValuation:        0,
 	}
 }
 
@@ -60,15 +72,38 @@ func NewBalanceFromJournal(j *Journal, on date.Date, method CostBasisMethod) (*B
 			return nil, fmt.Errorf("failed to apply event on %s: %w", e.date(), err)
 		}
 	}
+	// call computeTWR to account for the interval between the last cash flow and the report date
+	balance.computeTWR(decimal.Zero)
 	return balance, nil
+}
+
+func (b *Balance) computeTWR(cashFlowAmount decimal.Decimal) {
+	{
+		// 1. Calculate the portfolio value *before* this cash flow.
+		valueBeforeCF := b.TotalPortfolioValue().InexactFloat64() // You'll need to create this helper method.
+
+		// 2. If this isn't the very first cash flow, calculate the sub-period return.
+		if b.lastValuation != 0 {
+			subPeriodReturn := (valueBeforeCF - b.lastValuation) / b.lastValuation
+			// 3. Geometrically link this return to the running total.
+			b.linkedTWR *= 1 + subPeriodReturn
+		}
+		// 4. Update the lastValuation to the value *after* the cash flow.
+		b.lastValuation = valueBeforeCF + cashFlowAmount.InexactFloat64()
+	}
 }
 
 // apply processes a single event and updates the Balance state accordingly.
 func (b *Balance) apply(e event, method CostBasisMethod) error {
 	switch v := e.(type) {
 	case creditCash:
+		if b.initialValue.IsZero() {
+			b.initialValue = v.amount
+		}
+		b.computeTWR(v.amount)
 		b.cashAccounts[v.currency] = b.cashAccounts[v.currency].Add(v.amount)
 	case debitCash:
+		b.computeTWR(v.amount.Neg())
 		b.cashAccounts[v.currency] = b.cashAccounts[v.currency].Sub(v.amount)
 	case acquireLot:
 		newLot := lot{
@@ -95,6 +130,9 @@ func (b *Balance) apply(e event, method CostBasisMethod) error {
 		b.realizedGains[v.security] = b.realizedGains[v.security].Add(gain)
 
 	case creditCounterparty:
+		if b.initialValue.IsZero() {
+			b.initialValue = v.amount
+		}
 		b.counterpartyAccounts[v.account] = b.counterpartyAccounts[v.account].Add(v.amount)
 	case debitCounterparty:
 		b.counterpartyAccounts[v.account] = b.counterpartyAccounts[v.account].Sub(v.amount)
@@ -152,6 +190,12 @@ func (b *Balance) Securities() iter.Seq[Security] {
 	}
 }
 
+func (b *Balance) Counterparties() iter.Seq[string] {
+	keys := slices.Collect(maps.Keys(b.counterpartyAccounts))
+	slices.Sort(keys)
+	return slices.Values(keys)
+}
+
 // Position returns the quantity of a security held.
 func (b *Balance) Position(ticker string) decimal.Decimal {
 	var totalQuantity decimal.Decimal
@@ -184,6 +228,11 @@ func (b *Balance) MarketValue(ticker string) decimal.Decimal {
 	return b.Position(ticker).Mul(price)
 }
 
+// Return returns the TWR return since inception
+func (b *Balance) Return() float64 {
+	return b.linkedTWR - 1.0
+}
+
 // ConvertedMarketValue returns the total market value of a security in the reporting currency.
 func (b *Balance) secCurrency(ticker string) string { return b.securities[ticker].currency }
 
@@ -205,6 +254,11 @@ func (b *Balance) Cash(currency string) decimal.Decimal {
 // Counterparty returns the balance of a specific counterparty account.
 func (b *Balance) Counterparty(account string) decimal.Decimal {
 	return b.counterpartyAccounts[account]
+}
+
+// CounterpartyCurrency	returns the currency of a specific counterparty account.
+func (b *Balance) CounterpartyCurrency(account string) string {
+	return b.counterpartyCur[account]
 }
 
 // TotalRealizedGain returns the total realized gains accross all holdings.
