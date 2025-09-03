@@ -45,13 +45,6 @@ func ParseCostBasisMethod(s string) (CostBasisMethod, error) {
 	}
 }
 
-// lot represents a single purchase of a security.
-// lot represents a single purchase of a security, used for cost basis calculations.
-type lot struct {
-	Date     date.Date
-	Quantity decimal.Decimal
-	Cost     decimal.Decimal // Total cost of the lot (quantity * price)
-}
 
 // Ledger represents a list of transactions.
 //
@@ -299,130 +292,10 @@ func (l *Ledger) AllCounterpartyAccounts() iter.Seq[string] {
 	}
 }
 
-// CostBasis calculates the total cost basis of the remaining holdings for a given security
-// on a specific date, using the specified method.
-func (l *Ledger) CostBasis(ticker string, on date.Date, method CostBasisMethod, market *MarketData) (float64, error) {
-	remainingLots, _, err := l.calculateRemainingLots(ticker, on, method, market.Splits(l.securities[ticker].ID()))
-	if err != nil {
-		return 0, err
-	}
 
-	var totalCost decimal.Decimal
-	for _, l := range remainingLots {
-		totalCost = totalCost.Add(l.Cost)
-	}
 
-	return totalCost.InexactFloat64(), nil
-}
 
-// RealizedGain calculates the total realized gain or loss for a given security
-// on a specific date, using the specified method.
-func (l *Ledger) RealizedGain(ticker string, on date.Date, method CostBasisMethod, market *MarketData) (float64, error) {
-	_, realizedGain, err := l.calculateRemainingLots(ticker, on, method, market.Splits(l.securities[ticker].ID()))
-	if err != nil {
-		return 0, err
-	}
-	return realizedGain.InexactFloat64(), nil
-}
 
-// calculateRemainingLots return adjusted quantities for split
-func (l *Ledger) calculateRemainingLots(ticker string, on date.Date, method CostBasisMethod, splits []Split) ([]lot, decimal.Decimal, error) {
-	var currentLots []lot
-	var realizedGain decimal.Decimal
-
-	for _, tx := range l.transactions {
-		if tx.When().After(on) {
-			break // Transactions are sorted, so we can stop
-		}
-
-		switch v := tx.(type) {
-		case Buy:
-			if v.Security == ticker {
-				q := adjustForSplits(decimal.NewFromFloat(v.Quantity), v.When(), on, splits)
-				newLot := lot{
-					Date:     v.When(),
-					Quantity: q,
-					Cost:     decimal.NewFromFloat(v.Amount),
-				}
-				currentLots = append(currentLots, newLot)
-				sort.Slice(currentLots, func(i, j int) bool {
-					return currentLots[i].Date.Before(currentLots[j].Date)
-				})
-			}
-		case Sell:
-			if v.Security == ticker {
-				soldQuantity := adjustForSplits(decimal.NewFromFloat(v.Quantity), v.When(), on, splits)
-				proceeds := decimal.NewFromFloat(v.Amount)
-				costOfSoldShares, newLots, err := l.reduceLots(currentLots, soldQuantity, method)
-				if err != nil {
-					return nil, decimal.Zero, err
-				}
-				realizedGain = realizedGain.Add(proceeds.Sub(costOfSoldShares))
-				currentLots = newLots
-			}
-		}
-	}
-
-	return currentLots, realizedGain, nil
-}
-
-func (l *Ledger) reduceLots(lots []lot, quantityToSell decimal.Decimal, method CostBasisMethod) (decimal.Decimal, []lot, error) {
-	var costOfSoldShares decimal.Decimal
-	var remainingLots []lot
-
-	switch method {
-	case FIFO:
-		for _, currentLot := range lots {
-			if quantityToSell.IsZero() {
-				remainingLots = append(remainingLots, currentLot)
-				continue
-			}
-
-			if currentLot.Quantity.GreaterThan(quantityToSell) {
-				// Partial sale from this lot
-				costOfSoldPortion := currentLot.Cost.Div(currentLot.Quantity).Mul(quantityToSell)
-				costOfSoldShares = costOfSoldShares.Add(costOfSoldPortion)
-				newLot := lot{
-					Date:     currentLot.Date,
-					Quantity: currentLot.Quantity.Sub(quantityToSell),
-					Cost:     currentLot.Cost.Sub(costOfSoldPortion),
-				}
-				remainingLots = append(remainingLots, newLot)
-				quantityToSell = decimal.Zero
-			} else {
-				// Full sale of this lot
-				costOfSoldShares = costOfSoldShares.Add(currentLot.Cost)
-				quantityToSell = quantityToSell.Sub(currentLot.Quantity)
-			}
-		}
-	case AverageCost:
-		var totalQuantity decimal.Decimal
-		var totalCost decimal.Decimal
-		for _, currentLot := range lots {
-			totalQuantity = totalQuantity.Add(currentLot.Quantity)
-			totalCost = totalCost.Add(currentLot.Cost)
-		}
-
-		if totalQuantity.LessThan(quantityToSell) {
-			return decimal.Zero, nil, fmt.Errorf("not enough shares to sell for %v", quantityToSell)
-		}
-
-		averageCost := totalCost.Div(totalQuantity)
-		costOfSoldShares = averageCost.Mul(quantityToSell)
-		remainingQuantity := totalQuantity.Sub(quantityToSell)
-		remainingCost := totalCost.Sub(costOfSoldShares)
-
-		if remainingQuantity.IsPositive() {
-			remainingLots = append(remainingLots, lot{
-				Date:     lots[0].Date, // The date of the lot is not really important for average cost
-				Quantity: remainingQuantity,
-				Cost:     remainingCost,
-			})
-		}
-	}
-
-	return costOfSoldShares, remainingLots, nil
-}
 
 // SecurityTransactions returns an iterator over transactions related to a specific
 // security (Buy, Sell, Dividend) up to and including a given date.
@@ -501,7 +374,9 @@ func (l *Ledger) AllCurrencies() iter.Seq[string] {
 			}
 		}
 		// Now yield the values
-		for currency := range visitedCurrencies {
+		currencies := slices.Collect(maps.Keys(visitedCurrencies))
+		slices.Sort(currencies)
+		for _, currency := range currencies {
 			if !yield(currency) {
 				return
 			}

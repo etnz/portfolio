@@ -75,7 +75,7 @@ Public securities will have their prices fetched automatically, while private se
 Also it might look redundant, but you need to declare your assets in your ledger as well. This is because you might have multiple ledgers holding the same security, and you want to track them separately.
 
 ```bash run
-pcs declare -s AAPL -id US0378331005.XETR -c EUR
+pcs declare -d 2025-08-27 -s AAPL -id US0378331005.XETR -c EUR
 ```
 
 ```console check
@@ -83,7 +83,7 @@ Successfully appended transaction to transactions.jsonl
 ```
 
 ```bash run
-pcs declare -s BankFund1 -id My-bank-Fund1 -c EUR
+pcs declare -d 2025-08-27 -s BankFund1 -id My-bank-Fund1 -c EUR
 ```
 
 ```console check

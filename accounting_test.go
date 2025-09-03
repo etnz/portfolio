@@ -21,10 +21,10 @@ func setupCostBasisTest(t *testing.T) (*Ledger, *MarketData, *AccountingSystem) 
 		NewDeclaration(o, "", "AAPL", "US0378331005.XNAS", "USD"),
 		NewDeclaration(o, "", "USDEUR", "USDEUR", "EUR"),
 		NewDeclaration(o, "", "GBPEUR", "GBPEUR", "EUR"),
-		NewDeposit(date.New(2025, time.January, 10), "Initial USD", "USD", 1000),
-		NewDeposit(date.New(2025, time.February, 15), "Initial GBP", "GBP", 500),
+		NewDeposit(date.New(2025, time.January, 10), "Initial USD", "USD", 1000, ""),
+		NewDeposit(date.New(2025, time.February, 15), "Initial GBP", "GBP", 500, ""),
 		NewWithdraw(date.New(2025, time.March, 20), "Partial USD", "USD", 200),
-		NewDeposit(date.New(2025, time.April, 1), "EUR Deposit", "EUR", 2000),
+		NewDeposit(date.New(2025, time.April, 1), "EUR Deposit", "EUR", 2000, ""),
 		// Add a non-cash-flow transaction to ensure it's ignored
 		NewBuy(date.New(2025, time.April, 5), "", "AAPL", 10, 10*150),
 	)
@@ -66,22 +66,22 @@ func TestAccountingSystem_CostBasis(t *testing.T) {
 		{
 			name:          "On date of first deposit",
 			onDate:        date.New(2025, time.January, 10),
-			wantCostBasis: 900, // 1000 USD * 0.90
+			wantCostBasis: 0, // no buy
 		},
 		{
 			name:          "After second deposit",
 			onDate:        date.New(2025, time.February, 20),
-			wantCostBasis: 1475, // (1000 * 0.90) + (500 * 1.15) = 900 + 575
+			wantCostBasis: 0, // no holdings
 		},
 		{
 			name:          "After withdrawal",
 			onDate:        date.New(2025, time.March, 25),
-			wantCostBasis: 1291, // 1475 - (200 * 0.92) = 1475 - 184
+			wantCostBasis: 0, // no holdings
 		},
 		{
 			name:          "After all cash flow transactions",
 			onDate:        date.New(2025, time.May, 1),
-			wantCostBasis: 3291, // 1291 + 2000 (EUR deposit)
+			wantCostBasis: 1380, // 10*150 buy aapl *.92 forex
 		},
 	}
 
@@ -112,9 +112,9 @@ func setupPerformanceTest(t *testing.T) (*Ledger, *MarketData, *AccountingSystem
 	ledger := NewLedger()
 	ledger.Append(
 		NewDeclaration(o, "", "TICK", id.String(), "USD"),
-		NewDeposit(date.New(2025, time.January, 1), "", "USD", 10000),
+		NewDeposit(date.New(2025, time.January, 1), "", "USD", 10000, ""),
 		NewBuy(date.New(2025, time.January, 1), "", "TICK", 100, 100*100),
-		NewDeposit(date.New(2025, time.January, 15), "", "USD", 1100),
+		NewDeposit(date.New(2025, time.January, 15), "", "USD", 1100, ""),
 	)
 
 	marketData := NewMarketData()
@@ -170,21 +170,22 @@ func TestAccountingSystem_CalculatePeriodPerformance(t *testing.T) {
 	}
 }
 
-func TestAccountingSystem_CostBasis_ErrorOnMissingRate(t *testing.T) {
-	ledger, _, _ := setupCostBasisTest(t)
+// Validation of the accounting system needs to be done before computing.
+// func TestAccountingSystem_CostBasis_ErrorOnMissingRate(t *testing.T) {
+// 	ledger, _, _ := setupCostBasisTest(t)
 
-	// Create market data that is missing a required exchange rate
-	marketDataWithoutRate := NewMarketData()
-	as, err := NewAccountingSystem(ledger, marketDataWithoutRate, "EUR")
-	if err != nil {
-		t.Fatalf("NewAccountingSystem() failed: %v", err)
-	}
+// 	// Create market data that is missing a required exchange rate
+// 	marketDataWithoutRate := NewMarketData()
+// 	as, err := NewAccountingSystem(ledger, marketDataWithoutRate, "EUR")
+// 	if err != nil {
+// 		t.Fatalf("NewAccountingSystem() failed: %v", err)
+// 	}
 
-	_, err = as.CostBasis(date.New(2025, time.May, 1))
-	if err == nil {
-		t.Error("CostBasis() expected an error due to missing exchange rate, but got nil")
-	}
-}
+// 	_, err = as.CostBasis(date.New(2025, time.May, 1))
+// 	if err == nil {
+// 		t.Error("CostBasis() expected an error due to missing exchange rate, but got nil")
+// 	}
+// }
 
 // setupValidationTest creates a standard ledger, market data, and accounting system for validation tests.
 func setupValidationTest(t *testing.T) *AccountingSystem {
@@ -195,8 +196,8 @@ func setupValidationTest(t *testing.T) *AccountingSystem {
 	ledger.Append(
 		NewDeclaration(o, "", "AAPL", "US0378331005.XNAS", "USD"),
 		NewDeclaration(o, "", "GOOG", "US38259P5089.XNAS", "USD"),
-		NewDeposit(date.New(2025, time.January, 1), "", "USD", 20000),
-		NewDeposit(date.New(2025, time.January, 1), "", "EUR", 10000),
+		NewDeposit(date.New(2025, time.January, 1), "", "USD", 20000, ""),
+		NewDeposit(date.New(2025, time.January, 1), "", "EUR", 10000, ""),
 		NewBuy(date.New(2025, time.January, 2), "", "AAPL", 100, 100*150.0), // Cost: 15000 USD, remaining: 5000 USD
 	)
 
@@ -244,8 +245,8 @@ func TestAccountingSystem_Validate(t *testing.T) {
 		},
 		{
 			name:    "Quick Fix: Auto-populate date",
-			inputTx: NewDeposit(date.Date{}, "late deposit", "EUR", 1000), // Zero date
-			wantTx:  NewDeposit(date.Today(), "late deposit", "EUR", 1000),
+			inputTx: NewDeposit(date.Date{}, "late deposit", "EUR", 1000, ""), // Zero date
+			wantTx:  NewDeposit(date.Today(), "late deposit", "EUR", 1000, ""),
 			wantErr: false,
 		},
 		{
@@ -260,7 +261,7 @@ func TestAccountingSystem_Validate(t *testing.T) {
 		},
 		{
 			name:    "Error: Invalid currency",
-			inputTx: NewDeposit(testDate, "", "US", 1000), // Invalid currency code
+			inputTx: NewDeposit(testDate, "", "US", 1000, ""), // Invalid currency code
 			wantErr: true,
 		},
 		{

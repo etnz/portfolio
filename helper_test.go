@@ -182,3 +182,10 @@ func runTestableCommands(t *testing.T, file string) {
 		r.runBlock(t, block)
 	}
 }
+
+func must[T any](a T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return a
+}

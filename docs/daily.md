@@ -22,8 +22,8 @@ This scenario demonstrates a typical day with market gains and a simple transact
 ```bash setup
 pcs deposit -d 2025-01-01 -c EUR -a 10000
 pcs deposit -d 2025-01-01 -c USD -a 2000
-pcs declare -s MSFT -id US0378331005.XNAS -c USD
-pcs buy -d 2025-01-02 -s MSFT -q 10 -a 1000
+pcs declare -d 2025-01-01 -s MSFT -id US0378331005.XNAS -c USD
+pcs buy     -d 2025-01-02 -s MSFT -q 10 -a 1000
 pcs add-security -s MSFT -id US0378331005.XNAS -c USD
 pcs add-security -s EURUSD -id EURUSD -c USD
 pcs update-security -id US0378331005.XNAS -d 2025-01-02 -p 100
@@ -65,8 +65,8 @@ This scenario demonstrates a situation where a large cash deposit on a day with 
 ```bash setup
 pcs deposit -d 2025-01-01 -c EUR -a 10000
 pcs deposit -d 2025-01-01 -c USD -a 2000
-pcs declare -s MSFT -id US0378331005.XNAS -c USD
-pcs buy -d 2025-01-02 -s MSFT -q 10 -a 1000
+pcs declare -d 2025-01-01 -s MSFT -id US0378331005.XNAS -c USD
+pcs buy     -d 2025-01-02 -s MSFT -q 10 -a 1000
 pcs add-security -s MSFT -id US0378331005.XNAS -c USD
 pcs add-security -s EURUSD -id EURUSD -c USD
 pcs update-security -id US0378331005.XNAS -d 2025-01-02 -p 100

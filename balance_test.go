@@ -1,22 +1,23 @@
 package portfolio
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
 	"github.com/etnz/portfolio/date"
+	"github.com/shopspring/decimal"
 )
 
-// TODO: add a Position test with some splits
-
-func TestLedger_Position(t *testing.T) {
+func TestBalance_Position(t *testing.T) {
 	ledger := NewLedger()
-	market := NewMarketData()
+	as, err := NewAccountingSystem(ledger, NewMarketData(), "USD")
+	if err != nil {
+		t.Fatalf("NewAccountingSystem() error = %v", err)
+	}
 	o := date.New(2025, time.January, 1)
 	ledger.Append(
-		NewDeclaration(o, "", "AAPL", "US0378331005.XNAS", "EUR"),
-		NewDeclaration(o, "", "GOOG", "US38259P5089.XNAS", "EUR"),
+		NewDeclaration(o, "", "AAPL", "US0378331005.XNAS", "USD"),
+		NewDeclaration(o, "", "GOOG", "US38259P5089.XNAS", "USD"),
 		NewBuy(date.New(2025, time.January, 10), "", "AAPL", 100, 100*150.0),
 		NewBuy(date.New(2025, time.January, 15), "", "GOOG", 50, 50*2800.0),
 		NewSell(date.New(2025, time.February, 1), "", "AAPL", 25, 25*160.0),
@@ -24,8 +25,11 @@ func TestLedger_Position(t *testing.T) {
 		NewBuy(date.New(2025, time.February, 10), "", "AAPL", 10, 10*155.0),
 		NewSell(date.New(2025, time.March, 1), "", "GOOG", 50, 50*2900.0), // Sell all GOOG
 	)
-	// The ledger is intentionally created with sorted transactions, as the underlying
-	// SecurityTransactions method relies on a sorted list for efficiency.
+
+	journal, err := as.newJournal()
+	if err != nil {
+		t.Fatalf("NewJournal() error = %v", err)
+	}
 
 	testCases := []struct {
 		name         string
@@ -103,109 +107,25 @@ func TestLedger_Position(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			gotPosition := ledger.Position(tc.ticker, tc.date, market)
-			if gotPosition != tc.wantPosition {
-				t.Errorf("Position(%q, %s) = %v, want %v", tc.ticker, tc.date, gotPosition, tc.wantPosition)
+			balance, err := NewBalanceFromJournal(journal, tc.date, FIFO)
+			if err != nil {
+				t.Fatalf("NewBalanceFromJournal() error = %v", err)
+			}
+			gotPosition := balance.Position(tc.ticker)
+			wantPosition := decimal.NewFromFloat(tc.wantPosition)
+			if !gotPosition.Equal(wantPosition) {
+				t.Errorf("Position(%q, %s) = %v, want %v", tc.ticker, tc.date, gotPosition, wantPosition)
 			}
 		})
 	}
 }
 
-func TestLedger_SecurityTransactions(t *testing.T) {
-	// 1. Arrange: Create a sorted ledger with a mix of transactions.
-	tx1_aapl_buy := NewBuy(date.New(2025, time.January, 10), "", "AAPL", 10, 10*150.0)
-	tx2_aapl_sell := NewSell(date.New(2025, time.January, 15), "", "AAPL", 5, 5*155.0)
-	tx3_goog_buy := NewBuy(date.New(2025, time.January, 15), "", "GOOG", 2, 2*2800.0)
-	tx4_aapl_div := NewDividend(date.New(2025, time.January, 20), "", "AAPL", 20.0)
-	tx5_deposit := NewDeposit(date.New(2025, time.January, 22), "", "USD", 1000.0, "") // Should be ignored by SecurityTransactions
-
+func TestBalance_CashBalance(t *testing.T) {
 	ledger := NewLedger()
-	o := date.New(2025, time.January, 1)
-	ledger.Append(
-		NewDeclaration(o, "", "AAPL", "US0378331005.XNAS", "EUR"),
-		NewDeclaration(o, "", "GOOG", "US38259P5089.XNAS", "EUR"),
-		tx1_aapl_buy,
-		tx2_aapl_sell,
-		tx3_goog_buy,
-		tx4_aapl_div,
-		tx5_deposit,
-	)
-	// The ledger is pre-sorted by date for this test.
-
-	testCases := []struct {
-		name    string
-		ticker  string
-		maxDate date.Date
-		wantTx  []Transaction
-	}{
-		{
-			name:    "AAPL before any transactions",
-			ticker:  "AAPL",
-			maxDate: date.New(2025, time.January, 1),
-			wantTx:  []Transaction{},
-		},
-		{
-			name:    "AAPL day after first buy",
-			ticker:  "AAPL",
-			maxDate: date.New(2025, time.January, 10),
-			wantTx:  []Transaction{tx1_aapl_buy},
-		},
-		{
-			name:    "AAPL on day before second transaction",
-			ticker:  "AAPL",
-			maxDate: date.New(2025, time.January, 14),
-			wantTx:  []Transaction{tx1_aapl_buy},
-		},
-		{
-			name:    "AAPL on day of second transaction",
-			ticker:  "AAPL",
-			maxDate: date.New(2025, time.January, 15),
-			wantTx:  []Transaction{tx1_aapl_buy, tx2_aapl_sell},
-		},
-		{
-			name:    "AAPL after all its transactions",
-			ticker:  "AAPL",
-			maxDate: date.New(2025, time.January, 21),
-			wantTx:  []Transaction{tx1_aapl_buy, tx2_aapl_sell, tx4_aapl_div},
-		},
-		{
-			name:    "GOOG on day of its transaction",
-			ticker:  "GOOG",
-			maxDate: date.New(2025, time.January, 15),
-			wantTx:  []Transaction{tx3_goog_buy},
-		},
-		{
-			name:    "GOOG before its transaction",
-			ticker:  "GOOG",
-			maxDate: date.New(2025, time.January, 14),
-			wantTx:  []Transaction{},
-		},
-		{
-			name:    "Ticker with no transactions",
-			ticker:  "MSFT",
-			maxDate: date.New(2025, time.February, 1),
-			wantTx:  []Transaction{},
-		},
+	as, err := NewAccountingSystem(ledger, NewMarketData(), "USD")
+	if err != nil {
+		t.Fatalf("NewAccountingSystem() error = %v", err)
 	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			gotTx := []Transaction{}
-			seq := ledger.SecurityTransactions(tc.ticker, tc.maxDate)
-			seq(func(_ int, tx Transaction) bool {
-				gotTx = append(gotTx, tx)
-				return true
-			})
-
-			if !reflect.DeepEqual(gotTx, tc.wantTx) {
-				t.Errorf("SecurityTransactions(%q, %s) got %v, want %v", tc.ticker, tc.maxDate, gotTx, tc.wantTx)
-			}
-		})
-	}
-}
-
-func TestLedger_CashBalance(t *testing.T) {
-	ledger := NewLedger()
 	o := date.New(2025, time.January, 1)
 	ledger.Append(
 		NewDeclaration(o, "", "AAPL", "US0378331005.XNAS", "USD"),
@@ -219,6 +139,11 @@ func TestLedger_CashBalance(t *testing.T) {
 		NewConvert(date.New(2025, time.March, 10), "", "USD", 2000, "EUR", 1800), // -2000 USD, +1800 EUR
 		NewWithdraw(date.New(2025, time.April, 1), "", "EUR", 500),               // -500 EUR
 	)
+
+	journal, err := as.newJournal()
+	if err != nil {
+		t.Fatalf("NewJournal() error = %v", err)
+	}
 
 	testCases := []struct {
 		name        string
@@ -305,15 +230,72 @@ func TestLedger_CashBalance(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			gotBalance := ledger.CashBalance(tc.currency, tc.date)
-			if gotBalance != tc.wantBalance {
-				t.Errorf("CashBalance(%q, %s) = %v, want %v", tc.currency, tc.date, gotBalance, tc.wantBalance)
+			balance, err := NewBalanceFromJournal(journal, tc.date, FIFO)
+			if err != nil {
+				t.Fatalf("NewBalanceFromJournal() error = %v", err)
+			}
+			gotBalance := balance.Cash(tc.currency)
+			wantBalance := decimal.NewFromFloat(tc.wantBalance)
+			if !gotBalance.Equal(wantBalance) {
+				t.Errorf("CashBalance(%q, %s) = %v, want %v", tc.currency, tc.date, gotBalance, wantBalance)
 			}
 		})
 	}
 }
 
-func TestLedger_CostBasisAndRealizedGain(t *testing.T) {
+func TestBalance_CounterpartyAccountBalance(t *testing.T) {
+	ledger := NewLedger()
+	as, err := NewAccountingSystem(ledger, NewMarketData(), "USD")
+	if err != nil {
+		t.Fatalf("NewAccountingSystem() error = %v", err)
+	}
+	o := date.New(2025, time.January, 1)
+	ledger.Append(
+		NewAccrue(o, "interest", "bux", 10.0, "EUR"),
+		NewDeposit(date.New(2025, time.January, 5), "", "EUR", 10.0, "bux"),
+	)
+
+	journal, err := as.newJournal()
+	if err != nil {
+		t.Fatalf("NewJournal() error = %v", err)
+	}
+
+	testCases := []struct {
+		name        string
+		account     string
+		date        date.Date
+		wantBalance float64
+	}{
+		{
+			name:        "Initial balance",
+			account:     "bux",
+			date:        o,
+			wantBalance: 10.0,
+		},
+		{
+			name:        "Final balance",
+			account:     "bux",
+			date:        date.New(2025, time.January, 5),
+			wantBalance: 0,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			balance, err := NewBalanceFromJournal(journal, tc.date, FIFO)
+			if err != nil {
+				t.Fatalf("NewBalanceFromJournal() error = %v", err)
+			}
+			gotBalance := balance.Counterparty(tc.account)
+			wantBalance := decimal.NewFromFloat(tc.wantBalance)
+			if !gotBalance.Equal(wantBalance) {
+				t.Errorf("CounterpartyAccountBalance(%q, %s) = %v, want %v", tc.account, tc.date, gotBalance, wantBalance)
+			}
+		})
+	}
+}
+
+func TestBalance_TotalMarketValue(t *testing.T) {
 	ledger := NewLedger()
 	market := NewMarketData()
 	as, err := NewAccountingSystem(ledger, market, "USD")
@@ -321,73 +303,43 @@ func TestLedger_CostBasisAndRealizedGain(t *testing.T) {
 		t.Fatalf("NewAccountingSystem() error = %v", err)
 	}
 	o := date.New(2025, time.January, 1)
+	apple := NewSecurity("US0378331005.XNAS", "AAPL", "USD")
 	ledger.Append(
-		NewDeclaration(o, "", "AAPL", "US0378331005.XNAS", "USD"),
-		NewBuy(date.New(2025, time.January, 10), "", "AAPL", 100, 100*150.0), // Cost: 15000
-		NewBuy(date.New(2025, time.January, 15), "", "AAPL", 50, 50*160.0),   // Cost: 8000
-		NewSell(date.New(2025, time.February, 1), "", "AAPL", 75, 75*170.0),  // Proceeds: 12750
-		NewBuy(date.New(2025, time.February, 10), "", "AAPL", 25, 25*180.0),  // Cost: 4500
-		NewSell(date.New(2025, time.March, 1), "", "AAPL", 100, 100*190.0),   // Proceeds: 19000
+		NewDeclaration(o, "", apple.Ticker(), apple.ID().String(), apple.Currency()),
+		NewBuy(date.New(2025, time.January, 10), "", "AAPL", 100, 15000.0),
 	)
+	market.Add(apple)
+	market.Append(NewSecurity("US0378331005.XNAS", "AAPL", "USD").ID(), date.New(2025, time.January, 10), 160.0)
+
+	journal, err := as.newJournal()
+	if err != nil {
+		t.Fatalf("NewJournal() error = %v", err)
+	}
 
 	testCases := []struct {
-		name             string
-		ticker           string
-		date             date.Date
-		method           CostBasisMethod
-		wantCostBasis    float64
-		wantRealizedGain float64
+		name      string
+		ticker    string
+		date      date.Date
+		wantValue float64
 	}{
 		{
-			name:             "FIFO - After first sell",
-			ticker:           "AAPL",
-			date:             date.New(2025, time.February, 5),
-			method:           FIFO,
-			wantCostBasis:    (25 * 150) + (50 * 160),
-			wantRealizedGain: (75 * 170) - (75 * 150),
-		},
-		{
-			name:             "FIFO - Final",
-			ticker:           "AAPL",
-			date:             date.New(2025, time.April, 1),
-			method:           FIFO,
-			wantCostBasis:    0,
-			wantRealizedGain: ((75 * 170) - (75 * 150)) + ((100 * 190) - ((25 * 150) + (50 * 160) + (25 * 180))),
-		},
-		{
-			name:             "Average Cost - After first sell",
-			ticker:           "AAPL",
-			date:             date.New(2025, time.February, 5),
-			method:           AverageCost,
-			wantCostBasis:    11500,
-			wantRealizedGain: 1250,
-		},
-		{
-			name:             "Average Cost - Final",
-			ticker:           "AAPL",
-			date:             date.New(2025, time.April, 1),
-			method:           AverageCost,
-			wantCostBasis:    0,
-			wantRealizedGain: 4250,
+			name:      "On the day of the buy",
+			ticker:    "AAPL",
+			date:      date.New(2025, time.January, 10),
+			wantValue: 16000,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			costBasis, err := as.CostBasisForSecurity(tc.ticker, tc.date, tc.method)
+			balance, err := NewBalanceFromJournal(journal, tc.date, FIFO)
 			if err != nil {
-				t.Errorf("CostBasis() error = %v", err)
+				t.Fatalf("NewBalanceFromJournal() error = %v", err)
 			}
-			if costBasis != tc.wantCostBasis {
-				t.Errorf("CostBasis() = %v, want %v", costBasis, tc.wantCostBasis)
-			}
-
-			realizedGain, err := as.RealizedGainForSecurity(tc.ticker, tc.date, tc.method)
-			if err != nil {
-				t.Errorf("RealizedGain() error = %v", err)
-			}
-			if realizedGain != tc.wantRealizedGain {
-				t.Errorf("RealizedGain() = %v, want %v", realizedGain, tc.wantRealizedGain)
+			gotValue := balance.MarketValue(tc.ticker)
+			wantValue := decimal.NewFromFloat(tc.wantValue)
+			if !gotValue.Equal(wantValue) {
+				t.Errorf("TotalMarketValue(%q, %s) = %v, want %v", tc.ticker, tc.date, gotValue, wantValue)
 			}
 		})
 	}

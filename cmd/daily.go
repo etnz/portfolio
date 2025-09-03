@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/date"
@@ -67,7 +66,7 @@ func (c *dailyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		}
 	}
 
-	report, err := as.NewDailyReport(on, time.Now())
+	report, err := as.NewDailyReport(on)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error calculating daily report: %v\n", err)
 		return subcommands.ExitFailure

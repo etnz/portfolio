@@ -24,7 +24,7 @@ This scenario demonstrates how to generate a holding report for a specific date.
 ```bash setup
 pcs deposit -d 2025-01-01 -c EUR -a 10000
 pcs deposit -d 2025-01-01 -c USD -a 5000
-pcs declare -s MSFT -id US0378331005.XNAS -c USD
+pcs declare -d 2025-01-01 -s MSFT -id US0378331005.XNAS -c USD
 pcs buy -d 2025-01-02 -s MSFT -q 10 -a 4000
 pcs add-security -s MSFT -id US0378331005.XNAS -c USD
 pcs add-security -s EURUSD -id EURUSD -c USD

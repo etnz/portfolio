@@ -187,7 +187,7 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 		}
 
 		if totalAmount > 0 {
-			depositTx := portfolio.NewDeposit(op.DateDemand, memo, currency, totalAmount)
+			depositTx := portfolio.NewDeposit(op.DateDemand, memo, currency, totalAmount, "")
 			transactions = append(transactions, depositTx)
 		}
 	case "TRSF": // Arbitrage, Transfert, Réallocation
@@ -209,7 +209,7 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 			}
 		}
 		if totalAmount > 0 {
-			depositTx := portfolio.NewDeposit(op.DateDemand, memo, currency, totalAmount)
+			depositTx := portfolio.NewDeposit(op.DateDemand, memo, currency, totalAmount, "")
 			transactions = append(transactions, depositTx)
 		}
 

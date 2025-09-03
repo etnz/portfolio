@@ -18,7 +18,7 @@ func TestAccountingSystem_NewHoldingReport(t *testing.T) {
 		NewBuy(date.New(2025, time.January, 10), "", "AAPL", 100, 100*150.0),
 		NewBuy(date.New(2025, time.January, 15), "", "GOOG", 50, 50*2800.0),
 		NewSell(date.New(2025, time.February, 1), "", "AAPL", 25, 25*160.0),
-		NewDeposit(date.New(2025, time.February, 5), "", "EUR", 10000),
+		NewDeposit(date.New(2025, time.February, 5), "", "EUR", 10000, ""),
 	)
 
 	market := NewMarketData()
@@ -93,11 +93,4 @@ func TestAccountingSystem_NewHoldingReport(t *testing.T) {
 	if report.TotalValue != wantTotalValue {
 		t.Errorf("NewHoldingReport().TotalValue = %v, want %v", report.TotalValue, wantTotalValue)
 	}
-}
-
-func must[T any](v T, err error) T {
-	if err != nil {
-		panic(err)
-	}
-	return v
 }

@@ -174,8 +174,7 @@ func (c *depositCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.NewDeposit(day, c.memo, c.currency, c.amount)
-	tx.Settles = c.settles
+	tx := portfolio.NewDeposit(day, c.memo, c.currency, c.amount, c.settles)
 	_, status := handleTransaction(tx, f)
 	return status
 }

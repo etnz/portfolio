@@ -37,7 +37,7 @@ This scenario demonstrates the calculation of Time-Weighted Return (TWR) for a s
 ```bash setup
 pcs deposit -d 2025-01-01 -c EUR -a 10000
 pcs deposit -d 2025-01-01 -c USD -a 2000
-pcs declare -s MSFT -id US0378331005.XNAS -c USD
+pcs declare -d 2025-01-01 -s MSFT -id US0378331005.XNAS -c USD
 pcs buy -d 2025-01-02 -s MSFT -q 10 -a 1000
 pcs add-security -s MSFT -id US0378331005.XNAS -c USD
 pcs add-security -s EURUSD -id EURUSD -c USD
@@ -76,7 +76,7 @@ This scenario demonstrates how a large cash deposit can lead to a positive chang
 ```bash setup
 pcs deposit -d 2025-01-01 -c EUR -a 10000
 pcs deposit -d 2025-01-01 -c USD -a 2000
-pcs declare -s MSFT -id US0378331005.XNAS -c USD
+pcs declare -d 2025-01-01 -s MSFT -id US0378331005.XNAS -c USD
 pcs buy -d 2025-01-02 -s MSFT -q 10 -a 1000
 pcs add-security -s MSFT -id US0378331005.XNAS -c USD
 pcs add-security -s EURUSD -id EURUSD -c USD

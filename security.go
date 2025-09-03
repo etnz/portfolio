@@ -288,7 +288,9 @@ func (id ID) MIC() string {
 }
 
 // CurrencyPair validates a 6-character string and extracts the base and quote
-// components. It returns an error if the format is invalid.
+// components. 
+// It returns an error if the format is invalid.
+// 
 func (id ID) CurrencyPair() (base string, quote string, err error) {
 	if len(id) != 6 {
 		return "", "", fmt.Errorf("invalid length: currency pair must be 6 characters, got %d", len(id))

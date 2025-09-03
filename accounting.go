@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"sort"
 	"time"
 
 	"github.com/etnz/portfolio/date"
+	"github.com/shopspring/decimal"
 )
 
 // Performance holds the starting value and the calculated return for a specific period.
@@ -82,6 +84,7 @@ type AssetGain struct {
 type AccountingSystem struct {
 	Ledger            *Ledger
 	MarketData        *MarketData
+	journal           *Journal
 	ReportingCurrency string
 }
 
@@ -165,67 +168,31 @@ func (as *AccountingSystem) Validate(tx Transaction) (Transaction, error) {
 	}
 }
 
-// TotalMarketValue calculates the total value of all security positions and cash balances on a given
+// Balance computes the Balance on a given day.
+func (as *AccountingSystem) Balance(on date.Date) (*Balance, error) {
+	var err error
+	if as.journal == nil {
+		as.journal, err = as.newJournal()
+	}
+	if err != nil {
+		return nil, err
+	}
+	balance, err := NewBalanceFromJournal(as.journal, on, FIFO) // TODO: Make cost basis method configurable
+	if err != nil {
+		return nil, fmt.Errorf("could not create balance from journal: %w", err)
+	}
+	return balance, nil
+}
+
+// TotalPortfolioValue calculates the total value of all security positions and cash balances on a given
 // date, expressed in a single reporting currency. It uses the market data to find
 // security prices and currency exchange rates.
-func (as *AccountingSystem) TotalMarketValue(on date.Date) (float64, error) {
-	if as.ReportingCurrency == "" {
-		return 0, fmt.Errorf("reporting currency is not set in accounting system")
+func (as *AccountingSystem) TotalPortfolioValue(on date.Date) (float64, error) {
+	balance, err := as.Balance(on)
+	if err != nil {
+		return 0, fmt.Errorf("could not get balance for %s: %w", on, err)
 	}
-
-	var totalValue float64
-
-	// Calculate value of all security positions
-	for sec := range as.Ledger.AllSecurities() {
-		position := as.Ledger.Position(sec.Ticker(), on, as.MarketData)
-		if position <= 0 {
-			continue
-		}
-
-		price, ok := as.MarketData.PriceAsOf(sec.ID(), on)
-		if !ok {
-			return 0, fmt.Errorf("could not find price for security %q as of %s", sec.Ticker(), on)
-		}
-
-		positionValue := position * price
-
-		// Convert to reporting currency if necessary
-		convertedValue, err := as.ConvertCurrency(positionValue, sec.currency, as.ReportingCurrency, on)
-		if err != nil {
-			return 0, err
-		}
-		totalValue += convertedValue
-	}
-
-	// Add cash balances
-	for currency := range as.Ledger.AllCurrencies() {
-		balance := as.Ledger.CashBalance(currency, on)
-		if balance == 0 {
-			continue
-		}
-
-		convertedBalance, err := as.ConvertCurrency(balance, currency, as.ReportingCurrency, on)
-		if err != nil {
-			return 0, err
-		}
-		totalValue += convertedBalance
-	}
-
-	// Add counterparty account balances
-	for account := range as.Ledger.AllCounterpartyAccounts() {
-		balance, currency := as.Ledger.CounterpartyAccountBalance(account, on)
-		if balance == 0 {
-			continue
-		}
-
-		convertedBalance, err := as.ConvertCurrency(balance, currency, as.ReportingCurrency, on)
-		if err != nil {
-			return 0, err
-		}
-		totalValue += convertedBalance
-	}
-
-	return totalValue, nil
+	return balance.TotalPortfolioValue().InexactFloat64(), nil
 }
 
 // getCashFlows retrieves all cash flow transactions (deposits and withdrawals)
@@ -277,7 +244,7 @@ func (as *AccountingSystem) getCashFlows(start, end date.Date) (date.History[flo
 func (as *AccountingSystem) calculatePeriodPerformance(startDate, endDate date.Date) (Performance, error) {
 	// The value at the start of the period is the value at the end of the day before.
 	startValueDate := startDate.Add(-1)
-	startValue, err := as.TotalMarketValue(startValueDate)
+	startValue, err := as.TotalPortfolioValue(startValueDate)
 	if err != nil {
 		return Performance{}, fmt.Errorf("could not get start value for date %s: %w", startValueDate, err)
 	}
@@ -298,7 +265,7 @@ func (as *AccountingSystem) calculatePeriodPerformance(startDate, endDate date.D
 
 	// Iterate through each valuation date, which marks the end of a sub-period.
 	for d, cashFlowOnDate := range cashFlows.Values() {
-		valueAfterCF, err := as.TotalMarketValue(d)
+		valueAfterCF, err := as.TotalPortfolioValue(d)
 		if err != nil {
 			return Performance{}, fmt.Errorf("could not get market value for date %s: %w", d, err)
 		}
@@ -329,7 +296,7 @@ func (as *AccountingSystem) NewSummary(on date.Date) (*Summary, error) {
 	}
 
 	// 1. Calculate current total market value
-	currentTMV, err := as.TotalMarketValue(on)
+	currentTMV, err := as.TotalPortfolioValue(on)
 	if err != nil {
 		return nil, fmt.Errorf("could not calculate summary: %w", err)
 	}
@@ -368,33 +335,27 @@ func (as *AccountingSystem) NewSummary(on date.Date) (*Summary, error) {
 }
 
 // NewDailyReport calculates and returns a summary of the portfolio's performance for a single day.
-func (as *AccountingSystem) NewDailyReport(on date.Date, now time.Time) (*DailyReport, error) {
-	if as.ReportingCurrency == "" {
-		return nil, fmt.Errorf("reporting currency is not set in accounting system")
+func (as *AccountingSystem) NewDailyReport(on date.Date) (*DailyReport, error) {
+	endBalance, err := as.Balance(on)
+	if err != nil {
+		return nil, err
+	}
+	// 1. Calculate value at previous day's close
+	startBalance, err := as.Balance(on.Add(-1))
+	if err != nil {
+		return nil, err
 	}
 
 	report := &DailyReport{
 		Date:              on,
-		Time:              now,
+		Time:              time.Now(), // Generation time
 		ReportingCurrency: as.ReportingCurrency,
 		ActiveAssets:      []AssetGain{},
 		Transactions:      []Transaction{},
 	}
 
-	// 1. Calculate value at previous day's close
-	prevDate := on.Add(-1)
-	valueAtPrevClose, err := as.TotalMarketValue(prevDate)
-	if err != nil {
-		return nil, fmt.Errorf("could not get value at previous close for %s: %w", prevDate, err)
-	}
-	report.ValueAtPrevClose = valueAtPrevClose
-
-	// 2. Calculate value at the specified day's close
-	valueAtClose, err := as.TotalMarketValue(on)
-	if err != nil {
-		return nil, fmt.Errorf("could not get value at close for %s: %w", on, err)
-	}
-	report.ValueAtClose = valueAtClose
+	report.ValueAtPrevClose = startBalance.TotalPortfolioValue().InexactFloat64()
+	report.ValueAtClose = endBalance.TotalPortfolioValue().InexactFloat64()
 
 	// 3. Get all transactions for the specified day
 	for _, tx := range as.Ledger.transactions {
@@ -404,35 +365,17 @@ func (as *AccountingSystem) NewDailyReport(on date.Date, now time.Time) (*DailyR
 	}
 
 	// 4. Calculate Net Cash Flow and Realized Gains for the day
-	var netCashFlow, realizedGains float64
-	for _, tx := range report.Transactions {
-		switch v := tx.(type) {
-		case Deposit:
-			amount, err := as.ConvertCurrency(v.Amount, v.Currency, as.ReportingCurrency, on)
-			if err != nil {
-				return nil, err
-			}
-			netCashFlow += amount
-		case Withdraw:
-			amount, err := as.ConvertCurrency(v.Amount, v.Currency, as.ReportingCurrency, on)
-			if err != nil {
-				return nil, err
-			}
-			netCashFlow -= amount
-		case Sell:
-			gain, err := as.Ledger.RealizedGain(v.Security, on, FIFO, as.MarketData)
-			if err != nil {
-				return nil, err
-			}
-			prevDayGain, err := as.Ledger.RealizedGain(v.Security, prevDate, FIFO, as.MarketData)
-			if err != nil {
-				return nil, err
-			}
-			realizedGains += gain - prevDayGain
-		}
+	report.NetCashFlow = endBalance.TotalCash().Sub(startBalance.TotalCash()).InexactFloat64()
+	// Gains have to be computed per security (in fact per securities currency)
+	// then converted to the reporting currency.
+	totalRealized := decimal.Zero
+	for sec := range as.Ledger.AllSecurities() {
+		ticker := sec.Ticker()
+		gain := endBalance.RealizedGain(ticker).Sub(startBalance.RealizedGain(ticker))
+		gain = endBalance.convert(gain, sec.Currency())
+		totalRealized = totalRealized.Add(gain)
 	}
-	report.NetCashFlow = netCashFlow
-	report.RealizedGains = realizedGains
+	report.RealizedGains = totalRealized.InexactFloat64()
 
 	// 5. Calculate Total Gain and Market Gains
 	report.TotalGain = report.ValueAtClose - report.ValueAtPrevClose
@@ -440,61 +383,46 @@ func (as *AccountingSystem) NewDailyReport(on date.Date, now time.Time) (*DailyR
 
 	// 6. Calculate Active Asset Gains
 	for sec := range as.Ledger.AllSecurities() {
-		posPrev := as.Ledger.Position(sec.Ticker(), prevDate, as.MarketData)
-		if posPrev > 0 {
-			pricePrev, ok := as.MarketData.PriceAsOf(sec.ID(), prevDate)
-			if !ok {
-				log.Printf("Warning: could not find price for %s on %s", sec.Ticker(), prevDate)
-				continue
-			}
-			valuePrev, err := as.ConvertCurrency(posPrev*pricePrev, sec.Currency(), as.ReportingCurrency, prevDate)
-			if err != nil {
-				return nil, err
-			}
 
-			posToday := as.Ledger.Position(sec.Ticker(), on, as.MarketData)
-			priceToday, ok := as.MarketData.PriceAsOf(sec.ID(), on)
-			if !ok {
-				log.Printf("Warning: could not find price for %s on %s", sec.Ticker(), on)
-				continue
-			}
-			valueToday, err := as.ConvertCurrency(posToday*priceToday, sec.Currency(), as.ReportingCurrency, on)
-			if err != nil {
-				return nil, err
-			}
+		if endBalance.Position(sec.Ticker()).IsZero() {
+			continue // ignore assets not held today
+		}
 
-			gain := valueToday - valuePrev
-			// Adjust for buys/sells during the day
-			for _, tx := range report.Transactions {
-				switch v := tx.(type) {
-				case Buy:
-					if v.Security == sec.Ticker() {
-						cost, err := as.ConvertCurrency(v.Amount, sec.Currency(), as.ReportingCurrency, on)
-						if err != nil {
-							return nil, err
-						}
-						gain -= cost
-					}
-				case Sell:
-					if v.Security == sec.Ticker() {
-						proceeds, err := as.ConvertCurrency(v.Amount, sec.Currency(), as.ReportingCurrency, on)
-						if err != nil {
-							return nil, err
-						}
-						gain += proceeds
-					}
+		valueToday := endBalance.MarketValue(sec.Ticker())
+		valuePrev := startBalance.MarketValue(sec.Ticker())
+		gain := valueToday.Sub(valuePrev)
+
+		// Adjust for buys/sells during the day
+		for _, tx := range report.Transactions {
+			switch v := tx.(type) {
+			case Buy:
+				if v.Security == sec.Ticker() {
+					cost := decimal.NewFromFloat(v.Amount)
+					gain = gain.Sub(cost)
+				}
+			case Sell:
+				if v.Security == sec.Ticker() {
+					proceeds := decimal.NewFromFloat(v.Amount)
+					gain = gain.Add(proceeds)
 				}
 			}
-
-			assetGain := AssetGain{
-				Security: sec.Ticker(),
-				Gain:     gain,
-			}
-			if valuePrev > 0 {
-				assetGain.Return = gain / valuePrev
-			}
-			report.ActiveAssets = append(report.ActiveAssets, assetGain)
 		}
+
+		yield := 0.0
+		if !valuePrev.IsZero() { // if there was an initial value
+			yield = gain.Div(valuePrev).InexactFloat64()
+		}
+
+		// convert to reporting currency
+		gain = endBalance.convert(gain, sec.Currency())
+		assetGain := AssetGain{
+			Security: sec.Ticker(),
+			Gain:     gain.InexactFloat64(),
+			Return:   yield,
+		}
+
+		report.ActiveAssets = append(report.ActiveAssets, assetGain)
+
 	}
 
 	return report, nil
@@ -538,41 +466,11 @@ func (as *AccountingSystem) ConvertCurrency(amount float64, fromCurrency, toCurr
 // day of the transaction. This method correctly separates investment performance
 // from currency fluctuations.
 func (as *AccountingSystem) CostBasis(on date.Date) (float64, error) {
-	if as.ReportingCurrency == "" {
-		return 0, fmt.Errorf("reporting currency is not set in accounting system")
+	bal, err := as.Balance(on)
+	if err != nil {
+		return 0, err
 	}
-
-	var totalCostBasis float64
-
-	for _, tx := range as.Ledger.Transactions() {
-		if tx.When().After(on) {
-			// The ledger is sorted, so we can stop iterating.
-			break
-		}
-		if !tx.What().IsCashFlow() {
-			continue
-		}
-
-		var amount float64
-		var currency string
-
-		switch v := tx.(type) {
-		case Deposit:
-			amount = v.Amount
-			currency = v.Currency
-		case Withdraw:
-			amount = -v.Amount // Use negative amount for withdrawal
-			currency = v.Currency
-		}
-
-		convertedAmount, err := as.ConvertCurrency(amount, currency, as.ReportingCurrency, tx.When())
-		if err != nil {
-			return 0, fmt.Errorf("could not convert cost basis for transaction on %s: %w", tx.When(), err)
-		}
-		totalCostBasis += convertedAmount
-
-	}
-	return totalCostBasis, nil
+	return bal.TotalCostBasis().InexactFloat64(), nil
 }
 
 // CalculateGains computes the realized and unrealized gains for all securities
@@ -589,12 +487,12 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 		ticker := sec.Ticker()
 		position := as.Ledger.Position(ticker, period.To, as.MarketData)
 
-		realizedGainEnd, err := as.Ledger.RealizedGain(ticker, period.To, method, as.MarketData)
+		realizedGainEnd, err := as.RealizedGainForSecurity(ticker, period.To, method)
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate realized gain for %q at end of period: %w", ticker, err)
 		}
 
-		realizedGainStart, err := as.Ledger.RealizedGain(ticker, period.From.Add(-1), method, as.MarketData)
+		realizedGainStart, err := as.RealizedGainForSecurity(ticker, period.From.Add(-1), method)
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate realized gain for %q at start of period: %w", ticker, err)
 		}
@@ -602,7 +500,7 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 		realizedGain := realizedGainEnd - realizedGainStart
 
 		// Unrealized Gain
-		costBasisEnd, err := as.Ledger.CostBasis(ticker, period.To, method, as.MarketData)
+		costBasisEnd, err := as.CostBasisForSecurity(ticker, period.To, method)
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate cost basis for %q: %w", ticker, err)
 		}
@@ -616,7 +514,7 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 		unrealizedGainEnd := marketValueEnd - costBasisEnd
 
 		positionStart := as.Ledger.Position(ticker, period.From.Add(-1), as.MarketData)
-		costBasisStart, err := as.Ledger.CostBasis(ticker, period.From.Add(-1), method, as.MarketData)
+		costBasisStart, err := as.CostBasisForSecurity(ticker, period.From.Add(-1), method)
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate cost basis for %q: %w", ticker, err)
 		}
@@ -726,11 +624,137 @@ func (as *AccountingSystem) NewHoldingReport(on date.Date) (*HoldingReport, erro
 		})
 	}
 
-	tmv, err := as.TotalMarketValue(on)
+	tmv, err := as.TotalPortfolioValue(on)
 	if err != nil {
 		return nil, fmt.Errorf("could not calculate total market value: %w", err)
 	}
 	report.TotalValue = tmv
 
 	return report, nil
+}
+
+func (as *AccountingSystem) reduceLots(lots []lot, quantityToSell decimal.Decimal, method CostBasisMethod) (decimal.Decimal, []lot, error) {
+	var costOfSoldShares decimal.Decimal
+	var remainingLots []lot
+
+	switch method {
+	case FIFO:
+		for _, currentLot := range lots {
+			if quantityToSell.IsZero() {
+				remainingLots = append(remainingLots, currentLot)
+				continue
+			}
+
+			if currentLot.Quantity.GreaterThan(quantityToSell) {
+				// Partial sale from this lot
+				costOfSoldPortion := currentLot.Cost.Div(currentLot.Quantity).Mul(quantityToSell)
+				costOfSoldShares = costOfSoldShares.Add(costOfSoldPortion)
+				newLot := lot{
+					Date:     currentLot.Date,
+					Quantity: currentLot.Quantity.Sub(quantityToSell),
+					Cost:     currentLot.Cost.Sub(costOfSoldPortion),
+				}
+				remainingLots = append(remainingLots, newLot)
+				quantityToSell = decimal.Zero
+			} else {
+				// Full sale of this lot
+				costOfSoldShares = costOfSoldShares.Add(currentLot.Cost)
+				quantityToSell = quantityToSell.Sub(currentLot.Quantity)
+			}
+		}
+	case AverageCost:
+		var totalQuantity decimal.Decimal
+		var totalCost decimal.Decimal
+		for _, currentLot := range lots {
+			totalQuantity = totalQuantity.Add(currentLot.Quantity)
+			totalCost = totalCost.Add(currentLot.Cost)
+		}
+
+		if totalQuantity.LessThan(quantityToSell) {
+			return decimal.Zero, nil, fmt.Errorf("not enough shares to sell for %v", quantityToSell)
+		}
+
+		averageCost := totalCost.Div(totalQuantity)
+		costOfSoldShares = averageCost.Mul(quantityToSell)
+		remainingQuantity := totalQuantity.Sub(quantityToSell)
+		remainingCost := totalCost.Sub(costOfSoldShares)
+
+		if remainingQuantity.IsPositive() {
+			remainingLots = append(remainingLots, lot{
+				Date:     lots[0].Date, // The date of the lot is not really important for average cost
+				Quantity: remainingQuantity,
+				Cost:     remainingCost,
+			})
+		}
+	}
+
+	return costOfSoldShares, remainingLots, nil
+}
+
+// calculateRemainingLots return adjusted quantities for split
+func (as *AccountingSystem) calculateRemainingLots(ticker string, on date.Date, method CostBasisMethod) ([]lot, decimal.Decimal, error) {
+	var currentLots []lot
+	var realizedGain decimal.Decimal
+	splits := as.MarketData.Splits(as.Ledger.securities[ticker].ID())
+
+	for _, tx := range as.Ledger.transactions {
+		if tx.When().After(on) {
+			break // Transactions are sorted, so we can stop
+		}
+
+		switch v := tx.(type) {
+		case Buy:
+			if v.Security == ticker {
+				q := adjustForSplits(decimal.NewFromFloat(v.Quantity), v.When(), on, splits)
+				newLot := lot{
+					Date:     v.When(),
+					Quantity: q,
+					Cost:     decimal.NewFromFloat(v.Amount),
+				}
+				currentLots = append(currentLots, newLot)
+				sort.Slice(currentLots, func(i, j int) bool {
+					return currentLots[i].Date.Before(currentLots[j].Date)
+				})
+			}
+		case Sell:
+			if v.Security == ticker {
+				soldQuantity := adjustForSplits(decimal.NewFromFloat(v.Quantity), v.When(), on, splits)
+				proceeds := decimal.NewFromFloat(v.Amount)
+				costOfSoldShares, newLots, err := as.reduceLots(currentLots, soldQuantity, method)
+				if err != nil {
+					return nil, decimal.Zero, err
+				}
+				realizedGain = realizedGain.Add(proceeds.Sub(costOfSoldShares))
+				currentLots = newLots
+			}
+		}
+	}
+
+	return currentLots, realizedGain, nil
+}
+
+// CostBasisForSecurity calculates the total cost basis of the remaining holdings for a given security
+// on a specific date, using the specified method.
+func (as *AccountingSystem) CostBasisForSecurity(ticker string, on date.Date, method CostBasisMethod) (float64, error) {
+	remainingLots, _, err := as.calculateRemainingLots(ticker, on, method)
+	if err != nil {
+		return 0, err
+	}
+
+	var totalCost decimal.Decimal
+	for _, l := range remainingLots {
+		totalCost = totalCost.Add(l.Cost)
+	}
+
+	return totalCost.InexactFloat64(), nil
+}
+
+// RealizedGainForSecurity calculates the total realized gain or loss for a given security
+// on a specific date, using the specified method.
+func (as *AccountingSystem) RealizedGainForSecurity(ticker string, on date.Date, method CostBasisMethod) (float64, error) {
+	_, realizedGain, err := as.calculateRemainingLots(ticker, on, method)
+	if err != nil {
+		return 0, err
+	}
+	return realizedGain.InexactFloat64(), nil
 }
