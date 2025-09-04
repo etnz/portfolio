@@ -8,7 +8,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-
 // AccountingSystem encapsulates all the data required for portfolio management,
 // combining transactional data with market data. It serves as a central point
 // of access for querying portfolio state, such as positions and cash balances,

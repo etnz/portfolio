@@ -18,7 +18,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// 
+//
 
 func main() {
 	// The migrate tool needs its own set of flags, independent of the main pcs tool.

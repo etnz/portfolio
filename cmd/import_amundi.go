@@ -142,11 +142,12 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 				instructionIds[inst.Id] = struct{}{}
 				continue
 			}
-			if inst.Indicator == "Source" {
+			switch inst.Indicator {
+			case "Source":
 				instructionIds[inst.Id] = struct{}{}
 				sellTx := portfolio.NewSell(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Amount)
 				transactions = append(transactions, sellTx)
-			} else if inst.Indicator == "Cible" {
+			case "Cible":
 				instructionIds[inst.Id] = struct{}{}
 				buyTx := portfolio.NewBuy(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Amount)
 				transactions = append(transactions, buyTx)
@@ -199,10 +200,11 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 				instructionIds[inst.Id] = struct{}{}
 				continue
 			}
-			if inst.Indicator == "Source" {
+			switch inst.Indicator {
+			case "Source":
 				instructionIds[inst.Id] = struct{}{}
 				totalAmount += inst.Amount
-			} else if inst.Indicator == "Cible" {
+			case "Cible":
 				instructionIds[inst.Id] = struct{}{}
 				buyTx := portfolio.NewBuy(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Amount)
 				transactions = append(transactions, buyTx)

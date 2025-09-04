@@ -49,6 +49,10 @@ func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		return subcommands.ExitUsageError
 	}
 
+	if endDate.IsToday() {
+		c.update = true
+	}
+
 	if c.start != "" && c.period != "" {
 		fmt.Fprintln(os.Stderr, "-start and -period flags cannot be used together")
 		return subcommands.ExitUsageError

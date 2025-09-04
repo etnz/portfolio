@@ -24,6 +24,10 @@ type Date struct {
 	d int        // day
 }
 
+func (d Date) IsToday() bool {
+	return d == Today()
+}
+
 // Month returns the month of the date.
 func (d Date) Month() time.Month { return d.time().Month() }
 

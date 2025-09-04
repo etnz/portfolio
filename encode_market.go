@@ -235,7 +235,6 @@ func encodeSecurities(w io.Writer, m *MarketData) error {
 	return nil
 }
 
-
 // encodeDailyPrices persists a single line in a security jsonl file.
 // Returns bare io errors.
 func encodeDailyPrices(w io.Writer, day date.Date, tickers []string, values []float64) error {

@@ -40,6 +40,10 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitUsageError
 	}
 
+	if on.IsToday() {
+		c.update = true
+	}
+
 	market, err := DecodeMarketData()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading securities: %v\n", err)
