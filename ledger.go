@@ -117,10 +117,15 @@ func (l Ledger) Transactions(filters ...func(Transaction) bool) iter.Seq2[int, T
 	// The returned iterator preserves the original order of transactions in the ledger.
 	return func(yield func(int, Transaction) bool) {
 		for i, tx := range l.transactions {
+			accept := false
 			for _, filter := range filters {
-				if !filter(tx) {
-					continue
+				if filter(tx) {
+					accept = true
+					break
 				}
+			}
+			if !accept {
+				continue
 			}
 			if !yield(i, tx) {
 				return

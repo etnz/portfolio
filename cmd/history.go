@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/etnz/portfolio"
+	"github.com/etnz/portfolio/renderer"
 	"github.com/google/subcommands"
 )
 
@@ -19,10 +19,7 @@ type historyCmd struct {
 func (*historyCmd) Name() string     { return "history" }
 func (*historyCmd) Synopsis() string { return "display asset value history" }
 func (*historyCmd) Usage() string {
-	return `pcs history -s <security> | -c <currency>
-
-  Displays the value of a single asset or cash account over time.
-`
+	return `pcs history -s <security> | -c <currency>\n\n  Displays the value of a single asset or cash account over time.\n`
 }
 
 func (c *historyCmd) SetFlags(f *flag.FlagSet) {
@@ -42,36 +39,14 @@ func (c *historyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitFailure
 	}
 
-	var predicate func(portfolio.Transaction) bool
-	if c.security != "" {
-		predicate = portfolio.BySecurity(c.security)
-	} else {
-		predicate = portfolio.ByCurrency(c.currency)
+	report, err := as.NewHistory(c.security, c.currency)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error calculating history: %v\n", err)
+		return subcommands.ExitFailure
 	}
 
-	if c.security != "" {
-		fmt.Printf("Date\t\tPosition\tPrice\tValue\n")
-	} else {
-		fmt.Printf("Date\t\tValue\n")
-	}
-
-	for _, tx := range as.Ledger.Transactions(predicate) {
-		on := tx.When()
-		balance, err := as.Balance(on)
-		if c.security != "" {
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error calculating balance: %v\n", err)
-				return subcommands.ExitFailure
-			}
-			position := balance.Position(c.security)
-			price := balance.Price(c.security)
-			value := balance.MarketValue(c.security)
-			fmt.Printf("%s    %-10s %-10s %-10s\n", on, position, price, value)
-		} else {
-			value := balance.Cash(c.currency)
-			fmt.Printf("%s    %-10s\n", on, value)
-		}
-	}
+	md := renderer.HistoryMarkdown(report)
+	printMarkdown(md)
 
 	return subcommands.ExitSuccess
 }

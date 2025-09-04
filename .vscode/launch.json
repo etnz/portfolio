@@ -32,6 +32,15 @@
             "cwd": "${workspaceFolder}",
         },
         {
+            "name": "pcs history",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "pcs/main.go",
+            "args": ["history", "-s=NVD"],
+            "cwd": "${workspaceFolder}",
+        },
+        {
             "name": "pcs update",
             "type": "go",
             "request": "launch",

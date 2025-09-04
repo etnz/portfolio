@@ -36,6 +36,10 @@ type Balance struct {
 	lastValuation float64 // The total portfolio value at the last cash flow event.
 }
 
+func (b *Balance) Security(security string) Security {
+	return b.securities[security]
+}
+
 // Price returns the current price for a given ticker.
 func (b *Balance) Price(ticker string) decimal.Decimal {
 	return b.prices[ticker]
