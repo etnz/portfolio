@@ -76,6 +76,16 @@ Subcommands for transactions:
 Use "pcs flags" for a list of top-level flags
 ```
 
+## Global Flags
+
+`pcs` supports the following global flags that can be used with any subcommand:
+
+*   `-market-file <path>`: Specifies the path to the market data file (default: `market.jsonl`).
+*   `-ledger-file <path>`: Specifies the path to the ledger file (default: `transactions.jsonl`).
+*   `-default-currency <currency>`: Sets the default currency for reports (default: `EUR`).
+*   `-v`: Enables verbose logging.
+*   `-no-render`: Disables markdown rendering in terminal output. Note that yhe rendering engine already check for TTY compatible terminals before rendering.
+
 ## Advanced Concepts
 
 ### Cost Basis Methods

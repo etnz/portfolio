@@ -52,6 +52,7 @@ var (
 	ledgerFile      = flag.String("ledger-file", "transactions.jsonl", "Path to the ledger file containing transactions (JSONL format)")
 	defaultCurrency = flag.String("default-currency", "EUR", "default currency")
 	Verbose         = flag.Bool("v", false, "enable verbose logging")
+	noRender        = flag.Bool("no-render", false, "disable markdown rendering in terminal output")
 )
 
 // DecodeAccountingSystem decodes the market data and the ledger to create a new
@@ -147,6 +148,10 @@ func EncodeTransaction(tx portfolio.Transaction) (portfolio.Transaction, error) 
 // If styling fails for any reason (e.g., glamour error), it logs the
 // error and falls back to printing the raw, un-styled markdown string.
 func printMarkdown(md string) {
+	if *noRender {
+		fmt.Print(md)
+		return
+	}
 	renderer, err := glamour.NewTermRenderer(
 		glamour.WithAutoStyle(),
 		glamour.WithWordWrap(0),
