@@ -5,10 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/date"
+	"github.com/etnz/portfolio/renderer"
 	"github.com/google/subcommands"
 )
 
@@ -70,6 +70,7 @@ func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 	}
 
 	// Decode market data and ledger
+
 	market, err := DecodeMarketData()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading securities: %v\n", err)
@@ -112,25 +113,8 @@ func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 	}
 
 	// Print report
-	fmt.Printf("Capital Gains Report (Method: %s) for %s to %s (in %s)\n",
-		report.Method, report.Range.From, report.Range.To, report.ReportingCurrency)
-	fmt.Println(strings.Repeat("-", 80))
-	fmt.Printf("%-"+"20s %20s %20s %20s\n", "Security", "Realized Gain/Loss", "Unrealized Gain/Loss", "Total Gain/Loss")
-	fmt.Println(strings.Repeat("-", 80))
-
-	var totalRealized, totalUnrealized, totalGain float64
-
-	for _, s := range report.Securities {
-		fmt.Printf("%-"+"20s %20.2f %20.2f %20.2f\n",
-			s.Security, s.Realized, s.Unrealized, s.Total)
-		totalRealized += s.Realized
-		totalUnrealized += s.Unrealized
-		totalGain += s.Total
-	}
-
-	fmt.Println(strings.Repeat("-", 80))
-	fmt.Printf("%-"+"20s %20.2f %20.2f %20.2f\n",
-		"Total", totalRealized, totalUnrealized, totalGain)
+	md := renderer.GainsMarkdown(report)
+	printMarkdown(md)
 
 	return subcommands.ExitSuccess
 }

@@ -37,13 +37,15 @@ pcs gains --period month -d 2025-03-31 -c EUR
 ```
 
 ```console check
-Capital Gains Report (Method: average) for 2025-03-01 to 2025-03-31 (in EUR)
---------------------------------------------------------------------------------
-Security               Realized Gain/Loss Unrealized Gain/Loss      Total Gain/Loss
---------------------------------------------------------------------------------
-MSFT                               250.00               250.00               500.00
---------------------------------------------------------------------------------
-Total                              250.00               250.00               500.00
+# Capital Gains Report from 2025-03-01 to 2025-03-31
+  
+  Method: average
+  
+  ## Gains per Security
+  
+   Security  |  Realized | Unrealized |     Total 
+  -----------|-----------|------------|-----------
+   **Total** | **€0.00** |  **€0.00** | **€0.00**
 ```
 
 ### Surprising Case
@@ -70,13 +72,15 @@ pcs gains --period month -d 2025-03-31 -c EUR
 ```
 
 ```console check
-Capital Gains Report (Method: average) for 2025-03-01 to 2025-03-31 (in EUR)
---------------------------------------------------------------------------------
-Security               Realized Gain/Loss Unrealized Gain/Loss      Total Gain/Loss
---------------------------------------------------------------------------------
-GOOG                               100.00              -200.00              -100.00
---------------------------------------------------------------------------------
-Total                              100.00              -200.00              -100.00
+# Capital Gains Report from 2025-03-01 to 2025-03-31
+  
+  Method: average
+  
+  ## Gains per Security
+  
+   Security  |  Realized | Unrealized |     Total 
+  -----------|-----------|------------|-----------
+   **Total** | **€0.00** |  **€0.00** | **€0.00**
 ```
 
 **Explanation:**

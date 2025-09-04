@@ -189,14 +189,17 @@ pcs gains -period=day -d 2025-08-27
 ```
 
 ```console check
-Capital Gains Report (Method: average) for 2025-08-27 to 2025-08-27 (in EUR)
---------------------------------------------------------------------------------
-Security               Realized Gain/Loss Unrealized Gain/Loss      Total Gain/Loss
---------------------------------------------------------------------------------
-AAPL                                 0.00               432.00               432.00
-BankFund1                            0.00               -77.00               -77.00
---------------------------------------------------------------------------------
-Total                                0.00               355.00               355.00
+# Capital Gains Report from 2025-08-27 to 2025-08-27
+  
+  Method: average
+  
+  ## Gains per Security
+  
+   Security  |  Realized |   Unrealized |        Total 
+  -----------|-----------|--------------|--------------
+   AAPL      |     €0.00 |     +€432.00 |     +€432.00 
+   BankFund1 |     €0.00 |      -€77.00 |      -€77.00 
+   **Total** | **€0.00** | **+€355.00** | **+€355.00**
 ```
 
 ## User Manual

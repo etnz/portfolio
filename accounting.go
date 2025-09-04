@@ -337,7 +337,11 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 		return nil, fmt.Errorf("could not create balance from journal: %w", err)
 	}
 
-	for sec := range as.Ledger.AllSecurities() {
+	totalRealized := decimal.Zero
+	totalUnrealized := decimal.Zero
+	totalGain := decimal.Zero
+
+	for sec := range endBalance.Securities() {
 
 		realizedGainEnd := endBalance.RealizedGain(sec.Ticker())
 		realizedGainStart := startBalance.RealizedGain(sec.Ticker())
@@ -359,16 +363,25 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 			continue
 		}
 
+		// adding up gains BUT convert them first
+		gain := realizedGain.Add(unrealizedGain)
+		totalRealized = totalRealized.Add(endBalance.Convert(realizedGain, as.ReportingCurrency))
+		totalUnrealized = totalUnrealized.Add(endBalance.Convert(unrealizedGain, as.ReportingCurrency))
+		totalGain = totalGain.Add(endBalance.Convert(gain, as.ReportingCurrency))
+
 		report.Securities = append(report.Securities, SecurityGains{
 			Security:    sec.Ticker(),
-			Realized:    realizedGain.InexactFloat64(),
-			Unrealized:  unrealizedGain.InexactFloat64(),
-			Total:       realizedGain.Add(unrealizedGain).InexactFloat64(),
-			CostBasis:   costBasisEnd.InexactFloat64(),
-			MarketValue: marketValueEnd.InexactFloat64(),
-			Quantity:    endBalance.Position(sec.Ticker()).InexactFloat64(),
+			Realized:    NewMoney(realizedGain, sec.currency),
+			Unrealized:  NewMoney(unrealizedGain, sec.currency),
+			Total:       NewMoney(gain, sec.currency),
+			CostBasis:   NewMoney(costBasisEnd, sec.currency),
+			MarketValue: NewMoney(marketValueEnd, sec.currency),
+			Quantity:    NewQuantity(endBalance.Position(sec.Ticker())),
 		})
 	}
+	report.Realized = NewMoney(totalRealized, as.ReportingCurrency)
+	report.Unrealized = NewMoney(totalUnrealized, as.ReportingCurrency)
+	report.Total = NewMoney(totalGain, as.ReportingCurrency)
 
 	return report, nil
 }
