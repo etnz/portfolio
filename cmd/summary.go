@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/date"
+	"github.com/etnz/portfolio/renderer"
 	"github.com/google/subcommands"
 )
 
@@ -44,26 +44,14 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		c.update = true
 	}
 
-	market, err := DecodeMarketData()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading securities: %v\n", err)
-		return subcommands.ExitFailure
-	}
-
-	ledger, err := DecodeLedger()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading ledger: %v\n", err)
-		return subcommands.ExitFailure
-	}
-
-	as, err := portfolio.NewAccountingSystem(ledger, market, c.currency)
+	as, err := DecodeAccountingSystem()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating accounting system: %v\n", err)
 		return subcommands.ExitFailure
 	}
 
 	if c.update {
-		err := market.UpdateIntraday()
+		err := as.MarketData.UpdateIntraday()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
 			return subcommands.ExitFailure
@@ -76,31 +64,8 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitFailure
 	}
 
-	// Helper to format performance percentages
-	formatPerf := func(p portfolio.Performance) string {
-		return fmt.Sprintf("%+.2f%%", p.Return*100)
-	}
-
-	_, week := summary.Date.ISOWeek()
-	quarter := (summary.Date.Month()-1)/3 + 1
-
-	dayLabel := fmt.Sprintf("Day %d:", summary.Date.Day())
-	weekLabel := fmt.Sprintf("Week %d:", week)
-	monthLabel := fmt.Sprintf("%s:", summary.Date.Month())
-	quarterLabel := fmt.Sprintf("Q%d:", quarter)
-	yearLabel := fmt.Sprintf("%d:", summary.Date.Year())
-
-	fmt.Printf("Portfolio Summary on %s\n", summary.Date)
-	fmt.Println("-------------------------------------------")
-	fmt.Printf("Total Market Value: %.2f %s\n", summary.TotalMarketValue, summary.ReportingCurrency)
-	fmt.Println()
-	fmt.Println("Performance:")
-	fmt.Printf("  %-11s %10s\n", dayLabel, formatPerf(summary.Daily))
-	fmt.Printf("  %-11s %10s\n", weekLabel, formatPerf(summary.WTD))
-	fmt.Printf("  %-11s %10s\n", monthLabel, formatPerf(summary.MTD))
-	fmt.Printf("  %-11s %10s\n", quarterLabel, formatPerf(summary.QTD))
-	fmt.Printf("  %-11s %10s\n", yearLabel, formatPerf(summary.YTD))
-	fmt.Printf("  %-11s %10s\n", "Inception:", formatPerf(summary.Inception))
+	md := renderer.SummaryMarkdown(summary)
+	printMarkdown(md)
 
 	return subcommands.ExitSuccess
 }

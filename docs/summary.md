@@ -56,17 +56,20 @@ pcs summary -d 2025-01-31 -c EUR
 ```
 
 ```console check
-Portfolio Summary on 2025-01-31
--------------------------------------------
-Total Market Value: 11954.55 EUR
-
-Performance:
-  Day 31:         +0.38%
-  Week 5:         +0.38%
-  January:       +10.69%
-  Q1:            +10.69%
-  2025:          +10.69%
-  Inception:     +10.69%
+# Portfolio Summary on 2025-01-31
+  
+  Total Market Value: 11954.55 EUR
+  
+  ## Performance
+  
+   Period    | Return  
+  -----------|---------
+   Day 31    | +0.38%  
+   Week 5    | +0.38%  
+   January   | +10.69% 
+   Q1        | +10.69% 
+   2025      | +10.69% 
+   Inception | +10.69%
 ```
 
 ### Surprising Case
@@ -92,17 +95,20 @@ pcs summary -d 2025-01-03 -c EUR
 ```
 
 ```console check
-Portfolio Summary on 2025-01-03
--------------------------------------------
-Total Market Value: 16772.73 EUR
-
-Performance:
-  Day 3:          -0.27%
-  Week 1:         +9.13%
-  January:        +9.13%
-  Q1:             +9.13%
-  2025:           +9.13%
-  Inception:      +9.13%
+# Portfolio Summary on 2025-01-03
+  
+  Total Market Value: 16772.73 EUR
+  
+  ## Performance
+  
+   Period    | Return 
+  -----------|--------
+   Day 3     | -0.27% 
+   Week 1    | +9.13% 
+   January   | +9.13% 
+   Q1        | +9.13% 
+   2025      | +9.13% 
+   Inception | +9.13%
 ```
 
 **Explanation:**
