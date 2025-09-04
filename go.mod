@@ -4,6 +4,7 @@ go 1.24.5
 
 require (
 	github.com/PaesslerAG/jsonpath v0.1.1
+	github.com/Rhymond/go-money v1.0.15
 	github.com/google/subcommands v1.2.0
 	github.com/nao1215/markdown v0.8.1
 	github.com/shopspring/decimal v1.4.0

@@ -1,8 +1,6 @@
 package portfolio
 
 import (
-	"time"
-
 	"github.com/etnz/portfolio/date"
 )
 
@@ -45,28 +43,6 @@ type Summary struct {
 	Inception         Performance
 }
 
-// DailyReport provides a summary of a single day's portfolio changes, including
-// a per-asset breakdown of performance.
-type DailyReport struct {
-	Date              date.Date
-	Time              time.Time
-	ReportingCurrency string
-	ValueAtPrevClose  float64
-	ValueAtClose      float64
-	TotalGain         float64
-	MarketGains       float64
-	RealizedGains     float64
-	NetCashFlow       float64
-	ActiveAssets      []AssetGain
-	Transactions      []Transaction
-}
-
-// AssetGain represents the daily gain or loss for a single security.
-type AssetGain struct {
-	Security string
-	Gain     float64
-	Return   float64
-}
 
 // HoldingReport represents a detailed view of portfolio holdings at a specific date.
 type HoldingReport struct {

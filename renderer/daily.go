@@ -14,65 +14,79 @@ func DailyMarkdown(r *portfolio.DailyReport) string {
 
 	doc.H1("Daily Report")
 
-	table := md.TableSet{
-		Alignment: []md.TableAlignment{md.AlignLeft, md.AlignRight},
-	}
-	// TODO: calculation in the report
-	percentageGain := 0.0
-	if r.ValueAtPrevClose != 0 {
-		percentageGain = (r.TotalGain / r.ValueAtPrevClose) * 100
-	}
-	// TODO: in the report we shall use business types (like money for the Value, that has a decent String() and many different formats)
-
 	valDay := "Value at Day's Close"
 	if r.Date.IsToday() {
 		valDay = fmt.Sprintf("Value at %s", r.Time.Format("15:04:05"))
 	}
+	doc.Table(md.TableSet{
+		Alignment: []md.TableAlignment{
+			md.AlignLeft,
+			md.AlignRight,
+		},
+		Header: []string{
+			md.Bold(valDay),
+			md.Bold(r.ValueAtClose.String()),
+		},
+		Rows: [][]string{
+			{"Value at Prev. Close", r.ValueAtPrevClose.String()},
+		},
+	})
 
-	table.Header = []string{md.Bold(valDay), md.Bold(fmt.Sprintf("%.2f", r.ValueAtClose))}
-	table.Rows = append(table.Rows, []string{"Value at Prev. Close", fmt.Sprintf("%.2f", r.ValueAtPrevClose)})
-
-	doc.Table(table)
-
-	// TODO: calculation in the report struct
-	nonZeroCount := 0
-	if r.MarketGains != 0 {
-		nonZeroCount++
-	}
-	if r.RealizedGains != 0 {
-		nonZeroCount++
-	}
-	if r.NetCashFlow != 0 {
-		nonZeroCount++
-	}
-	if nonZeroCount > 0 {
+	if r.HasBreakdown() {
 		doc.H2("Breakdown of Change")
 		table := md.TableSet{
-			Header:    []string{("Total Day's Gain"), fmt.Sprintf("%+.2f (%+.2f%%)", r.TotalGain, percentageGain)},
-			Alignment: []md.TableAlignment{md.AlignLeft, md.AlignRight},
+			Alignment: []md.TableAlignment{md.AlignLeft,
+				md.AlignRight,
+			},
+			Header: []string{
+				md.Bold("Total Day's Gain"),
+				md.Bold(r.TotalGain.SignedString()),
+				r.PercentageGain().SignedString()},
 		}
-		if r.MarketGains != 0 {
-			table.Rows = append(table.Rows, []string{"Unrealized Market", fmt.Sprintf("%+.2f", r.MarketGains)})
+		if !r.MarketGains.IsZero() {
+			table.Rows = append(table.Rows, []string{
+				"Unrealized Market",
+				r.MarketGains.SignedString(),
+				"",
+			})
 		}
-		if r.RealizedGains != 0 {
-			table.Rows = append(table.Rows, []string{"Realized Market", fmt.Sprintf("%+.2f", r.RealizedGains)})
+		if !r.RealizedGains.IsZero() {
+			table.Rows = append(table.Rows, []string{
+				"Realized Market",
+				r.RealizedGains.SignedString(),
+				"",
+			})
 		}
-		if r.NetCashFlow != 0 {
-			table.Rows = append(table.Rows, []string{"Net Cash Flow", fmt.Sprintf("%+.2f", r.NetCashFlow)})
+		if !r.NetCashFlow.IsZero() {
+			table.Rows = append(table.Rows, []string{
+				"Net Cash Flow",
+				r.NetCashFlow.SignedString(),
+				"",
+			})
 		}
-
 		doc.Table(table)
 	}
 
 	if len(r.ActiveAssets) > 0 {
 		doc.H2("Active Assets")
 		table := md.TableSet{
-			Header:    []string{"Ticker", "Gain / Loss", "Change"},
-			Alignment: []md.TableAlignment{md.AlignLeft, md.AlignRight, md.AlignRight},
+			Alignment: []md.TableAlignment{md.AlignLeft,
+				md.AlignRight,
+				md.AlignRight,
+			},
+			Header: []string{
+				"Ticker",
+				"Gain / Loss",
+				"Change",
+			},
 		}
 		for _, asset := range r.ActiveAssets {
-			if asset.Gain != 0 {
-				table.Rows = append(table.Rows, []string{asset.Security, fmt.Sprintf("%.2f", asset.Gain), fmt.Sprintf("%+.2f%%", asset.Return*100)})
+			if !asset.Gain.IsZero() {
+				table.Rows = append(table.Rows, []string{
+					asset.Security,
+					asset.Gain.String(),
+					asset.Return.SignedString(),
+				})
 			}
 		}
 		doc.Table(table)
@@ -82,8 +96,7 @@ func DailyMarkdown(r *portfolio.DailyReport) string {
 		doc.H2("Today's Transactions")
 		var transactions []string
 		for _, tx := range r.Transactions {
-			// TODO: native transactions needs a proper renderer
-			transactions = append(transactions, string(tx.What()))
+			transactions = append(transactions, Transaction(tx))
 		}
 		doc.OrderedList(transactions...)
 	}

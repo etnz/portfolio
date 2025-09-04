@@ -127,8 +127,7 @@ func (r *runner) runBlock(t *testing.T, block *Block) {
 		//got = strings.ReplaceAll(got, "\t", "        ")
 		if want != got {
 			// Print out the diffs.
-			//t.Errorf("%s:%d: output mismatch:\ngot:\n\n%s\n\nwant:\n\n%s\n\nDiff:\n\n%s\n\n", block.File, block.Line, got, want, diff.Diff(got, want))
-			t.Errorf("%s:%d: output mismatch:\ngot :%q\nwant:%q\n", block.File, block.Line, got, want)
+			t.Errorf("%s:%d: output mismatch:\ngot:\n\n%s\n\nwant:\n\n%s\n\ngot :%q\nwant:%q\n", block.File, block.Line, got, want, got, want)
 		}
 		return
 	}

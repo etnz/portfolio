@@ -48,7 +48,7 @@ func (c *dailyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		c.update = true
 	}
 
-	for c.watch > 0 {
+	for {
 		market, err := DecodeMarketData()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading securities: %v\n", err)
@@ -81,14 +81,16 @@ func (c *dailyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 			return subcommands.ExitFailure
 		}
 
+		md := renderer.DailyMarkdown(report)
+
 		if c.watch > 0 {
 			fmt.Println("\033[2J")
 		}
-
-		printMarkdown(renderer.DailyMarkdown(report))
-
+		printMarkdown(md)
 		if c.watch > 0 {
 			time.Sleep(time.Duration(c.watch) * time.Second)
+		} else {
+			return subcommands.ExitSuccess
 		}
 	}
 

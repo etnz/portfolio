@@ -222,8 +222,10 @@ func (as *AccountingSystem) NewDailyReport(on date.Date) (*DailyReport, error) {
 		Transactions:      []Transaction{},
 	}
 
-	report.ValueAtPrevClose = startBalance.TotalPortfolioValue().InexactFloat64()
-	report.ValueAtClose = endBalance.TotalPortfolioValue().InexactFloat64()
+	valueAtClose := endBalance.TotalPortfolioValue()
+	valueAtPrevClose := startBalance.TotalPortfolioValue()
+	report.ValueAtClose = NewMoney(valueAtClose, as.ReportingCurrency)
+	report.ValueAtPrevClose = NewMoney(valueAtPrevClose, as.ReportingCurrency)
 
 	// 3. Get all transactions for the specified day
 	for _, tx := range as.Ledger.transactions {
@@ -233,7 +235,8 @@ func (as *AccountingSystem) NewDailyReport(on date.Date) (*DailyReport, error) {
 	}
 
 	// 4. Calculate Net Cash Flow and Realized Gains for the day
-	report.NetCashFlow = endBalance.TotalCash().Sub(startBalance.TotalCash()).InexactFloat64()
+	netCashFlow := endBalance.TotalCash().Sub(startBalance.TotalCash())
+	report.NetCashFlow = NewMoney(netCashFlow, as.ReportingCurrency)
 	// Gains have to be computed per security (in fact per securities currency)
 	// then converted to the reporting currency.
 	totalRealized := decimal.Zero
@@ -243,11 +246,11 @@ func (as *AccountingSystem) NewDailyReport(on date.Date) (*DailyReport, error) {
 		gain = endBalance.Convert(gain, sec.Currency())
 		totalRealized = totalRealized.Add(gain)
 	}
-	report.RealizedGains = totalRealized.InexactFloat64()
+	report.RealizedGains = NewMoney(totalRealized, as.ReportingCurrency)
 
 	// 5. Calculate Total Gain and Market Gains
-	report.TotalGain = report.ValueAtClose - report.ValueAtPrevClose
-	report.MarketGains = report.TotalGain - report.RealizedGains - report.NetCashFlow
+	report.TotalGain = NewMoney(valueAtClose.Sub(valueAtPrevClose), as.ReportingCurrency)
+	report.MarketGains = NewMoney(valueAtClose.Sub(valueAtPrevClose).Sub(totalRealized).Sub(netCashFlow), as.ReportingCurrency)
 
 	// 6. Calculate Active Asset Gains
 	for sec := range endBalance.Securities() {
@@ -278,15 +281,15 @@ func (as *AccountingSystem) NewDailyReport(on date.Date) (*DailyReport, error) {
 
 		yield := 0.0
 		if !valuePrev.IsZero() { // if there was an initial value
-			yield = gain.Div(valuePrev).InexactFloat64()
+			yield = (gain.Div(valuePrev).InexactFloat64()) * 100
 		}
 
 		// convert to reporting currency
 		gain = endBalance.Convert(gain, sec.Currency())
 		assetGain := AssetGain{
 			Security: sec.Ticker(),
-			Gain:     gain.InexactFloat64(),
-			Return:   yield,
+			Gain:     NewMoney(gain, as.ReportingCurrency),
+			Return:   Percent(yield),
 		}
 
 		report.ActiveAssets = append(report.ActiveAssets, assetGain)
