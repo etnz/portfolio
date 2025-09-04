@@ -121,12 +121,14 @@ func (r *runner) runBlock(t *testing.T, block *Block) {
 
 	// Check don't need execution.
 	if block.Type == consoleCheck {
-		expected := strings.TrimSpace(block.Content)
-		actual := strings.TrimSpace(r.previousOutput)
+		want := strings.TrimSpace(block.Content)
+		got := strings.TrimSpace(r.previousOutput)
 		// replace tabs with spaces for consistent comparison
-		actual = strings.ReplaceAll(actual, "	", "        ")
-		if expected != actual {
-			t.Errorf("%s:%d: output mismatch:\ngot:\n\n%s\n\nwant:\n\n%s\n\n", block.File, block.Line, actual, expected)
+		//got = strings.ReplaceAll(got, "\t", "        ")
+		if want != got {
+			// Print out the diffs.
+			//t.Errorf("%s:%d: output mismatch:\ngot:\n\n%s\n\nwant:\n\n%s\n\nDiff:\n\n%s\n\n", block.File, block.Line, got, want, diff.Diff(got, want))
+			t.Errorf("%s:%d: output mismatch:\ngot :%q\nwant:%q\n", block.File, block.Line, got, want)
 		}
 		return
 	}

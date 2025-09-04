@@ -37,25 +37,23 @@ pcs daily -d 2025-01-03 -c EUR
 ```
 
 ```console check
-Daily Report for 2025-01-03 (in EUR)
-
-Overall Performance
---------------------------------------------------
-Value at Prev. Close:        11818.18
-Value at Day's Close:        11863.64
---------------------------------------------------
-Total Day's Gain / Loss:       +45.45 (+0.38%)
-
-Breakdown of Change
---------------------------------------------------
-Market Gains (Unrealized):      +45.45
-
-Active Assets
---------------------------------------------------
-Ticker     Day's Gain / Loss    Change
---------------------------------------------------
-MSFT                 45.45       +5.00%
---------------------------------------------------
+# Daily Report
+  
+   **Value at Day's Close** | **11863.64** 
+  --------------------------|--------------
+   Value at Prev. Close     |     11818.18 
+  
+  ## Breakdown of Change
+  
+   Total Day's Gain  | +45.45 (+0.38%) 
+  -------------------|-----------------
+   Unrealized Market |          +45.45 
+  
+  ## Active Assets
+  
+   Ticker | Gain / Loss | Change 
+  --------|-------------|--------
+   MSFT   |       45.45 | +5.00% 
 ```
 
 ### Surprising Case
@@ -81,32 +79,28 @@ pcs daily -d 2025-01-03 -c EUR
 ```
 
 ```console check
-Daily Report for 2025-01-03 (in EUR)
-
-Overall Performance
---------------------------------------------------
-Value at Prev. Close:        11818.18
-Value at Day's Close:        12272.73
---------------------------------------------------
-Total Day's Gain / Loss:       +454.55 (+3.85%)
-
-Breakdown of Change
---------------------------------------------------
-Market Gains (Unrealized):      -45.45
-Net Cash Flow (today):          +500.00
---------------------------------------------------
-Total Change:                  +454.55
-
-Active Assets
---------------------------------------------------
-Ticker     Day's Gain / Loss    Change
---------------------------------------------------
-MSFT                -45.45       -5.00%
---------------------------------------------------
-
-Today's Transactions
---------------------------------------------------
-- deposit
+ # Daily Report
+  
+   **Value at Day's Close** | **12272.73** 
+  --------------------------|--------------
+   Value at Prev. Close     |     11818.18 
+  
+  ## Breakdown of Change
+  
+   Total Day's Gain  | +454.55 (+3.85%) 
+  -------------------|------------------
+   Unrealized Market |           -45.45 
+   Net Cash Flow     |          +500.00 
+  
+  ## Active Assets
+  
+   Ticker | Gain / Loss | Change 
+  --------|-------------|--------
+   MSFT   |      -45.45 | -5.00% 
+  
+  ## Today's Transactions
+  
+  1. deposit
 ```
 
 **Explanation:**

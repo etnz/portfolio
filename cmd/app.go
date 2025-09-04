@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/charmbracelet/glamour"
 	"github.com/etnz/portfolio"
 	"github.com/google/subcommands"
 )
@@ -140,4 +141,28 @@ func EncodeTransaction(tx portfolio.Transaction) (portfolio.Transaction, error) 
 		return nil, fmt.Errorf("error writing to portfolio file %q: %w", *ledgerFile, err)
 	}
 	return tx, nil
+}
+
+// printMarkdown renders a markdown string to stdout with appropriate styling.
+// If styling fails for any reason (e.g., glamour error), it logs the
+// error and falls back to printing the raw, un-styled markdown string.
+func printMarkdown(md string) {
+	renderer, err := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(0),
+	)
+	if err != nil {
+		log.Printf("Error creating markdown renderer: %v. Falling back to raw output.", err)
+		fmt.Print(md)
+		return
+	}
+
+	out, err := renderer.Render(md)
+	if err != nil {
+		log.Printf("Error rendering markdown: %v. Falling back to raw output.", err)
+		fmt.Print(md)
+		return
+	}
+
+	fmt.Print(out)
 }

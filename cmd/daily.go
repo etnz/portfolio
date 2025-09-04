@@ -8,6 +8,7 @@ import (
 
 	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/date"
+	"github.com/etnz/portfolio/renderer"
 	"github.com/google/subcommands"
 )
 
@@ -76,74 +77,7 @@ func (c *dailyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		return subcommands.ExitFailure
 	}
 
-	// Overall Performance
-	fmt.Printf("Daily Report for %s (in %s)\n", report.Date, report.ReportingCurrency)
-	if on == date.Today() {
-		fmt.Printf("Report generated at %s\n", report.Time.Format("15:04:05"))
-	}
-	fmt.Println()
-	fmt.Println("Overall Performance")
-	fmt.Println("--------------------------------------------------")
-	fmt.Printf("Value at Prev. Close:        %.2f\n", report.ValueAtPrevClose)
-	fmt.Printf("Value at Day's Close:        %.2f\n", report.ValueAtClose)
-	fmt.Println("--------------------------------------------------")
-	fmt.Printf("Total Day's Gain / Loss:       %+.2f (%+.2f%%)\n", report.TotalGain, (report.TotalGain/report.ValueAtPrevClose)*100)
-
-	// Breakdown of Change
-	nonZeroCount := 0
-	if report.MarketGains != 0 {
-		nonZeroCount++
-	}
-	if report.RealizedGains != 0 {
-		nonZeroCount++
-	}
-	if report.NetCashFlow != 0 {
-		nonZeroCount++
-	}
-
-	if nonZeroCount > 0 {
-		fmt.Println()
-		fmt.Println("Breakdown of Change")
-		fmt.Println("--------------------------------------------------")
-		if report.MarketGains != 0 {
-			fmt.Printf("Market Gains (Unrealized):      %+.2f\n", report.MarketGains)
-		}
-		if report.RealizedGains != 0 {
-			fmt.Printf("Realized Gains (from sales):     %+.2f\n", report.RealizedGains)
-		}
-		if report.NetCashFlow != 0 {
-			fmt.Printf("Net Cash Flow (today):          %+.2f\n", report.NetCashFlow)
-		}
-		if nonZeroCount > 1 {
-			fmt.Println("--------------------------------------------------")
-			fmt.Printf("Total Change:                  %+.2f\n", report.TotalGain)
-		}
-	}
-
-	// Active Assets
-	if len(report.ActiveAssets) > 0 {
-		fmt.Println()
-		fmt.Println("Active Assets")
-		fmt.Println("--------------------------------------------------")
-		fmt.Printf("% -10s % -20s %s\n", "Ticker", "Day's Gain / Loss", "Change")
-		fmt.Println("--------------------------------------------------")
-		for _, asset := range report.ActiveAssets {
-			if asset.Gain != 0 {
-				fmt.Printf("% -10s % 15.2f       %+.2f%%\n", asset.Security, asset.Gain, asset.Return*100)
-			}
-		}
-		fmt.Println("--------------------------------------------------")
-	}
-
-	// Today's Transactions
-	if len(report.Transactions) > 0 {
-		fmt.Println()
-		fmt.Println("Today's Transactions")
-		fmt.Println("--------------------------------------------------")
-		for _, tx := range report.Transactions {
-			fmt.Printf("- %s\n", tx.What())
-		}
-	}
+	printMarkdown(renderer.DailyMarkdown(report))
 
 	return subcommands.ExitSuccess
 }

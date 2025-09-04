@@ -5,6 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "pcs daily",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "pcs/main.go",
+            "args": ["daily", "-u"],
+            "cwd": "${workspaceFolder}",
+        },
+        {
             "name": "pcs summary",
             "type": "go",
             "request": "launch",
