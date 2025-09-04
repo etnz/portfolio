@@ -1,13 +1,16 @@
 package portfolio
 
 import (
-	"reflect"
 	"sort"
 	"testing"
 	"time"
 
 	"github.com/etnz/portfolio/date"
 )
+
+func EUR(v float64) Money  { return NewMoneyFromFloat(v, "EUR") }
+func USD(v float64) Money  { return NewMoneyFromFloat(v, "USD") }
+func Q(v float64) Quantity { return NewQuantityFromFloat(v) }
 
 func TestAccountingSystem_NewHoldingReport(t *testing.T) {
 	ledger := NewLedger()
@@ -40,13 +43,13 @@ func TestAccountingSystem_NewHoldingReport(t *testing.T) {
 	}
 
 	wantSecurities := []SecurityHolding{
-		{Ticker: "AAPL", ID: "US0378331005.XNAS", Quantity: 75, Price: 160, MarketValue: 10800},
-		{Ticker: "GOOG", ID: "US38259P5089.XNAS", Quantity: 50, Price: 2900, MarketValue: 130500},
+		{Ticker: "AAPL", ID: "US0378331005.XNAS", Quantity: Q(75), Price: USD(160), MarketValue: EUR(10800)},
+		{Ticker: "GOOG", ID: "US38259P5089.XNAS", Quantity: Q(50), Price: USD(2900), MarketValue: EUR(130500)},
 	}
 
 	wantCash := []CashHolding{
-		{Currency: "EUR", Balance: 10000, Value: 10000},
-		{Currency: "USD", Balance: -151000, Value: -135900},
+		{Currency: "EUR", Balance: EUR(10000), Value: EUR(10000)},
+		{Currency: "USD", Balance: USD(-151000), Value: EUR(-135900)},
 	}
 
 	sort.Slice(report.Securities, func(i, j int) bool {
@@ -66,14 +69,14 @@ func TestAccountingSystem_NewHoldingReport(t *testing.T) {
 			if report.Securities[i].ID != wantSecurities[i].ID {
 				t.Errorf("ID = %s, want %s", report.Securities[i].ID, wantSecurities[i].ID)
 			}
-			if report.Securities[i].Quantity != wantSecurities[i].Quantity {
-				t.Errorf("Quantity = %f, want %f", report.Securities[i].Quantity, wantSecurities[i].Quantity)
+			if !report.Securities[i].Quantity.Equals(wantSecurities[i].Quantity) {
+				t.Errorf("Quantity = %v, want %v", report.Securities[i].Quantity, wantSecurities[i].Quantity)
 			}
-			if report.Securities[i].Price != wantSecurities[i].Price {
-				t.Errorf("Price = %f, want %f", report.Securities[i].Price, wantSecurities[i].Price)
+			if !report.Securities[i].Price.Equals(wantSecurities[i].Price) {
+				t.Errorf("Price = %v, want %v", report.Securities[i].Price, wantSecurities[i].Price)
 			}
-			if report.Securities[i].MarketValue != wantSecurities[i].MarketValue {
-				t.Errorf("MarketValue = %f, want %f", report.Securities[i].MarketValue, wantSecurities[i].MarketValue)
+			if !report.Securities[i].MarketValue.Equals(wantSecurities[i].MarketValue) {
+				t.Errorf("MarketValue = %v, want %v", report.Securities[i].MarketValue, wantSecurities[i].MarketValue)
 			}
 		}
 	}
@@ -85,12 +88,17 @@ func TestAccountingSystem_NewHoldingReport(t *testing.T) {
 		return wantCash[i].Currency < wantCash[j].Currency
 	})
 
-	if !reflect.DeepEqual(report.Cash, wantCash) {
-		t.Errorf("NewHoldingReport().Cash = %v, want %v", report.Cash, wantCash)
+	if len(report.Cash) != len(wantCash) {
+		t.Errorf("len(report.Cash) = %d, want %d", len(report.Cash), len(wantCash))
+	}
+	for i := range wantCash {
+		if !report.Cash[i].Equals(wantCash[i]) {
+			t.Errorf("NewHoldingReport().Cash = %v, want %v", report.Cash[i], wantCash[i])
+		}
 	}
 
-	wantTotalValue := 15400.0
-	if report.TotalValue != wantTotalValue {
+	wantTotalValue := EUR(15400.0)
+	if !report.TotalValue.Equals(wantTotalValue) {
 		t.Errorf("NewHoldingReport().TotalValue = %v, want %v", report.TotalValue, wantTotalValue)
 	}
 }

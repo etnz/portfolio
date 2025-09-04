@@ -404,9 +404,9 @@ func (as *AccountingSystem) NewHoldingReport(on date.Date) (*HoldingReport, erro
 			Ticker:      ticker,
 			ID:          id.String(),
 			Currency:    currency,
-			Quantity:    position.InexactFloat64(),
-			Price:       price.InexactFloat64(),
-			MarketValue: convertedValue.InexactFloat64(),
+			Quantity:    NewQuantity(position),
+			Price:       NewMoney(price, currency),
+			MarketValue: NewMoney(convertedValue, as.ReportingCurrency),
 		})
 	}
 
@@ -419,8 +419,8 @@ func (as *AccountingSystem) NewHoldingReport(on date.Date) (*HoldingReport, erro
 		convertedBalance := balance.Convert(bal, currency)
 		report.Cash = append(report.Cash, CashHolding{
 			Currency: currency,
-			Balance:  bal.InexactFloat64(),
-			Value:    convertedBalance.InexactFloat64(),
+			Balance:  NewMoney(bal, currency),
+			Value:    NewMoney(convertedBalance, as.ReportingCurrency),
 		})
 	}
 
@@ -434,16 +434,12 @@ func (as *AccountingSystem) NewHoldingReport(on date.Date) (*HoldingReport, erro
 		report.Counterparties = append(report.Counterparties, CounterpartyHolding{
 			Name:     account,
 			Currency: currency,
-			Balance:  bal.InexactFloat64(),
-			Value:    convertedBalance.InexactFloat64(),
+			Balance:  NewMoney(bal, currency),
+			Value:    NewMoney(convertedBalance, as.ReportingCurrency),
 		})
 	}
 
-	tmv, err := as.TotalPortfolioValue(on)
-	if err != nil {
-		return nil, fmt.Errorf("could not calculate total market value: %w", err)
-	}
-	report.TotalValue = tmv
+	report.TotalValue = NewMoney(balance.TotalPortfolioValue(), as.ReportingCurrency)
 
 	return report, nil
 }

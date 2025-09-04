@@ -124,7 +124,7 @@ func (r *runner) runBlock(t *testing.T, block *Block) {
 		want := strings.TrimSpace(block.Content)
 		got := strings.TrimSpace(r.previousOutput)
 		// replace tabs with spaces for consistent comparison
-		//got = strings.ReplaceAll(got, "\t", "        ")
+		got = strings.ReplaceAll(got, "\t", "        ")
 		if want != got {
 			// Print out the diffs.
 			t.Errorf("%s:%d: output mismatch:\ngot:\n\n%s\n\nwant:\n\n%s\n\ngot :%q\nwant:%q\n", block.File, block.Line, got, want, got, want)

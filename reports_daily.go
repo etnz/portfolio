@@ -34,7 +34,7 @@ func (r *DailyReport) PercentageGain() Percent {
 	if r.ValueAtPrevClose.IsZero() {
 		return 0
 	}
-	return Percent(100 * r.TotalGain.AsMajorUnits() / r.ValueAtPrevClose.AsMajorUnits())
+	return Percent(100 * r.TotalGain.AsFloat() / r.ValueAtPrevClose.AsFloat())
 }
 
 // HasBreakdown returns true if there is a breakdown of the day's gain.

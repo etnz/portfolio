@@ -7,9 +7,33 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+type Quantity struct {
+	value decimal.Decimal
+}
+
+func (q Quantity) Equals(quantity Quantity) bool {
+	return q.value.Equal(quantity.value)
+}
+
+func NewQuantity(value decimal.Decimal) Quantity {
+	return Quantity{value: value}
+}
+
+func NewQuantityFromFloat(val float64) Quantity {
+	return NewQuantity(decimal.NewFromFloat(val))
+}
+
+func (q Quantity) String() string {
+	return q.value.String()
+}
+
+func (q Quantity) IsZero() bool {
+	return q.value.IsZero()
+}
+
 // Money represents a monetary value.
 type Money struct {
-	*money.Money
+	value *money.Money
 }
 
 // NewMoney creates a new Money instance from a decimal.Decimal.
@@ -25,17 +49,41 @@ func NewMoney(amount decimal.Decimal, currency string) Money {
 	return Money{money.New(amount.IntPart(), currency)}
 }
 
+func NewMoneyFromFloat(amount float64, currency string) Money {
+	return NewMoney(decimal.NewFromFloat(amount), currency)
+}
+
 // String returns the string representation of the money value.
 func (m Money) String() string {
-	return m.Money.Display()
+	return m.value.Display()
+}
+
+func (m Money) Equals(other Money) bool {
+	eq, err := m.value.Equals(other.value)
+	return err == nil && eq
+}
+
+func (m Money) IsZero() bool {
+	return m.value.IsZero()
+}
+func (m Money) IsPositive() bool {
+	return m.value.IsPositive()
+}
+
+func (m Money) IsNegative() bool {
+	return m.value.IsNegative()
+}
+
+func (m Money) AsFloat() float64 {
+	return m.value.AsMajorUnits()
 }
 
 // SignedString returns the string representation of the money value with a sign.
 func (m Money) SignedString() string {
-	if m.IsPositive() {
-		return "+" + m.Money.Display()
+	if m.value.IsPositive() {
+		return "+" + m.value.Display()
 	}
-	return m.Money.Display()
+	return m.value.Display()
 }
 
 type Percent float64
