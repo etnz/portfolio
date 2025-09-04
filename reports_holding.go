@@ -1,10 +1,15 @@
 package portfolio
 
-import "github.com/etnz/portfolio/date"
+import (
+	"time"
+
+	"github.com/etnz/portfolio/date"
+)
 
 // HoldingReport represents a detailed view of portfolio holdings at a specific date.
 type HoldingReport struct {
 	Date              date.Date
+	Time              time.Time // Generation time
 	ReportingCurrency string
 	Securities        []SecurityHolding
 	Cash              []CashHolding

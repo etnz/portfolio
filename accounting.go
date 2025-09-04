@@ -377,6 +377,7 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 func (as *AccountingSystem) NewHoldingReport(on date.Date) (*HoldingReport, error) {
 	report := &HoldingReport{
 		Date:              on,
+		Time:              time.Now(), // Generation time
 		ReportingCurrency: as.ReportingCurrency,
 		Securities:        []SecurityHolding{},
 		Cash:              []CashHolding{},

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/etnz/portfolio"
+	"github.com/etnz/portfolio/date"
 	md "github.com/nao1215/markdown"
 )
 
@@ -15,7 +16,8 @@ func DailyMarkdown(r *portfolio.DailyReport) string {
 	doc.H1("Daily Report")
 
 	valDay := "Value at Day's Close"
-	if r.Date.IsToday() {
+	genDate := date.New(r.Time.Year(), r.Time.Month(), r.Time.Day())
+	if r.Date == genDate {
 		valDay = fmt.Sprintf("Value at %s", r.Time.Format("15:04:05"))
 	}
 	doc.Table(md.TableSet{
