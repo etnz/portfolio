@@ -180,13 +180,13 @@ func (as *AccountingSystem) NewSummary(on date.Date) (*Summary, error) {
 	}
 
 	// 1. Calculate current total market value
-	summary.TotalMarketValue = endBalance.TotalPortfolioValue().InexactFloat64()
+	summary.TotalMarketValue = NewMoney(endBalance.TotalPortfolioValue(), as.ReportingCurrency)
 
 	// 2. Calculate performance for each period
 	periodTWR := func(start *Balance) (perf Performance) {
 		return Performance{
-			StartValue: start.TotalPortfolioValue().InexactFloat64(),
-			Return:     endBalance.linkedTWR/start.linkedTWR - 1,
+			StartValue: NewMoney(start.TotalPortfolioValue(), as.ReportingCurrency),
+			Return:     Percent(endBalance.linkedTWR/start.linkedTWR - 1),
 		}
 	}
 
@@ -196,8 +196,8 @@ func (as *AccountingSystem) NewSummary(on date.Date) (*Summary, error) {
 	summary.QTD = periodTWR(quarterBalance)
 	summary.YTD = periodTWR(yearBalance)
 	summary.Inception = Performance{
-		StartValue: 0,
-		Return:     endBalance.linkedTWR - 1,
+		StartValue: NewMoney(decimal.Zero, as.ReportingCurrency),
+		Return:     Percent(endBalance.linkedTWR - 1),
 	}
 	return summary, nil
 }
@@ -313,78 +313,6 @@ func (as *AccountingSystem) CostBasis(on date.Date) (float64, error) {
 	return bal.TotalCostBasis().InexactFloat64(), nil
 }
 
-// CalculateGains computes the realized and unrealized gains for all securities
-// over a given period, using a specified cost basis accounting method.
-func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMethod) (*GainsReport, error) {
-	report := &GainsReport{
-		Range:             period,
-		Method:            method,
-		ReportingCurrency: as.ReportingCurrency,
-		Securities:        []SecurityGains{},
-	}
-
-	journal, err := as.getJournal()
-	if err != nil {
-		return nil, fmt.Errorf("could not get journal: %w", err)
-	}
-
-	endBalance, err := NewBalance(journal, period.To, method)
-	if err != nil {
-		return nil, fmt.Errorf("could not create balance from journal: %w", err)
-	}
-	startBalance, err := NewBalance(journal, period.From.Add(-1), method)
-	if err != nil {
-		return nil, fmt.Errorf("could not create balance from journal: %w", err)
-	}
-
-	totalRealized := decimal.Zero
-	totalUnrealized := decimal.Zero
-	totalGain := decimal.Zero
-
-	for sec := range endBalance.Securities() {
-
-		realizedGainEnd := endBalance.RealizedGain(sec.Ticker())
-		realizedGainStart := startBalance.RealizedGain(sec.Ticker())
-
-		realizedGain := realizedGainEnd.Sub(realizedGainStart)
-
-		// Unrealized Gain
-		costBasisEnd := endBalance.CostBasis(sec.Ticker())
-		marketValueEnd := endBalance.MarketValue(sec.Ticker())
-		unrealizedGainEnd := marketValueEnd.Sub(costBasisEnd)
-
-		costBasisStart := startBalance.CostBasis(sec.Ticker())
-		marketValueStart := startBalance.MarketValue(sec.Ticker())
-		unrealizedGainStart := marketValueStart.Sub(costBasisStart)
-
-		unrealizedGain := unrealizedGainEnd.Sub(unrealizedGainStart)
-
-		if realizedGain.IsZero() && unrealizedGain.IsZero() {
-			continue
-		}
-
-		// adding up gains BUT convert them first
-		gain := realizedGain.Add(unrealizedGain)
-		totalRealized = totalRealized.Add(endBalance.Convert(realizedGain, as.ReportingCurrency))
-		totalUnrealized = totalUnrealized.Add(endBalance.Convert(unrealizedGain, as.ReportingCurrency))
-		totalGain = totalGain.Add(endBalance.Convert(gain, as.ReportingCurrency))
-
-		report.Securities = append(report.Securities, SecurityGains{
-			Security:    sec.Ticker(),
-			Realized:    NewMoney(realizedGain, sec.currency),
-			Unrealized:  NewMoney(unrealizedGain, sec.currency),
-			Total:       NewMoney(gain, sec.currency),
-			CostBasis:   NewMoney(costBasisEnd, sec.currency),
-			MarketValue: NewMoney(marketValueEnd, sec.currency),
-			Quantity:    NewQuantity(endBalance.Position(sec.Ticker())),
-		})
-	}
-	report.Realized = NewMoney(totalRealized, as.ReportingCurrency)
-	report.Unrealized = NewMoney(totalUnrealized, as.ReportingCurrency)
-	report.Total = NewMoney(totalGain, as.ReportingCurrency)
-
-	return report, nil
-}
 
 // NewHoldingReport calculates and returns a detailed holdings report for a given date.
 func (as *AccountingSystem) NewHoldingReport(on date.Date) (*HoldingReport, error) {

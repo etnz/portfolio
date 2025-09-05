@@ -22,13 +22,11 @@ func GainsMarkdown(r *portfolio.GainsReport) string {
 			md.AlignLeft,
 			md.AlignRight,
 			md.AlignRight,
-			md.AlignRight,
 		},
 		Header: []string{
 			"Security",
 			"Realized",
 			"Unrealized",
-			"Total",
 		},
 	}
 
@@ -37,14 +35,12 @@ func GainsMarkdown(r *portfolio.GainsReport) string {
 			s.Security,
 			s.Realized.SignedString(),
 			s.Unrealized.SignedString(),
-			s.Total.SignedString(),
 		})
 	}
 	table.Rows = append(table.Rows, []string{
 		md.Bold("Total"),
 		md.Bold(r.Realized.SignedString()),
 		md.Bold(r.Unrealized.SignedString()),
-		md.Bold(r.Total.SignedString()),
 	})
 	doc.Table(table)
 

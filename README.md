@@ -199,11 +199,11 @@ pcs gains -period=day -d 2025-08-27
   
   ## Gains per Security
   
-   Security  |  Realized |   Unrealized |        Total 
-  -----------|-----------|--------------|--------------
-   AAPL      |     €0.00 |     +€432.00 |     +€432.00 
-   BankFund1 |     €0.00 |      -€77.00 |      -€77.00 
-   **Total** | **€0.00** | **+€355.00** | **+€355.00**
+   Security  |  Realized |   Unrealized 
+  -----------|-----------|--------------
+   AAPL      |     €0.00 |     +€432.00 
+   BankFund1 |     €0.00 |      -€77.00 
+   **Total** | **€0.00** | **+€355.00**
 ```
 
 ## User Manual

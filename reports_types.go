@@ -2,6 +2,7 @@ package portfolio
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/Rhymond/go-money"
 	"github.com/shopspring/decimal"
@@ -72,6 +73,13 @@ func (m Money) IsPositive() bool {
 
 func (m Money) IsNegative() bool {
 	return m.value.IsNegative()
+}
+func (m Money) Sub(n Money) Money {
+	r, err := m.value.Subtract(n.value)
+	if err != nil {
+		log.Fatalf("invalid money operation: %v", err)
+	}
+	return Money{r}
 }
 
 func (m Money) AsFloat() float64 {

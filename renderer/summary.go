@@ -13,7 +13,7 @@ func SummaryMarkdown(s *portfolio.Summary) string {
 	doc := md.NewMarkdown(&buf)
 
 	doc.H1(fmt.Sprintf("Portfolio Summary on %s", s.Date))
-	doc.PlainText(fmt.Sprintf("Total Market Value: %.2f %s", s.TotalMarketValue, s.ReportingCurrency))
+	doc.PlainText(fmt.Sprintf("Total Market Value: %s", s.TotalMarketValue.String()))
 
 	doc.H2("Performance")
 
@@ -22,7 +22,7 @@ func SummaryMarkdown(s *portfolio.Summary) string {
 
 	dayLabel := fmt.Sprintf("Day %d", s.Date.Day())
 	weekLabel := fmt.Sprintf("Week %d", week)
-	monthLabel := fmt.Sprintf("%s", s.Date.Month())
+	monthLabel := s.Date.Month().String()
 	quarterLabel := fmt.Sprintf("Q%d", quarter)
 	yearLabel := fmt.Sprintf("%d", s.Date.Year())
 

@@ -6,8 +6,8 @@ import (
 
 // Performance holds the starting value and the calculated return for a specific period.
 type Performance struct {
-	StartValue float64
-	Return     float64 // Return is a ratio (e.g., 0.05 for 5%)
+	StartValue Money
+	Return     Percent // Return is a ratio (e.g., 0.05 for 5%)
 }
 
 // Summary provides a comprehensive, at-a-glance overview of the portfolio's
@@ -15,7 +15,7 @@ type Performance struct {
 type Summary struct {
 	Date              date.Date
 	ReportingCurrency string
-	TotalMarketValue  float64
+	TotalMarketValue  Money
 	Daily             Performance
 	WTD               Performance // Week-to-Date
 	MTD               Performance // Month-to-Date

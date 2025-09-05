@@ -16,6 +16,8 @@ type Balance struct {
 	cur string // reporting currency
 	// cashAccounts holds the balance for each currency.
 	cashAccounts map[string]decimal.Decimal
+	// cashFlows holds the money that goes in or out the portfolio.
+	cashFlows map[string]decimal.Decimal
 	// counterpartyAccounts holds the balance for each external account.
 	counterpartyAccounts map[string]decimal.Decimal
 	// counterpartyCur record counterparty currency
@@ -49,6 +51,7 @@ func (b *Balance) Price(ticker string) decimal.Decimal {
 func newBalance() *Balance {
 	return &Balance{
 		cashAccounts:         make(map[string]decimal.Decimal),
+		cashFlows:            make(map[string]decimal.Decimal),
 		counterpartyAccounts: make(map[string]decimal.Decimal),
 		counterpartyCur:      make(map[string]string),
 		securities:           make(map[string]Security),
@@ -102,9 +105,15 @@ func (b *Balance) apply(e event, method CostBasisMethod) error {
 	case creditCash:
 		b.computeTWR(v.amount)
 		b.cashAccounts[v.currency] = b.cashAccounts[v.currency].Add(v.amount)
+		if v.external {
+			b.cashFlows[v.currency] = b.cashFlows[v.currency].Add(v.amount)
+		}
 	case debitCash:
 		b.computeTWR(v.amount.Neg())
 		b.cashAccounts[v.currency] = b.cashAccounts[v.currency].Sub(v.amount)
+		if v.external {
+			b.cashFlows[v.currency] = b.cashFlows[v.currency].Sub(v.amount)
+		}
 	case acquireLot:
 		newLot := lot{
 			Date:     v.on,
@@ -248,6 +257,11 @@ func (b *Balance) Cash(currency string) decimal.Decimal {
 	return b.cashAccounts[currency]
 }
 
+// CashFlow returns the total cash flow for a specific currency.
+func (b *Balance) CashFlow(currency string) decimal.Decimal {
+	return b.cashFlows[currency]
+}
+
 // Counterparty returns the balance of a specific counterparty account.
 func (b *Balance) Counterparty(account string) decimal.Decimal {
 	return b.counterpartyAccounts[account]
@@ -266,6 +280,11 @@ func (b *Balance) TotalRealizedGain() decimal.Decimal {
 		total = total.Add(gain)
 	}
 	return total
+}
+
+// TotalUnealizedGain returns the total realized gains accross all holdings.
+func (b *Balance) TotalUnrealizedGain() decimal.Decimal {
+	return b.TotalMarketValue().Sub(b.TotalCostBasis())
 }
 
 // TotalMarketValue returns the total market value of all securities in the portfolio.
@@ -293,6 +312,15 @@ func (b *Balance) TotalCostBasis() decimal.Decimal {
 func (b *Balance) TotalCash() decimal.Decimal {
 	total := decimal.Zero
 	for currency, amount := range b.cashAccounts {
+		total = total.Add(b.Convert(amount, currency))
+	}
+	return total
+}
+
+// TotalCashFlow returns the total cash flow across all currencies, converted to the reporting currency.
+func (b *Balance) TotalCashFlow() decimal.Decimal {
+	total := decimal.Zero
+	for currency, amount := range b.cashFlows {
 		total = total.Add(b.Convert(amount, currency))
 	}
 	return total

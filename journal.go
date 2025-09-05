@@ -27,6 +27,7 @@ type creditCash struct {
 	on       date.Date
 	currency string
 	amount   decimal.Decimal
+	external bool // true when cash comes from outside.
 }
 
 func (e creditCash) date() date.Date { return e.on }
@@ -36,6 +37,7 @@ type debitCash struct {
 	on       date.Date
 	currency string
 	amount   decimal.Decimal
+	external bool // true when cash goes outside.
 }
 
 func (e debitCash) date() date.Date { return e.on }
@@ -172,7 +174,7 @@ func (as *AccountingSystem) newJournal() (*Journal, error) {
 		case Deposit:
 			amount := decimal.NewFromFloat(v.Amount)
 			journal.events = append(journal.events,
-				creditCash{on: v.When(), currency: v.Currency, amount: amount},
+				creditCash{on: v.When(), currency: v.Currency, amount: amount, external: true},
 			)
 			if v.Settles != "" {
 				// A deposit settling an account means a counterparty paid us back, reducing what they owe us (asset).
@@ -183,7 +185,7 @@ func (as *AccountingSystem) newJournal() (*Journal, error) {
 		case Withdraw:
 			amount := decimal.NewFromFloat(v.Amount)
 			journal.events = append(journal.events,
-				debitCash{on: v.When(), currency: v.Currency, amount: amount},
+				debitCash{on: v.When(), currency: v.Currency, amount: amount, external: true},
 			)
 			if v.Settles != "" {
 				// A withdrawal settling an account means we paid a counterparty back, reducing what we owe them (liability).

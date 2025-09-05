@@ -256,3 +256,6 @@ func Iterate[T float32 | float64](histories ...History[T]) iter.Seq[Date] {
 
 // Range represents a range of dates.
 type Range struct{ From, To Date }
+
+// Contains return true date is included in the range (boundaries included)
+func (r Range) Contains(date Date) bool { return (!date.Before(r.From) && !date.After(r.To)) }
