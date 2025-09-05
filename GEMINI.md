@@ -11,7 +11,7 @@ Never try to commit unless I am asking you to, and then follow the Commit rules.
 
 The file ARCHITECTURE.md contains all you need to know about the project's architecture. Read it when looking for code.
 
-### The merging Rules
+### The Merging Rules
 
 when merging a feature branch, always use e `ff-only` flag, and if it is not fast-foward, rebase the feature branch.
 
@@ -38,9 +38,11 @@ Always use the file named 'COMMIT_EDITMSG' to write commit messages and use the 
 
 ### The Github CLI Rule
 
-To interact with Github issues or pull requests, you can use the `gh` command line.
+To view an issue use `gh issue view <issue number> --comments`.
 
-Always use the file named 'GH_EDITMSG' to send complex text to `gh` command line (via -F flag)
+To list issues use `gh issue list`.
+
+To comment on issues always use the file named 'GH_EDITMSG' and use  `gh issue comment <issue number> -F /workspaces/portfolio/GH_EDITMSG`
 
 
 ### The Testing Rule
