@@ -43,6 +43,8 @@ func Register(c *subcommands.Commander) {
 	c.Register(&gainsCmd{}, "analysis")
 	c.Register(&dailyCmd{}, "analysis")
 
+	c.Register(&topicCmd{}, "documentation")
+
 }
 
 // As a CLI application, it has a very short-lived lifecycle, so it is ok to use global variables for flags.

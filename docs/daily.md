@@ -15,22 +15,30 @@ The `pcs daily` report provides a snapshot of your portfolio's performance on a 
 
 ## Scenarios
 
-### Standard Case
+### Basic Portfolio Growth
 
-This scenario demonstrates a typical day with market gains and a simple transaction.
+This scenario sets up a basic dual-currency investment portfolio by funding it with cash in EUR and USD, and then making an initial purchase of Microsoft (MSFT) shares. This prepares the portfolio to demonstrate how `pcs` tracks daily gains and losses.
 
 ```bash setup
+# Set up the market data.
+pcs add-security -s EURUSD -id EURUSD -c USD
+pcs add-security -s MSFT -id US0378331005.XNAS -c USD
+# Fund the portfolio with EUR and USD.
 pcs deposit -d 2025-01-01 -c EUR -a 10000
 pcs deposit -d 2025-01-01 -c USD -a 2000
+# Add stock to the ledger and make the first buy transaction.
 pcs declare -d 2025-01-01 -s MSFT -id US0378331005.XNAS -c USD
 pcs buy     -d 2025-01-02 -s MSFT -q 10 -a 1000
-pcs add-security -s MSFT -id US0378331005.XNAS -c USD
-pcs add-security -s EURUSD -id EURUSD -c USD
+# Manually updating market data to explicitly show price changes.
+# In a real-world daily routine, `pcs fetch-security` would automate this.
 pcs update-security -id US0378331005.XNAS -d 2025-01-02 -p 100
-pcs update-security -id EURUSD -d 2025-01-02 -p 1.1
 pcs update-security -id US0378331005.XNAS -d 2025-01-03 -p 105
+pcs update-security -id EURUSD -d 2025-01-02 -p 1.1
 pcs update-security -id EURUSD -d 2025-01-03 -p 1.1
 ```
+
+On the next day, the portfolio is showing some gains.
+
 
 ```bash run
 pcs daily -d 2025-01-03 -c EUR
@@ -56,23 +64,32 @@ pcs daily -d 2025-01-03 -c EUR
    MSFT   |      €45.45 | +5.00% 
 ```
 
-### Surprising Case
+### Cash Flow Impact on Daily Gains
 
-This scenario demonstrates a situation where a large cash deposit on a day with negative market movement can lead to a positive overall portfolio value change, even if the "Total Day's Gain / Loss" is negative due to market losses.
+This scenario illustrates how a significant cash inflow can lead to an overall positive portfolio value change, even when market performance for securities is negative. It highlights the distinction between market gains/losses and the impact of cash movements on total portfolio value.
 
 ```bash setup
+# Set up the market data.
+pcs add-security -s EURUSD -id EURUSD -c USD
+pcs add-security -s MSFT -id US0378331005.XNAS -c USD
+# Fund the portfolio with EUR and USD.
 pcs deposit -d 2025-01-01 -c EUR -a 10000
 pcs deposit -d 2025-01-01 -c USD -a 2000
+# Add stock to the ledger and make the first buy transaction.
 pcs declare -d 2025-01-01 -s MSFT -id US0378331005.XNAS -c USD
 pcs buy     -d 2025-01-02 -s MSFT -q 10 -a 1000
-pcs add-security -s MSFT -id US0378331005.XNAS -c USD
-pcs add-security -s EURUSD -id EURUSD -c USD
+# Manually updating market data to explicitly show price changes.
+# In a real-world daily routine, `pcs fetch-security` would automate this.
 pcs update-security -id US0378331005.XNAS -d 2025-01-02 -p 100
-pcs update-security -id EURUSD -d 2025-01-02 -p 1.1
 pcs update-security -id US0378331005.XNAS -d 2025-01-03 -p 95
+pcs update-security -id EURUSD -d 2025-01-02 -p 1.1
 pcs update-security -id EURUSD -d 2025-01-03 -p 1.1
+# An additional deposit is made to demonstrate its effect.
 pcs deposit -d 2025-01-03 -c EUR -a 500
 ```
+
+Observe how the total daily gain remains positive, and the breakdown clarifies the contributing factors.
+
 
 ```bash run
 pcs daily -d 2025-01-03 -c EUR
@@ -102,8 +119,3 @@ pcs daily -d 2025-01-03 -c EUR
   
   1. Deposited 500.00 EUR
 ```
-
-**Explanation:**
-
-Despite a negative market gain for MSFT (-45.45 EUR), the overall portfolio value increased significantly due to a large cash deposit (454.55 EUR). The "Total Day's Gain / Loss" reflects the combined effect of market movements and cash flows, showing a positive change in the total portfolio value. This highlights that a positive cash flow can offset negative market performance, leading to an overall increase in portfolio value for the day.
-

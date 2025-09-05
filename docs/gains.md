@@ -12,24 +12,30 @@ The `pcs gains` report answers the question: "What is the total economic change 
 
 ## Scenarios
 
-### Standard Case
+### Baseline Gain/Loss
 
 This scenario demonstrates the calculation of realized and unrealized gains for a security that has been partially sold.
 
 ```bash setup
+# Set up the market data.
+pcs add-security -s EURUSD -id EURUSD -c USD
+pcs add-security -s MSFT -id US0378331005.XNAS -c USD
+# Fund the portfolio with EUR and USD.
 pcs deposit -d 2025-01-01 -c EUR -a 10000
 pcs deposit -d 2025-01-01 -c USD -a 5000
-pcs declare -s MSFT -id US0378331005.XNAS -c USD
+# Add stock to the ledger and make the first buy transaction.
+pcs declare -d 2025-01-02 -s MSFT -id US0378331005.XNAS -c USD
 pcs buy -d 2025-01-02 -s MSFT -q 10 -a 4000
-pcs add-security -s MSFT -id US0378331005.XNAS -c USD
-pcs add-security -s EURUSD -id EURUSD -c USD
+# Manually updating market data to explicitly show price changes.
+# In a real-world daily routine, `pcs fetch-security` would automate this.
 pcs update-security -id US0378331005.XNAS -d 2025-02-28 -p 400
-pcs update-security -id EURUSD -d 2025-02-28 -p 1.1
 pcs update-security -id US0378331005.XNAS -d 2025-03-05 -p 420
-pcs update-security -id EURUSD -d 2025-03-05 -p 1.1
-pcs sell -d 2025-03-06 -s MSFT -q 5 -a 2250
 pcs update-security -id US0378331005.XNAS -d 2025-03-31 -p 450
+pcs update-security -id EURUSD -d 2025-02-28 -p 1.1
+pcs update-security -id EURUSD -d 2025-03-05 -p 1.1
 pcs update-security -id EURUSD -d 2025-03-31 -p 1.1
+# Sell the stock.
+pcs sell -d 2025-03-06 -s MSFT -q 5 -a 2250
 ```
 
 ```bash run
@@ -43,28 +49,36 @@ pcs gains --period month -d 2025-03-31 -c EUR
   
   ## Gains per Security
   
-   Security  |  Realized | Unrealized |     Total 
-  -----------|-----------|------------|-----------
-   **Total** | **€0.00** |  **€0.00** | **€0.00**
+   Security  |     Realized |   Unrealized |        Total 
+  -----------|--------------|--------------|--------------
+   MSFT      |     +$250.00 |     +$250.00 |     +$500.00 
+   **Total** | **+€250.00** | **+€250.00** | **+€500.00**
 ```
 
-### Surprising Case
+### Impact of a Sale on Unrealized Gains
 
 This scenario demonstrates a situation where an asset is bought before the reporting period and sold entirely within the period, resulting in a negative unrealized gain.
 
 ```bash setup
+# Set up the market data.
+pcs add-security -s EURUSD -id EURUSD -c USD
+pcs add-security -s GOOG -id US02079K3059.XNAS -c USD
+# Fund the portfolio with EUR and USD.
 pcs deposit -d 2025-01-01 -c EUR -a 10000
 pcs deposit -d 2025-01-01 -c USD -a 2000
-pcs declare -s GOOG -id US02079K3059.XNAS -c USD
+# Add stock to the ledger and make the first buy transaction.
+pcs declare -d 2025-01-01 -s GOOG -id US02079K3059.XNAS -c USD
 pcs buy -d 2025-01-02 -s GOOG -q 10 -a 1000
-pcs add-security -s GOOG -id US02079K3059.XNAS -c USD
-pcs add-security -s EURUSD -id EURUSD -c USD
-pcs update-security -id US02079K3059.XNAS -d 2025-02-28 -p 120
-pcs update-security -id EURUSD -d 2025-02-28 -p 1.1
+# Manually updating market data to explicitly show price changes.
+# In a real-world daily routine, `pcs fetch-security` would automate this.
+pcs update-security -d 2025-02-28 -id US02079K3059.XNAS -p 120
+pcs update-security -d 2025-03-15 -id US02079K3059.XNAS -p 110
+pcs update-security -d 2025-03-31 -id US02079K3059.XNAS -p 110
+pcs update-security -d 2025-02-28 -id EURUSD -p 1.1
+pcs update-security -d 2025-03-15 -id EURUSD -p 1.1
+pcs update-security -d 2025-03-31 -id EURUSD -p 1.1
+# Sell the stock.
 pcs sell -d 2025-03-15 -s GOOG -q 10 -a 1100
-pcs update-security -id US02079K3059.XNAS -d 2025-03-15 -p 110
-pcs update-security -id EURUSD -d 2025-03-15 -p 1.1
-pcs update-security -id EURUSD -d 2025-03-31 -p 1.1
 ```
 
 ```bash run
@@ -78,9 +92,10 @@ pcs gains --period month -d 2025-03-31 -c EUR
   
   ## Gains per Security
   
-   Security  |  Realized | Unrealized |     Total 
-  -----------|-----------|------------|-----------
-   **Total** | **€0.00** |  **€0.00** | **€0.00**
+   Security  |     Realized |   Unrealized |        Total 
+  -----------|--------------|--------------|--------------
+   GOOG      |     +$100.00 |     -$200.00 |     -$100.00 
+   **Total** | **+€100.00** | **-€200.00** | **-€100.00**
 ```
 
 **Explanation:**

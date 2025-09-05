@@ -22,14 +22,19 @@ The holding report calculates the following key metrics:
 This scenario demonstrates how to generate a holding report for a specific date.
 
 ```bash setup
-pcs deposit -d 2025-01-01 -c EUR -a 10000
-pcs deposit -d 2025-01-01 -c USD -a 5000
-pcs declare -d 2025-01-01 -s MSFT -id US0378331005.XNAS -c USD
-pcs buy -d 2025-01-02 -s MSFT -q 10 -a 4000
-pcs add-security -s MSFT -id US0378331005.XNAS -c USD
+# Set up the market data.
 pcs add-security -s EURUSD -id EURUSD -c USD
+pcs add-security -s MSFT -id US0378331005.XNAS -c USD
+# Manually updating market data to explicitly show price changes.
+# In a real-world daily routine, `pcs fetch-security` would automate this.
 pcs update-security -id US0378331005.XNAS -d 2025-03-05 -p 420
 pcs update-security -id EURUSD -d 2025-03-05 -p 1.1
+# Fund the portfolio with EUR and USD.
+pcs deposit -d 2025-01-01 -c EUR -a 10000
+pcs deposit -d 2025-01-01 -c USD -a 5000
+# Add stock to the ledger and make the first buy transaction.
+pcs declare -d 2025-01-01 -s MSFT -id US0378331005.XNAS -c USD
+pcs buy -d 2025-01-02 -s MSFT -q 10 -a 4000
 ```
 
 ```bash run
@@ -60,7 +65,9 @@ pcs holding -d 2025-03-05 -c EUR
 This scenario demonstrates how to use counterparty accounts to track liabilities, such as taxes.
 
 ```bash run
+# Sell some stock realize a gain.
 pcs sell -d 2025-03-06 -s MSFT -q 5 -a 2200
+# Record that Gain Tax will be payable.
 pcs accrue -d 2025-03-06 -c USD -payable TaxAccount -a 60 
 ```
 
