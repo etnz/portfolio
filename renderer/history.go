@@ -20,6 +20,12 @@ func HistoryMarkdown(r *portfolio.HistoryReport) string {
 
 	if r.Security != "" {
 		table := md.TableSet{
+			Alignment: []md.TableAlignment{
+				md.AlignLeft,
+				md.AlignRight,
+				md.AlignRight,
+				md.AlignRight,
+			},
 			Header: []string{"Date", "Position", "Price", "Value"},
 			Rows:   [][]string{},
 		}
@@ -34,6 +40,10 @@ func HistoryMarkdown(r *portfolio.HistoryReport) string {
 		doc.Table(table)
 	} else {
 		table := md.TableSet{
+			Alignment: []md.TableAlignment{
+				md.AlignLeft,
+				md.AlignRight,
+			},
 			Header: []string{"Date", "Value"},
 			Rows:   [][]string{},
 		}
