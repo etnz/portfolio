@@ -11,6 +11,9 @@ Never try to commit unless I am asking you to, and then follow the Commit rules.
 
 The file ARCHITECTURE.md contains all you need to know about the project's architecture. Read it when looking for code.
 
+### The merging Rules
+
+when merging a feature branch, always use e `ff-only` flag, and if it is not fast-foward, rebase the feature branch.
 
 ### The Commit Rules
 
