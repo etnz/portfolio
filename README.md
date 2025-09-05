@@ -1,6 +1,10 @@
+![pcs-large](docs/pcs-large.png)
+
 [![Go Reference](https://pkg.go.dev/badge/github.com/etnz/portfolio.svg)](https://pkg.go.dev/github.com/etnz/portfolio)
 
 # pcs: Your Private, Unified Portfolio Tracker
+
+![pcs-large](docs/pcs-medium.png)
 
 In a world where your investments are scattered across multiple platforms—from corporate savings plans and retirement accounts to various online brokers—getting a single, clear view of your financial health is a challenge. `pcs` is a local-first, command-line tool designed to solve this problem by providing a unified, private, and auditable view of your entire investment portfolio.
 
