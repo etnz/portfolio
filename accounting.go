@@ -471,9 +471,11 @@ func (as *AccountingSystem) NewHistory(security, currency string) (*HistoryRepor
 	if security != "" {
 		predicate = BySecurity(security)
 	} else {
-		predicate = ByCurrency(currency)
+		predicate = as.Ledger.ByCurrency(currency)
 	}
 
+	// Build a list of all days where there was a significant transaction.
+	days := make([]date.Date, 0, len(as.Ledger.transactions))
 	previous := date.Date{}
 	for _, tx := range as.Ledger.Transactions(predicate) {
 		on := tx.When()
@@ -481,6 +483,10 @@ func (as *AccountingSystem) NewHistory(security, currency string) (*HistoryRepor
 			continue // already done for that day
 		}
 		previous = on
+		days = append(days, on)
+	}
+
+	for _, on := range days {
 		balance, err := as.Balance(on)
 		if err != nil {
 			return nil, fmt.Errorf("could not get balance for %s: %w", on, err)

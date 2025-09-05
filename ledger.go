@@ -402,9 +402,18 @@ func BySecurity(ticker string) func(Transaction) bool {
 }
 
 // ByCurrency returns a predicate that filters transactions by currency.
-func ByCurrency(currency string) func(Transaction) bool {
+func (l *Ledger) ByCurrency(currency string) func(Transaction) bool {
 	return func(tx Transaction) bool {
 		switch v := tx.(type) {
+		case Buy:
+			sec := l.Get(v.Security)
+			return sec != nil && sec.Currency() == currency
+		case Sell:
+			sec := l.Get(v.Security)
+			return sec != nil && sec.Currency() == currency
+		case Dividend:
+			sec := l.Get(v.Security)
+			return sec != nil && sec.Currency() == currency
 		case Deposit:
 			return v.Currency == currency
 		case Withdraw:
