@@ -184,10 +184,9 @@ func (as *AccountingSystem) NewSummary(on date.Date) (*Summary, error) {
 
 	// 2. Calculate performance for each period
 	periodTWR := func(start *Balance) (perf Performance) {
-		return Performance{
-			StartValue: NewMoney(start.TotalPortfolioValue(), as.ReportingCurrency),
-			Return:     Percent(endBalance.linkedTWR/start.linkedTWR - 1),
-		}
+		perf = NewPerformanceFromDecimal(start.TotalPortfolioValue(), endBalance.TotalPortfolioValue(), as.ReportingCurrency)
+		perf.Return = Percent(endBalance.linkedTWR/start.linkedTWR - 1)
+		return perf
 	}
 
 	summary.Daily = periodTWR(yesterdayBalance)
@@ -196,8 +195,8 @@ func (as *AccountingSystem) NewSummary(on date.Date) (*Summary, error) {
 	summary.QTD = periodTWR(quarterBalance)
 	summary.YTD = periodTWR(yearBalance)
 	summary.Inception = Performance{
-		StartValue: NewMoney(decimal.Zero, as.ReportingCurrency),
-		Return:     Percent(endBalance.linkedTWR - 1),
+		Start:  NewMoney(decimal.Zero, as.ReportingCurrency),
+		Return: Percent(endBalance.linkedTWR - 1),
 	}
 	return summary, nil
 }
@@ -312,7 +311,6 @@ func (as *AccountingSystem) CostBasis(on date.Date) (float64, error) {
 	}
 	return bal.TotalCostBasis().InexactFloat64(), nil
 }
-
 
 // NewHoldingReport calculates and returns a detailed holdings report for a given date.
 func (as *AccountingSystem) NewHoldingReport(on date.Date) (*HoldingReport, error) {

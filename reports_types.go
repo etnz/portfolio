@@ -103,3 +103,27 @@ func (p Percent) String() string {
 func (p Percent) SignedString() string {
 	return fmt.Sprintf("%+.2f%%", p)
 }
+
+// Performance holds the starting value and the calculated change for a specific range.
+type Performance struct {
+	Start, End Money
+	Return     Percent // TWR return if available
+}
+
+func NewPerformance(start, end Money) Performance {
+	return Performance{
+		Start: start,
+		End:   end,
+	}
+}
+func NewPerformanceFromDecimal(start, end decimal.Decimal, currency string) Performance {
+	return NewPerformance(NewMoney(start, currency), NewMoney(end, currency))
+}
+
+func (p Performance) Change() Money {
+	return p.End.Sub(p.Start)
+}
+
+func (p Performance) Percent() Percent {
+	return Percent(100 * p.Change().AsFloat() / p.Start.AsFloat())
+}

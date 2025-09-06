@@ -11,24 +11,32 @@ import (
 func ReviewMarkdown(report *portfolio.ReviewReport) string {
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "# Review Report for %s to %s\n\n", report.Range.From, report.Range.To)
+	fmt.Fprint(&b, "# Review Report\n\n")
+	fmt.Fprintf(&b, "Period from %s to %s\n\n", report.Range.From, report.Range.To)
 
-	// Summary
-	fmt.Fprint(&b, "## Summary\n\n")
-
-	fmt.Fprintln(&b, "|    |    |    |")
-	fmt.Fprintln(&b, "|---:|---:|---:|")
-
-	fmt.Fprintf(&b, "| %s | %s | |\n", "**Previous Total Value**", report.PrevPortfolioValue.String())
+	fmt.Fprintf(&b, "| **%s** | **%s** |\n", "Total Portfolio Value", report.PortfolioValue.End.String())
+	fmt.Fprintln(&b, "|---:|---:|")
+	fmt.Fprintf(&b, "| %s | %s |\n", "Previous Value", report.PortfolioValue.Start.String())
 	fmt.Fprintf(&b, "| %s | %s |\n", "Cash Flow", report.CashFlow.SignedString())
-	fmt.Fprintf(&b, "| %s | | %s |\n", "Cash Change", report.CashChange.SignedString())
-	fmt.Fprintf(&b, "| %s | | %s |\n", "Counterparties Change", report.CounterpartyChange.SignedString())
-	fmt.Fprintf(&b, "| %s | | %s |\n", "Market Value Change", report.MarketChange().SignedString())
-	//fmt.Fprintf(&b, "| %s | %s |\n", "Realized Gains", report.Gains.Realized.SignedString())
-	fmt.Fprintf(&b, "| %s | %s | |\n", "Total Gains", report.NetGains().SignedString())
-	fmt.Fprintf(&b, "| %s | %s | |\n", "Total Change", report.Gains.Total.SignedString())
-	fmt.Fprintf(&b, "| **%s** | **%s** | |\n", "New Total Value", report.TotalPortfolioValue.String())
-	//fmt.Fprintf(&b, "| %s | %s |\n", "Time-Weighted Return (TWR)**", report.Performance.Return.SignedString())
+	fmt.Fprintf(&b, "| %s | %s |\n", "Gains", report.NetGains().SignedString())
+
+	fmt.Fprintln(&b, "|   |   |")
+	fmt.Fprintf(&b, "| **%s** | **%s** |\n", "Net Change", report.PortfolioValue.Change().String())
+	fmt.Fprintf(&b, "| %s | %s |\n", "Cash", report.Cash.Change().SignedString())
+	fmt.Fprintf(&b, "| %s | %s |\n", "Counterparties", report.Counterparty.Change().SignedString())
+	fmt.Fprintf(&b, "| %s | %s |\n", "Market Value", report.MarketChange().SignedString())
+	// fmt.Fprintf(&b, "| %s | %s |\n", "Time-Weighted Return (TWR)**", report.PortfolioValue.Return.SignedString())
+
+	fmt.Fprintln(&b, "|   |   |")
+	fmt.Fprintln(&b, "|  **Cash Accounts** |  |")
+	for _, acc := range report.CashAccounts {
+		fmt.Fprintf(&b, "| %s | %s |\n", acc.Label, acc.Value.SignedString())
+	}
+	fmt.Fprintln(&b, "|   |   |")
+	fmt.Fprintln(&b, "| **Counterparty Accounts**  |  |")
+	for _, acc := range report.Counterparties {
+		fmt.Fprintf(&b, "| %s | %s |\n", acc.Label, acc.Value.SignedString())
+	}
 
 	// Asset Reviews
 	fmt.Fprintf(&b, "\n## Asset Performance\n\n")
@@ -43,12 +51,13 @@ func ReviewMarkdown(report *portfolio.ReviewReport) string {
 			asset.UnrealizedGains.SignedString(),
 		)
 	}
+
 	fmt.Fprintf(&b, "| **%s** | **%s** | **%s** | **%s** | **%s** |\n",
 		"Total",
-		report.PrevMarketValue.String(),
-		report.TotalMarketValue.String(),
-		report.Gains.Realized.SignedString(),
-		report.Gains.Unrealized.SignedString(),
+		report.MarketValue.Start.String(),
+		report.MarketValue.End.String(),
+		report.Realized.SignedString(),
+		report.Unrealized.SignedString(),
 	)
 
 	// Transactions

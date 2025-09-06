@@ -70,7 +70,7 @@ func tradegateLatest(name, isin string) (float64, error) {
 		return math.NaN(), fmt.Errorf("error retrieving %q: %w", name, err)
 	}
 	// last is the last transaction, moves slower than the bid, but the bid can be 0.
-	jval := jobj["bid"]
+	jval := jobj["last"] // or bid
 	val, ok := jval.(float64)
 	if !ok {
 		// sometimes, this weird API returns the value as a string

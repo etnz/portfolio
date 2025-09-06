@@ -4,12 +4,6 @@ import (
 	"github.com/etnz/portfolio/date"
 )
 
-// Performance holds the starting value and the calculated return for a specific period.
-type Performance struct {
-	StartValue Money
-	Return     Percent // Return is a ratio (e.g., 0.05 for 5%)
-}
-
 // Summary provides a comprehensive, at-a-glance overview of the portfolio's
 // state and performance on a given date.
 type Summary struct {

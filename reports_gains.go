@@ -29,12 +29,6 @@ type SecurityGains struct {
 // CalculateGains computes the realized and unrealized gains for all securities
 // over a given period, using a specified cost basis accounting method.
 func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMethod) (*GainsReport, error) {
-	report := &GainsReport{
-		Range:             period,
-		Method:            method,
-		ReportingCurrency: as.ReportingCurrency,
-		Securities:        []SecurityGains{},
-	}
 
 	journal, err := as.getJournal()
 	if err != nil {
@@ -49,6 +43,22 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 	if err != nil {
 		return nil, fmt.Errorf("could not create balance from journal: %w", err)
 	}
+	return as.calculateGains(endBalance, startBalance, method)
+}
+func (as *AccountingSystem) calculateGains(endBalance, startBalance *Balance, method CostBasisMethod) (*GainsReport, error) {
+	report := &GainsReport{
+		Range:             date.Range{From: startBalance.on.Add(1), To: endBalance.on},
+		Method:            method,
+		ReportingCurrency: as.ReportingCurrency,
+		Securities:        []SecurityGains{},
+	}
+	// TotalPortfolio value is broken in three parts: 
+	// - the cash accounts (one per currency)
+	// - the counterparty accounts (one per counterparty)
+	// - the assets market value
+	//
+	// As a consequence there are three variations aka gains of those three parts.
+
 	// gains are: total gain := change in total portfolio value
 	//  market value gain:=  total gain - cash flow, and counterparty change
 	// Completely independant: realized gain:
