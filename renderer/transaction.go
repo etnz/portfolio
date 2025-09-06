@@ -20,7 +20,10 @@ func Transaction(tx portfolio.Transaction) string {
 	case portfolio.Withdraw:
 		return fmt.Sprintf("Withdrew %.2f %s", v.Amount, v.Currency)
 	case portfolio.Accrue:
-		return fmt.Sprintf("Accrued %.2f %s for %s", v.Amount, v.Currency, v.Counterparty)
+		if v.Amount > 0 {
+			return fmt.Sprintf("Accrued receivable %.2f %s from %s", v.Amount, v.Currency, v.Counterparty)
+		}
+		return fmt.Sprintf("Accrued payable %.2f %s to %s", -v.Amount, v.Currency, v.Counterparty)
 	case portfolio.Convert:
 		return fmt.Sprintf("Converted %.2f %s to %.2f %s", v.FromAmount, v.FromCurrency, v.ToAmount, v.ToCurrency)
 	case portfolio.Declare:
