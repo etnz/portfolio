@@ -73,14 +73,17 @@ func (as *AccountingSystem) NewReviewReport(period date.Range) (*ReviewReport, e
 		flowEnd := endBalance.CashFlow(cur)
 		flowStart := startBalance.CashFlow(cur)
 		flow := flowEnd.Sub(flowStart)
-		totalCashFlow = totalCashFlow.Add(flow)
+		totalCashFlow = totalCashFlow.Add(endBalance.Convert(flow, cur))
 	}
 	report.CashFlow = NewMoney(totalCashFlow, as.ReportingCurrency)
 
 	totalCounterparties := decimal.Zero
 	for acc := range endBalance.Counterparties() {
 		cur := endBalance.CounterpartyCurrency(acc)
-		totalCounterparties = totalCounterparties.Add(endBalance.Counterparty(cur).Sub(startBalance.Counterparty(cur)))
+		start := startBalance.Counterparty(acc)
+		end := endBalance.Counterparty(acc)
+		change := end.Sub(start)
+		totalCounterparties = totalCounterparties.Add(endBalance.Convert(change, cur))
 	}
 	report.CounterpartyChange = NewMoney(totalCounterparties, as.ReportingCurrency)
 
@@ -120,6 +123,9 @@ func (as *AccountingSystem) NewReviewReport(period date.Range) (*ReviewReport, e
 	return report, nil
 }
 
+func (r *ReviewReport) NetGains() Money {
+	return r.TotalPortfolioValue.Sub(r.PrevPortfolioValue).Sub(r.CashFlow)
+}
 func (r *ReviewReport) MarketChange() Money {
-	return r.TotalMarketValue.Sub(r.PrevMarketValue).Sub(r.CashFlow)
+	return r.TotalMarketValue.Sub(r.PrevMarketValue)
 }

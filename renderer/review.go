@@ -16,18 +16,19 @@ func ReviewMarkdown(report *portfolio.ReviewReport) string {
 	// Summary
 	fmt.Fprint(&b, "## Summary\n\n")
 
-	fmt.Fprintln(&b, "|    |    |")
-	fmt.Fprintln(&b, "|---:|---:|")
+	fmt.Fprintln(&b, "|    |    |    |")
+	fmt.Fprintln(&b, "|---:|---:|---:|")
 
 	fmt.Fprintf(&b, "| %s | %s | |\n", "**Previous Total Value**", report.PrevPortfolioValue.String())
-	//fmt.Fprintf(&b, "| %s | %s |\n", "Time-Weighted Return (TWR)**", report.Performance.Return.SignedString())
 	fmt.Fprintf(&b, "| %s | %s |\n", "Cash Flow", report.CashFlow.SignedString())
-	fmt.Fprintf(&b, "| %s | %s |\n", "Cash Change", report.CashChange.SignedString())
-	fmt.Fprintf(&b, "| %s | %s |\n", "Counterparties Change", report.CounterpartyChange.SignedString())
-	fmt.Fprintf(&b, "| %s | %s |\n", "Realized Gains", report.Gains.Realized.SignedString())
-	fmt.Fprintf(&b, "| %s | %s |\n", "Market Gains", report.MarketChange().SignedString())
-	fmt.Fprintf(&b, "| %s | %s |\n", "Total Change", report.Gains.Total.SignedString())
-	fmt.Fprintf(&b, "| **%s** | **%s** |\n", "New Total Value", report.TotalPortfolioValue.String())
+	fmt.Fprintf(&b, "| %s | | %s |\n", "Cash Change", report.CashChange.SignedString())
+	fmt.Fprintf(&b, "| %s | | %s |\n", "Counterparties Change", report.CounterpartyChange.SignedString())
+	fmt.Fprintf(&b, "| %s | | %s |\n", "Market Value Change", report.MarketChange().SignedString())
+	//fmt.Fprintf(&b, "| %s | %s |\n", "Realized Gains", report.Gains.Realized.SignedString())
+	fmt.Fprintf(&b, "| %s | %s | |\n", "Total Gains", report.NetGains().SignedString())
+	fmt.Fprintf(&b, "| %s | %s | |\n", "Total Change", report.Gains.Total.SignedString())
+	fmt.Fprintf(&b, "| **%s** | **%s** | |\n", "New Total Value", report.TotalPortfolioValue.String())
+	//fmt.Fprintf(&b, "| %s | %s |\n", "Time-Weighted Return (TWR)**", report.Performance.Return.SignedString())
 
 	// Asset Reviews
 	fmt.Fprintf(&b, "\n## Asset Performance\n\n")
