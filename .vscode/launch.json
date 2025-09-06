@@ -19,7 +19,7 @@
             "request": "launch",
             "mode": "debug",
             "program": "pcs/main.go",
-            "args": ["gains", "-period=month", "-d=2025-03-31", "-c=EUR"],
+            "args": ["gains", "-period=month", "-d=2025-08-31"],
             "cwd": "/tmp/",
         },
         {
@@ -28,8 +28,8 @@
             "request": "launch",
             "mode": "debug",
             "program": "pcs/main.go",
-            "args": ["review"],
-            "cwd": "${workspaceFolder}",
+            "args": ["review", "-period=month", "-d=2025-08-31"],
+            "cwd": "/tmp/",
         },
         {
             "name": "pcs summary",

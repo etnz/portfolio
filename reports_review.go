@@ -35,12 +35,9 @@ type AssetReview struct {
 }
 
 // NewReviewReport returns a report with all transactions in a given period.
-func (as *AccountingSystem) NewReviewReport(p date.Range) (*ReviewReport, error) {
-	period := p
-	period.From = period.From.Add(-1)
-
+func (as *AccountingSystem) NewReviewReport(period date.Range) (*ReviewReport, error) {
 	report := &ReviewReport{
-		Range:             p,
+		Range:             period,
 		ReportingCurrency: as.ReportingCurrency,
 		Transactions:      []Transaction{},
 		Assets:            []AssetReview{},
@@ -48,7 +45,7 @@ func (as *AccountingSystem) NewReviewReport(p date.Range) (*ReviewReport, error)
 
 	// Transactions
 	for _, tx := range as.Ledger.transactions {
-		if p.Contains(tx.When()) {
+		if period.Contains(tx.When()) {
 			report.Transactions = append(report.Transactions, tx)
 		}
 	}
@@ -59,6 +56,7 @@ func (as *AccountingSystem) NewReviewReport(p date.Range) (*ReviewReport, error)
 		return nil, err
 	}
 
+	// compute the balance the day before the first day of the period.
 	startBalance, err := as.Balance(period.From.Add(-1))
 	if err != nil {
 		return nil, err
@@ -72,7 +70,10 @@ func (as *AccountingSystem) NewReviewReport(p date.Range) (*ReviewReport, error)
 
 	totalCashFlow := decimal.Zero
 	for cur := range endBalance.Currencies() {
-		totalCashFlow = totalCashFlow.Add(endBalance.CashFlow(cur).Sub(startBalance.CashFlow(cur)))
+		flowEnd := endBalance.CashFlow(cur)
+		flowStart := startBalance.CashFlow(cur)
+		flow := flowEnd.Sub(flowStart)
+		totalCashFlow = totalCashFlow.Add(flow)
 	}
 	report.CashFlow = NewMoney(totalCashFlow, as.ReportingCurrency)
 
@@ -84,7 +85,7 @@ func (as *AccountingSystem) NewReviewReport(p date.Range) (*ReviewReport, error)
 	report.CounterpartyChange = NewMoney(totalCounterparties, as.ReportingCurrency)
 
 	// Gains
-	report.Gains, err = as.CalculateGains(p, FIFO)
+	report.Gains, err = as.CalculateGains(period, FIFO)
 	if err != nil {
 		return nil, fmt.Errorf("could not calculate gains for review report: %w", err)
 	}
