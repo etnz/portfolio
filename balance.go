@@ -140,8 +140,14 @@ func (b *Balance) apply(e event, method CostBasisMethod) error {
 
 	case creditCounterparty:
 		b.counterpartyAccounts[v.account] = b.counterpartyAccounts[v.account].Add(v.amount)
+		if v.external {
+			b.cashFlows[v.currency] = b.cashFlows[v.currency].Add(v.amount)
+		}
 	case debitCounterparty:
 		b.counterpartyAccounts[v.account] = b.counterpartyAccounts[v.account].Sub(v.amount)
+		if v.external {
+			b.cashFlows[v.currency] = b.cashFlows[v.currency].Sub(v.amount)
+		}
 	case splitShare:
 		num := decimal.NewFromInt(v.numerator)
 		den := decimal.NewFromInt(v.denominator)

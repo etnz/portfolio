@@ -81,6 +81,8 @@ type creditCounterparty struct {
 	account  string
 	currency string
 	amount   decimal.Decimal
+	external bool // true when money goes outside.
+
 }
 
 func (e creditCounterparty) date() date.Date { return e.on }
@@ -91,6 +93,7 @@ type debitCounterparty struct {
 	account  string
 	currency string
 	amount   decimal.Decimal
+	external bool // true when money goes outside.
 }
 
 func (e debitCounterparty) date() date.Date { return e.on }
@@ -173,8 +176,11 @@ func (as *AccountingSystem) newJournal() (*Journal, error) {
 			)
 		case Deposit:
 			amount := decimal.NewFromFloat(v.Amount)
+			// A deposit that settles a receivable is not considered as external (since the amount)
+			// was taken into account when accruing the receivable
+			ext := v.Settles == ""
 			journal.events = append(journal.events,
-				creditCash{on: v.When(), currency: v.Currency, amount: amount, external: true},
+				creditCash{on: v.When(), currency: v.Currency, amount: amount, external: ext},
 			)
 			if v.Settles != "" {
 				// A deposit settling an account means a counterparty paid us back, reducing what they owe us (asset).
@@ -184,8 +190,11 @@ func (as *AccountingSystem) newJournal() (*Journal, error) {
 			}
 		case Withdraw:
 			amount := decimal.NewFromFloat(v.Amount)
+			// A withdrawal that settles a payable is not considered as external (since the amount)
+			// was taken into account when accruing the receivable
+			ext := v.Settles == ""
 			journal.events = append(journal.events,
-				debitCash{on: v.When(), currency: v.Currency, amount: amount, external: true},
+				debitCash{on: v.When(), currency: v.Currency, amount: amount, external: ext},
 			)
 			if v.Settles != "" {
 				// A withdrawal settling an account means we paid a counterparty back, reducing what we owe them (liability).
@@ -209,11 +218,11 @@ func (as *AccountingSystem) newJournal() (*Journal, error) {
 			amount := decimal.NewFromFloat(v.Amount)
 			if amount.IsPositive() { // Receivable: counterparty owes us (asset) -> increase asset
 				journal.events = append(journal.events,
-					creditCounterparty{on: v.When(), account: v.Counterparty, currency: v.Currency, amount: amount},
+					creditCounterparty{on: v.When(), account: v.Counterparty, currency: v.Currency, amount: amount, external: true},
 				)
 			} else { // Payable: we owe counterparty (liability) -> increase liability
 				journal.events = append(journal.events,
-					debitCounterparty{on: v.When(), account: v.Counterparty, currency: v.Currency, amount: amount.Neg()},
+					debitCounterparty{on: v.When(), account: v.Counterparty, currency: v.Currency, amount: amount.Neg(), external: true},
 				)
 			}
 		default:
