@@ -41,6 +41,11 @@ func (c *gainsCmd) SetFlags(f *flag.FlagSet) {
 }
 
 func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	if c.start != "" && c.period != "" {
+		fmt.Fprintln(os.Stderr, "-start and -period flags cannot be used together")
+		return subcommands.ExitUsageError
+	}
+
 	// Determine the reporting period
 	var period date.Range
 	endDate, err := date.Parse(c.end)
@@ -48,17 +53,18 @@ func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		fmt.Fprintf(os.Stderr, "Error parsing end date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
+	p, err := date.ParsePeriod(c.period)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing period: %v\n", err)
+		return subcommands.ExitUsageError
+	}
 
 	if endDate.IsToday() {
 		c.update = true
 	}
 
-	if c.start != "" && c.period != "" {
-		fmt.Fprintln(os.Stderr, "-start and -period flags cannot be used together")
-		return subcommands.ExitUsageError
-	}
-
 	if c.start != "" {
+		// Special range
 		startDate, err := date.Parse(c.start)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error parsing start date: %v\n", err)
@@ -66,7 +72,8 @@ func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		}
 		period = date.Range{From: startDate, To: endDate}
 	} else {
-		period = date.NewRangeFrom(endDate, c.period)
+		// standard range
+		period = date.NewRange(endDate, p)
 	}
 
 	// Decode market data and ledger

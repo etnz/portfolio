@@ -6,6 +6,15 @@ import (
 	"sort"
 )
 
+// Iterate returns an iterator over all unique, sorted dates from multiple History objects.
+func Iterate[T float32 | float64](histories ...History[T]) iter.Seq[Date] {
+	dates := make([][]Date, 0, len(histories))
+	for _, h := range histories {
+		dates = append(dates, h.days)
+	}
+	return iterate(dates...)
+}
+
 // History stores a chronological series of values, each associated with a specific date.
 // It ensures that dates are unique and the series is always sorted.
 type History[T float32 | float64 | string] struct {

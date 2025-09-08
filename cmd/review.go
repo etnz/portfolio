@@ -34,28 +34,17 @@ func (c *reviewCmd) SetFlags(f *flag.FlagSet) {
 func (c *reviewCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	// 1. Parse the date range for the report
 	var r date.Range
-	var err error
 	on, err := date.Parse(c.date)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	switch c.period {
-	case "week":
-		r = date.NewRangeFrom(on, c.period)
-
-	case "month":
-		r = date.NewRangeFrom(on, c.period)
-
-	case "quarter":
-		r = date.NewRangeFrom(on, c.period)
-
-	case "year":
-		r = date.NewRangeFrom(on, c.period)
-	default:
-		fmt.Fprintf(os.Stderr, "Invalid period: %s\n", c.period)
+	p, err := date.ParsePeriod(c.period)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid period: %v\n", err)
 		return subcommands.ExitUsageError
 	}
+	r = date.NewRange(on, p)
 
 	// 2. Create the accounting system
 	as, err := DecodeAccountingSystem()

@@ -159,22 +159,22 @@ func (as *AccountingSystem) NewSummary(on date.Date) (*Summary, error) {
 		return nil, err
 	}
 
-	weekBalance, err := as.Balance(date.StartOfWeek(on).Add(-1))
+	weekBalance, err := as.Balance(on.StartOf(date.Weekly).Add(-1))
 	if err != nil {
 		return nil, err
 	}
 
-	monthBalance, err := as.Balance(date.StartOfMonth(on).Add(-1))
+	monthBalance, err := as.Balance(on.StartOf(date.Monthly).Add(-1))
 	if err != nil {
 		return nil, err
 	}
 
-	quarterBalance, err := as.Balance(date.StartOfQuarter(on).Add(-1))
+	quarterBalance, err := as.Balance(on.StartOf(date.Quarterly).Add(-1))
 	if err != nil {
 		return nil, err
 	}
 
-	yearBalance, err := as.Balance(date.StartOfYear(on).Add(-1))
+	yearBalance, err := as.Balance(on.StartOf(date.Yearly).Add(-1))
 	if err != nil {
 		return nil, err
 	}

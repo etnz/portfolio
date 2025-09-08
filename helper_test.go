@@ -69,6 +69,9 @@ func parseMarkdown(t *testing.T, file string) []*Block {
 		}
 
 		if fcb, ok := n.(*ast.FencedCodeBlock); ok {
+			if fcb.Info == nil {
+				return ast.WalkContinue, nil
+			}
 			lang := string(fcb.Info.Segment.Value(content))
 
 			// lang := string(fcb.Language(content))
@@ -96,6 +99,7 @@ func parseMarkdown(t *testing.T, file string) []*Block {
 
 	return blocks
 }
+
 
 // lineNumber computes the lineNumber for a given offset AST offset
 func lineNumber(source []byte, offset int) (lineNumber int) {
@@ -174,6 +178,9 @@ func runTestableCommands(t *testing.T, file string) {
 	baseEnv := append(os.Environ(), newPath)
 
 	blocks := parseMarkdown(t, file)
+	if len(blocks) == 0 {
+		return
+	}
 
 	r := runner{
 		env:       baseEnv,

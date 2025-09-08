@@ -14,6 +14,7 @@ const readDateFormat = "2006-1-2" // Permissive read date format (allows single-
 
 // DateFormat is the format used to represent dates as strings in ISO-8601 format.
 const DateFormat = "2006-01-02" // write date format
+const DatetimeFormat = time.RFC3339
 
 const Day = 24 * time.Hour
 
@@ -24,12 +25,31 @@ type Date struct {
 	d int        // day
 }
 
-func (d Date) IsToday() bool {
-	return d == Today()
+// New returns a normalized Date for the given year, month, and day.
+func New(year int, month time.Month, day int) Date {
+	d := Date{year, month, day}
+	d.y, d.m, d.d = d.time().Date()
+	return d
 }
+
+// Year returns current year.
+func (d Date) Year() int { return d.y }
 
 // Month returns the month of the date.
 func (d Date) Month() time.Month { return d.time().Month() }
+
+// Day returns current day of the month.
+func (d Date) Day() int { return d.d }
+
+// String format the date in date RFC3339
+func (d Date) String() string { return d.time().Format(DateFormat) }
+
+// Full format the date in date-time RFC3339
+func (d Date) Full() string { return d.time().Format(DateFormat) }
+
+func (d Date) IsToday() bool {
+	return d == Today()
+}
 
 // Weekday returns the day of the week for the date.
 func (d Date) Weekday() time.Weekday { return d.time().Weekday() }
@@ -39,13 +59,6 @@ func (d Date) ISOWeek() (year, week int) { return d.time().ISOWeek() }
 
 // time returns a time.Time that is a canonical representation of that day (at midnight UTC).
 func (d Date) time() time.Time { return time.Date(d.y, d.m, d.d, 0, 0, 0, 0, time.UTC) }
-
-// New returns a normalized Date for the given year, month, and day.
-func New(year int, month time.Month, day int) Date {
-	d := Date{year, month, day}
-	d.y, d.m, d.d = d.time().Date()
-	return d
-}
 
 // Format returns a textual representation of the date value formatted according to the layout defined by the argument.
 //
@@ -64,14 +77,58 @@ func Today() Date { return New(time.Now().Date()) }
 // Add returns a new Date with the given number of days added.
 func (d Date) Add(i int) Date { return New(d.y, d.m, d.d+i) }
 
-// Year returns current year.
-func (d Date) Year() int { return d.y }
+// AddMonth returns a new Date with the given number of days added.
+func (d Date) AddMonth(i int) Date { return New(d.y, d.m+time.Month(i), d.d) }
 
-// Day returns current day of the month.
-func (d Date) Day() int { return d.d }
+// StartOf returns the date of begining of a given period
+func (d Date) StartOf(period Period) Date {
+	switch period {
+	case Daily:
+		return d
+	case Weekly:
+		weekday := d.Weekday() // time.Sunday = 0, ..., time.Saturday = 6
+		offset := int(weekday - time.Monday)
+		for offset < 0 {
+			offset += 7
+		}
+		return d.Add(-offset)
+	case Monthly:
+		return New(d.Year(), d.Month(), 1)
+	case Quarterly:
+		quarter := (d.Month() - 1) / 3
+		startMonth := time.Month(quarter*3 + 1)
+		return New(d.Year(), startMonth, 1)
+	case Yearly:
+		return New(d.Year(), time.January, 1)
+	default:
+		panic("unknown period")
+	}
+}
 
-// String format the date in its standard format.
-func (d Date) String() string { return d.time().Format(DateFormat) }
+// EndOf returns the date of end of a given period
+func (d Date) EndOf(period Period) Date {
+	switch period {
+	case Daily:
+		return d
+	case Weekly:
+		weekday := d.Weekday() // time.Sunday = 0, ..., time.Saturday = 6
+		offset := int(7 - weekday)
+		for offset >= 7 {
+			offset -= 7
+		}
+		return d.Add(offset)
+	case Monthly:
+		return New(d.Year(), d.Month()+1, 0)
+	case Quarterly:
+		quarter := (d.Month() - 1) / 3        // in [0..3]
+		endMonth := time.Month(quarter*3 + 3) // in [1..12] hence the +3
+		return New(d.Year(), endMonth+1, 0)   // last is next month on the day 0
+	case Yearly:
+		return New(d.Year()+1, time.January, 0)
+	default:
+		panic("unknown period")
+	}
+}
 
 var (
 	relativeDateRE = regexp.MustCompile(`^([+-])(\d+)([dwmqy])$`)
@@ -244,18 +301,3 @@ func iterate(series ...[]Date) iter.Seq[Date] {
 		}
 	}
 }
-
-// Iterate returns an iterator over all unique, sorted dates from multiple History objects.
-func Iterate[T float32 | float64](histories ...History[T]) iter.Seq[Date] {
-	dates := make([][]Date, 0, len(histories))
-	for _, h := range histories {
-		dates = append(dates, h.days)
-	}
-	return iterate(dates...)
-}
-
-// Range represents a range of dates.
-type Range struct{ From, To Date }
-
-// Contains return true date is included in the range (boundaries included)
-func (r Range) Contains(date Date) bool { return (!date.Before(r.From) && !date.After(r.To)) }
