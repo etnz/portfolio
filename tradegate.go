@@ -71,12 +71,12 @@ func tradegateLatest(name, isin string) (float64, error) {
 		return math.NaN(), fmt.Errorf("error retrieving %q: %w", name, err)
 	}
 	// last is the last transaction, moves slower than the bid, but the bid can be 0.
-	jval := jobj["last"] // or bid
+	jval := jobj["bid"] // or bid
 	if s, ok := jval.(string); ok {
 		if s == "./." {
 			// trade gate show's empty last this way, use the bid instead
-			log.Println("'last' is empty, falling back to 'bid'")
-			jval = jobj["bid"]
+			log.Println(name + " 'bid' is empty, falling back to 'last'")
+			jval = jobj["last"]
 		}
 	}
 	val, ok := jval.(float64)
