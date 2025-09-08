@@ -38,7 +38,9 @@ Always use the file named 'COMMIT_EDITMSG' to write commit messages and use the 
 
 ### The Github CLI Rule
 
-To view an issue use `gh issue view <issue number> --comments`.
+If the issue is empty, do not invent it, ask for confirmation.
+
+To view an issue use `gh issue view <issue number> --json title,body,comments`.
 
 To list issues use `gh issue list`.
 
