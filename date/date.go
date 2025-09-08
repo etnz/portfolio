@@ -45,7 +45,12 @@ func (d Date) Day() int { return d.d }
 func (d Date) String() string { return d.time().Format(DateFormat) }
 
 // Full format the date in date-time RFC3339
-func (d Date) Full() string { return d.time().Format(DateFormat) }
+func (d Date) Full() string { return d.time().Format(DatetimeFormat) }
+
+// IsZero returns true if the date is the zero value.
+func (d Date) IsZero() bool {
+	return d.y == 0 && d.m == 0 && d.d == 0
+}
 
 func (d Date) IsToday() bool {
 	return d == Today()

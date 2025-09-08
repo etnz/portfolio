@@ -40,7 +40,7 @@ func (r Range) Name() string {
 	if ok {
 		return p.String()
 	}
-	return "Special"
+	return "special"
 }
 
 // Identifier compute a unique identifier for the Range.

@@ -100,7 +100,6 @@ func parseMarkdown(t *testing.T, file string) []*Block {
 	return blocks
 }
 
-
 // lineNumber computes the lineNumber for a given offset AST offset
 func lineNumber(source []byte, offset int) (lineNumber int) {
 	newline := []byte{'\n'}

@@ -10,15 +10,15 @@ type Period int
 func (p Period) String() string {
 	switch p {
 	case Daily:
-		return "Daily"
+		return "daily"
 	case Weekly:
-		return "Weekly"
+		return "weekly"
 	case Monthly:
-		return "Monthly"
+		return "monthly"
 	case Quarterly:
-		return "Quarterly"
+		return "quarterly"
 	case Yearly:
-		return "Yearly"
+		return "yearly"
 	default:
 		panic(fmt.Sprintf("unknown period %d", p))
 	}

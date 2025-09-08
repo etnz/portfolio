@@ -142,6 +142,24 @@ func (l *Ledger) stableSort() {
 	})
 }
 
+// OldestTransactionDate returns the date of the earliest transaction in the ledger.
+// It returns false if the ledger has no transactions.
+func (l *Ledger) OldestTransactionDate() date.Date {
+	if len(l.transactions) == 0 {
+		return date.Date{}
+	}
+	return l.transactions[0].When()
+}
+
+// NewestTransactionDate returns the date of the latest transaction in the ledger.
+// It returns false if the ledger has no transactions.
+func (l *Ledger) NewestTransactionDate() date.Date {
+	if len(l.transactions) == 0 {
+		return date.Date{}
+	}
+	return l.transactions[len(l.transactions)-1].When()
+}
+
 // Position computes the total quantity of a security held on a specific date.
 // It now requires market data to correctly adjust for any stock splits that
 // have occurred.

@@ -108,14 +108,14 @@ func TestRange_Name(t *testing.T) {
 		in   Range
 		want string
 	}{
-		{"Single Day", NewDailyRange(New(2025, time.September, 8)), "Daily"},
-		{"Standard Week", NewWeeklyRange(New(2025, time.September, 8)), "Weekly"},
-		{"Standard Month", NewMonthlyRange(New(2025, time.September, 1)), "Monthly"},
-		{"Standard Quarter", NewQuarterlyRange(New(2025, time.July, 1)), "Quarterly"},
-		{"Standard Year", NewYearlyRange(New(2025, time.January, 1)), "Yearly"},
-		{"Non-Standard Range", Range{From: New(2025, time.September, 2), To: New(2025, time.September, 10)}, "Special"},
-		{"Leap Year Month", NewMonthlyRange(New(2024, time.February, 1)), "Monthly"},
-		{"Multi Year", Range{From: New(2025, time.January, 1), To: New(2026, time.December, 31)}, "Special"},
+		{"Single Day", NewDailyRange(New(2025, time.September, 8)), "daily"},
+		{"Standard Week", NewWeeklyRange(New(2025, time.September, 8)), "weekly"},
+		{"Standard Month", NewMonthlyRange(New(2025, time.September, 1)), "monthly"},
+		{"Standard Quarter", NewQuarterlyRange(New(2025, time.July, 1)), "quarterly"},
+		{"Standard Year", NewYearlyRange(New(2025, time.January, 1)), "yearly"},
+		{"Non-Standard Range", Range{From: New(2025, time.September, 2), To: New(2025, time.September, 10)}, "special"},
+		{"Leap Year Month", NewMonthlyRange(New(2024, time.February, 1)), "monthly"},
+		{"Multi Year", Range{From: New(2025, time.January, 1), To: New(2026, time.December, 31)}, "special"},
 	}
 
 	for _, tc := range testCases {

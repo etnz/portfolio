@@ -46,7 +46,8 @@ func GetTopics(topics ...string) (string, error) {
 			for _, t := range allTopics {
 				content, err := GetTopic(t)
 				if err != nil {
-					return "", err				}
+					return "", err
+				}
 				b.WriteString(content)
 				b.WriteString("\n")
 			}

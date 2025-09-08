@@ -52,7 +52,7 @@ func (as *AccountingSystem) calculateGains(endBalance, startBalance *Balance, me
 		ReportingCurrency: as.ReportingCurrency,
 		Securities:        []SecurityGains{},
 	}
-	// TotalPortfolio value is broken in three parts: 
+	// TotalPortfolio value is broken in three parts:
 	// - the cash accounts (one per currency)
 	// - the counterparty accounts (one per counterparty)
 	// - the assets market value
