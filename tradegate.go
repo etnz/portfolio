@@ -2,6 +2,7 @@ package portfolio
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"strconv"
@@ -71,6 +72,13 @@ func tradegateLatest(name, isin string) (float64, error) {
 	}
 	// last is the last transaction, moves slower than the bid, but the bid can be 0.
 	jval := jobj["last"] // or bid
+	if s, ok := jval.(string); ok {
+		if s == "./." {
+			// trade gate show's empty last this way, use the bid instead
+			log.Println("'last' is empty, falling back to 'bid'")
+			jval = jobj["bid"]
+		}
+	}
 	val, ok := jval.(float64)
 	if !ok {
 		// sometimes, this weird API returns the value as a string
