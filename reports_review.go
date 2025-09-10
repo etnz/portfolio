@@ -2,15 +2,12 @@ package portfolio
 
 import (
 	"time"
-
-	"github.com/etnz/portfolio/date"
-	"github.com/shopspring/decimal"
 )
 
 // ReviewReport contains the transactions for a given period.
 type ReviewReport struct {
 	// Range of the report all days included in the report.
-	Range date.Range
+	Range Range
 	// Timestamp is the timestamp of the report generation.
 	Timestamp time.Time
 	// Reporting Currency
@@ -53,7 +50,7 @@ type CoutnerpartyAccountReview struct {
 }
 
 // NewReviewReport returns a report with all transactions in a given period.
-func (as *AccountingSystem) NewReviewReport(period date.Range) (*ReviewReport, error) {
+func (as *AccountingSystem) NewReviewReport(period Range) (*ReviewReport, error) {
 
 	// Compute the balance on the last days and on the day before the first to compute several
 	// different metrics from there.
@@ -72,37 +69,35 @@ func (as *AccountingSystem) NewReviewReport(period date.Range) (*ReviewReport, e
 	// and summing them up (in the reporting currency)
 	// Computing the $total end cash flow - total start cash flow cause$
 	// is counter intuitive as it shows also the gains made playing with forex.
-	totalCashFlow := decimal.Zero
+	var totalCashFlow Money
 	for cur := range endBalance.Currencies() {
 		flow := endBalance.CashFlow(cur).Sub(startBalance.CashFlow(cur))
-		totalCashFlow = totalCashFlow.Add(endBalance.Convert(flow, cur))
+		totalCashFlow = totalCashFlow.Add(endBalance.Convert(flow))
 	}
 
 	// Same for Counterparties
-	totalCounterparties := decimal.Zero
+	var totalCounterparties Money
 	for acc := range endBalance.Counterparties() {
-		cur := endBalance.CounterpartyCurrency(acc)
 		change := endBalance.Counterparty(acc).Sub(startBalance.Counterparty(acc))
-		totalCounterparties = totalCounterparties.Add(endBalance.Convert(change, cur))
+		totalCounterparties = totalCounterparties.Add(endBalance.Convert(change))
 	}
 
 	// Sum realized gains in the period per security
-	totalRealized := decimal.Zero
+	var totalRealized Money
 
 	cashAccounts := make([]CashAccountReview, 0, 100)
 	for cur := range endBalance.Currencies() {
 		cashAccounts = append(cashAccounts, CashAccountReview{
 			Label: cur,
-			Value: NewMoney(endBalance.Cash(cur), cur),
+			Value: endBalance.Cash(cur),
 		})
 	}
 
 	counterpartyAccounts := make([]CoutnerpartyAccountReview, 0, 100)
 	for acc := range endBalance.Counterparties() {
-		cur := endBalance.CounterpartyCurrency(acc)
 		counterpartyAccounts = append(counterpartyAccounts, CoutnerpartyAccountReview{
 			Label: acc,
-			Value: NewMoney(endBalance.Counterparty(acc), cur),
+			Value: endBalance.Counterparty(acc),
 		})
 	}
 
@@ -111,7 +106,6 @@ func (as *AccountingSystem) NewReviewReport(period date.Range) (*ReviewReport, e
 
 	for sec := range endBalance.Securities() {
 		ticker := sec.Ticker()
-		currency := sec.Currency()
 
 		startPos := startBalance.Position(ticker)
 		startValue := startBalance.MarketValue(ticker)
@@ -121,19 +115,19 @@ func (as *AccountingSystem) NewReviewReport(period date.Range) (*ReviewReport, e
 		// Gains
 		realizedGain := endBalance.RealizedGain(ticker).Sub(startBalance.RealizedGain(ticker))
 		unrealizedGain := endBalance.MarketValue(ticker).Sub(endBalance.CostBasis(ticker))
-		totalRealized = totalRealized.Add(endBalance.Convert(realizedGain, sec.currency))
+		totalRealized = totalRealized.Add(endBalance.Convert(realizedGain))
 
 		if startPos.IsZero() && endPos.IsZero() && realizedGain.IsZero() {
 			continue
 		}
 		assets = append(assets, AssetReview{
 			Security:         ticker,
-			StartingPosition: NewQuantity(startPos),
-			EndingPosition:   NewQuantity(endPos),
-			StartingValue:    NewMoney(startValue, currency),
-			EndingValue:      NewMoney(endValue, currency),
-			RealizedGains:    NewMoney(realizedGain, currency),
-			UnrealizedGains:  NewMoney(unrealizedGain, currency),
+			StartingPosition: startPos,
+			EndingPosition:   endPos,
+			StartingValue:    startValue,
+			EndingValue:      endValue,
+			RealizedGains:    realizedGain,
+			UnrealizedGains:  unrealizedGain,
 		})
 	}
 
@@ -149,13 +143,13 @@ func (as *AccountingSystem) NewReviewReport(period date.Range) (*ReviewReport, e
 	report := &ReviewReport{
 		Range:             period,
 		ReportingCurrency: as.ReportingCurrency,
-		PortfolioValue:    NewPerformanceFromDecimal(startBalance.TotalPortfolioValue(), endBalance.TotalPortfolioValue(), as.ReportingCurrency),
-		MarketValue:       NewPerformanceFromDecimal(startBalance.TotalMarketValue(), endBalance.TotalMarketValue(), as.ReportingCurrency),
-		Cash:              NewPerformanceFromDecimal(startBalance.TotalCash(), endBalance.TotalCash(), as.ReportingCurrency),
-		Counterparty:      NewPerformanceFromDecimal(startBalance.TotalCounterparty(), endBalance.TotalCounterparty(), as.ReportingCurrency),
-		CashFlow:          NewMoney(totalCashFlow, as.ReportingCurrency),
-		Realized:          NewMoney(totalRealized, as.ReportingCurrency),
-		Unrealized:        NewMoney(endBalance.TotalUnrealizedGain(), as.ReportingCurrency),
+		PortfolioValue:    NewPerformance(startBalance.TotalPortfolioValue(), endBalance.TotalPortfolioValue()),
+		MarketValue:       NewPerformance(startBalance.TotalMarketValue(), endBalance.TotalMarketValue()),
+		Cash:              NewPerformance(startBalance.TotalCash(), endBalance.TotalCash()),
+		Counterparty:      NewPerformance(startBalance.TotalCounterparty(), endBalance.TotalCounterparty()),
+		CashFlow:          totalCashFlow,
+		Realized:          totalRealized,
+		Unrealized:        endBalance.TotalUnrealizedGain(),
 		CashAccounts:      cashAccounts,
 		Counterparties:    counterpartyAccounts,
 		Assets:            assets,

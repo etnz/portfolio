@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/etnz/portfolio"
-	"github.com/etnz/portfolio/date"
 	"github.com/google/subcommands"
+	"github.com/shopspring/decimal"
 )
 
 // --- Buy Command ---
@@ -17,8 +17,8 @@ import (
 type buyCmd struct {
 	date     string
 	security string
-	quantity float64
-	amount   float64
+	quantity decimal.Decimal
+	amount   decimal.Decimal
 	memo     string
 }
 
@@ -27,30 +27,30 @@ func (*buyCmd) Synopsis() string { return "record the purchase of a security" }
 func (*buyCmd) Usage() string {
 	return `pcs buy -d <date> -s <security> -q <quantity> -p <price> [-m <memo>]
 
-Purchases shares of a security. The total cost is debited from the cash account in the security's currency.
+	Purchases shares of a security. The total cost is debited from the cash account in the security's currency.
 `
 }
 
 func (c *buyCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
+	f.StringVar(&c.date, "d", portfolio.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.StringVar(&c.security, "s", "", "Security ticker")
-	f.Float64Var(&c.quantity, "q", 0, "Number of shares")
-	f.Float64Var(&c.amount, "a", 0, "Total amount paid for the shares")
+	f.Var(DecimalVar(&c.quantity, "0"), "q", "Number of shares")
+	f.Var(DecimalVar(&c.amount, "0"), "a", "Total amount paid for the shares")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 }
 
 func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.security == "" || c.quantity == 0 || c.amount == 0 {
+	if c.security == "" || c.quantity.IsZero() || c.amount.IsZero() {
 		fmt.Fprintln(os.Stderr, "Error: -s, -q, and -a flags are all required.")
 		return subcommands.ExitUsageError
 	}
-	day, err := date.Parse(c.date) // Validate date format
+	day, err := portfolio.ParseDate(c.date) // Validate date format
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.NewBuy(day, c.memo, c.security, c.quantity, c.amount)
+	tx := portfolio.NewBuy(day, c.memo, c.security, portfolio.Q(c.quantity), portfolio.M(c.amount, ""))
 	_, status := handleTransaction(tx, f)
 	return status
 }
@@ -61,8 +61,8 @@ func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) s
 type sellCmd struct {
 	date     string
 	security string
-	quantity float64
-	amount   float64
+	quantity portfolio.Quantity
+	amount   decimal.Decimal
 	memo     string
 }
 
@@ -71,28 +71,28 @@ func (*sellCmd) Synopsis() string { return "record the sale of a security" }
 func (*sellCmd) Usage() string {
 	return `pcs sell -d <date> -s <security> -p <price> [-q <quantity>] [-m <memo>]
 
-  Sells shares of a security. The proceeds are credited to the cash account in the security's currency.
-  If -q is not specified, all shares of the security are sold.
+	Sells shares of a security. The proceeds are credited to the cash account in the security's currency.
+	If -q is not specified, all shares of the security are sold.
 `
 }
 func (c *sellCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
+	f.StringVar(&c.date, "d", portfolio.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.StringVar(&c.security, "s", "", "Security ticker")
-	f.Float64Var(&c.quantity, "q", 0, "Number of shares, if missing all shares are sold")
-	f.Float64Var(&c.amount, "a", 0, "Total amount received for the shares")
+	f.Var(QuantityVar(&c.quantity, "0"), "q", "Number of shares, if missing all shares are sold")
+	f.Var(DecimalVar(&c.amount, "0"), "a", "Total amount received for the shares")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 }
 func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.security == "" || c.amount == 0 {
+	if c.security == "" || c.amount.IsZero() {
 		fmt.Fprintln(os.Stderr, "Error: -s and -a flags are required.")
 		return subcommands.ExitUsageError
 	}
-	day, err := date.Parse(c.date) // Validate date format
+	day, err := portfolio.ParseDate(c.date) // Validate date format
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	tx := portfolio.NewSell(day, c.memo, c.security, c.quantity, c.amount)
+	tx := portfolio.NewSell(day, c.memo, c.security, c.quantity, portfolio.M(c.amount, ""))
 	_, status := handleTransaction(tx, f)
 	return status
 }
@@ -103,7 +103,7 @@ func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 type dividendCmd struct {
 	date     string
 	security string
-	amount   float64
+	amount   decimal.Decimal
 	memo     string
 }
 
@@ -112,27 +112,27 @@ func (*dividendCmd) Synopsis() string { return "record a dividend payment for a 
 func (*dividendCmd) Usage() string {
 	return `pcs dividend -d <date> -s <security> -a <amount> [-m <memo>]
 
-  Records a dividend payment. The amount is credited to the cash account in the security's currency.
+	Records a dividend payment. The amount is credited to the cash account in the security's currency.
 `
 }
 func (c *dividendCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
+	f.StringVar(&c.date, "d", portfolio.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.StringVar(&c.security, "s", "", "Security ticker receiving the dividend")
-	f.Float64Var(&c.amount, "a", 0, "Total dividend amount received")
+	f.Var(DecimalVar(&c.amount, "0"), "a", "Total dividend amount received")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
 }
 func (c *dividendCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.security == "" || c.amount == 0 {
+	if c.security == "" || c.amount.IsZero() {
 		fmt.Fprintln(os.Stderr, "Error: -s and -a flags are required.")
 		return subcommands.ExitUsageError
 	}
-	day, err := date.Parse(c.date) // Validate date format
+	day, err := portfolio.ParseDate(c.date) // Validate date format
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.NewDividend(day, c.memo, c.security, c.amount)
+	tx := portfolio.NewDividend(day, c.memo, c.security, portfolio.M(c.amount, ""))
 	_, status := handleTransaction(tx, f)
 	return status
 }
@@ -142,7 +142,7 @@ func (c *dividendCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 // depositCmd holds the flags for the 'deposit' subcommand.
 type depositCmd struct {
 	date     string
-	amount   float64
+	amount   decimal.Decimal
 	currency string
 	memo     string
 	settles  string
@@ -153,28 +153,28 @@ func (*depositCmd) Synopsis() string { return "record a cash deposit into the po
 func (*depositCmd) Usage() string {
 	return `pcs deposit -d <date> -a <amount> -c <currency> [-m <memo>] [-settles <account>]
 
-  Records a cash deposit into the portfolio's cash account.
+	Records a cash deposit into the portfolio's cash account.
 `
 }
 func (c *depositCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
-	f.Float64Var(&c.amount, "a", 0, "Amount of cash to deposit")
+	f.StringVar(&c.date, "d", portfolio.Today().String(), "Transaction date. See the user manual for supported date formats.")
+	f.Var(DecimalVar(&c.amount, "0"), "a", "Amount of cash to deposit")
 	f.StringVar(&c.currency, "c", "EUR", "Currency of the deposit (e.g., USD, EUR). Cash is kept in that currency")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
 	f.StringVar(&c.settles, "settles", "", "Settle a counterparty account")
 }
-func (c *depositCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.amount == 0 {
+func (c *depositCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...any) subcommands.ExitStatus {
+	if c.amount.IsZero() {
 		fmt.Fprintln(os.Stderr, "Error: -a flag is required.")
 		return subcommands.ExitUsageError
 	}
-	day, err := date.Parse(c.date) // Validate date format
+	day, err := portfolio.ParseDate(c.date) // Validate date format
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.NewDeposit(day, c.memo, c.currency, c.amount, c.settles)
+	tx := portfolio.NewDeposit(day, c.memo, portfolio.M(c.amount, c.currency), c.settles)
 	_, status := handleTransaction(tx, f)
 	return status
 }
@@ -184,7 +184,7 @@ func (c *depositCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 // withdrawCmd holds the flags for the 'withdraw' subcommand.
 type withdrawCmd struct {
 	date     string
-	amount   float64
+	amount   decimal.Decimal
 	currency string
 	memo     string
 	settles  string
@@ -195,28 +195,28 @@ func (*withdrawCmd) Synopsis() string { return "record a cash withdrawal from th
 func (*withdrawCmd) Usage() string {
 	return `pcs withdraw -d <date> -a <amount> -c <currency> [-m <memo>] [-settles <account>]
 
-  Records a cash withdrawal from the portfolio's cash account.
+	Records a cash withdrawal from the portfolio's cash account.
 `
 }
 func (c *withdrawCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
-	f.Float64Var(&c.amount, "a", 0, "Amount of cash to withdraw")
+	f.StringVar(&c.date, "d", portfolio.Today().String(), "Transaction date. See the user manual for supported date formats.")
+	f.Var(DecimalVar(&c.amount, "0"), "a", "Amount of cash to withdraw")
 	f.StringVar(&c.currency, "c", "EUR", "Currency of the withdrawal (e.g., USD, EUR)")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
 	f.StringVar(&c.settles, "settles", "", "Settle a counterparty account")
 }
 func (c *withdrawCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.amount == 0 {
+	if c.amount.IsZero() {
 		fmt.Fprintln(os.Stderr, "Error: -a flag is required.")
 		return subcommands.ExitUsageError
 	}
-	day, err := date.Parse(c.date) // Validate date format
+	day, err := portfolio.ParseDate(c.date) // Validate date format
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.NewWithdraw(day, c.memo, c.currency, c.amount)
+	tx := portfolio.NewWithdraw(day, c.memo, portfolio.M(c.amount, c.currency))
 	tx.Settles = c.settles
 	_, status := handleTransaction(tx, f)
 	return status
@@ -228,9 +228,9 @@ func (c *withdrawCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 type convertCmd struct {
 	date         string
 	fromCurrency string
-	fromAmount   float64
+	fromAmount   decimal.Decimal
 	toCurrency   string
-	toAmount     float64
+	toAmount     decimal.Decimal
 	memo         string
 }
 
@@ -241,32 +241,32 @@ func (*convertCmd) Synopsis() string {
 func (*convertCmd) Usage() string {
 	return `pcs convert -d <date> -fc <currency> -fa <amount> -tc <currency> -ta <amount> [-m <memo>]
 
-  Records an internal cash conversion between two currency accounts.
-  This does not represent a net portfolio deposit or withdrawal.
+	Records an internal cash conversion between two currency accounts.
+	This does not represent a net portfolio deposit or withdrawal.
 `
 }
 
 func (c *convertCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
+	f.StringVar(&c.date, "d", portfolio.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.StringVar(&c.fromCurrency, "fc", "", "Source currency code (e.g., USD)")
-	f.Float64Var(&c.fromAmount, "fa", 0, "Amount of cash to convert from the source currency")
+	f.Var(DecimalVar(&c.fromAmount, "0"), "fa", "Amount of cash to convert from the source currency")
 	f.StringVar(&c.toCurrency, "tc", "", "Destination currency code (e.g., EUR")
-	f.Float64Var(&c.toAmount, "ta", 0, "Amount of cash received in the destination currency")
+	f.Var(DecimalVar(&c.toAmount, "0"), "ta", "Amount of cash received in the destination currency")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 }
 
 func (c *convertCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.fromCurrency == "" || c.fromAmount == 0 || c.toCurrency == "" || c.toAmount == 0 {
+	if c.fromCurrency == "" || c.fromAmount.IsZero() || c.toCurrency == "" || c.toAmount.IsZero() {
 		fmt.Fprintln(os.Stderr, "Error: -fc, -fa, -tc, and -ta flags are all required.")
 		return subcommands.ExitUsageError
 	}
-	day, err := date.Parse(c.date) // Validate date format
+	day, err := portfolio.ParseDate(c.date) // Validate date format
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.NewConvert(day, c.memo, c.fromCurrency, c.fromAmount, c.toCurrency, c.toAmount)
+	tx := portfolio.NewConvert(day, c.memo, portfolio.M(c.fromAmount, c.fromCurrency), portfolio.M(c.toAmount, c.toCurrency))
 	_, status := handleTransaction(tx, f)
 	return status
 }
@@ -278,7 +278,7 @@ type accrueCmd struct {
 	date       string
 	payable    string
 	receivable string
-	amount     float64
+	amount     decimal.Decimal
 	currency   string
 	memo       string
 }
@@ -288,15 +288,15 @@ func (*accrueCmd) Synopsis() string { return "record a non-cash transaction with
 func (*accrueCmd) Usage() string {
 	return `pcs accrue -d <date> (-payable <account> | -receivable <account>) -a <amount> -c <currency> [-m <memo>]
 
-  Records a non-cash transaction with a counterparty, such as a loan or rent.
+	Records a non-cash transaction with a counterparty, such as a loan or rent.
 `
 }
 
 func (c *accrueCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
+	f.StringVar(&c.date, "d", portfolio.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.StringVar(&c.payable, "payable", "", "The counterparty account to which the user owes money")
 	f.StringVar(&c.receivable, "receivable", "", "The counterparty account that owes money to the user")
-	f.Float64Var(&c.amount, "a", 0, "Amount of cash to accrue")
+	f.Var(DecimalVar(&c.amount, "0"), "a", "Amount of cash to accrue")
 	f.StringVar(&c.currency, "c", "EUR", "Currency of the accrual (e.g., USD, EUR)")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
 }
@@ -306,28 +306,28 @@ func (c *accrueCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 		fmt.Fprintln(os.Stderr, "Error: either -payable or -receivable must be specified.")
 		return subcommands.ExitUsageError
 	}
-	if c.amount <= 0 {
+	if !c.amount.IsPositive() {
 		fmt.Fprintln(os.Stderr, "Error: -a flag must be a positive amount.")
 		return subcommands.ExitUsageError
 	}
-	day, err := date.Parse(c.date) // Validate date format
+	day, err := portfolio.ParseDate(c.date) // Validate date format
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
 
 	var account string
-	var amount float64
+	var amount decimal.Decimal
 	switch {
 	case c.payable != "":
 		account = c.payable
-		amount = -c.amount
+		amount = c.amount.Neg()
 	case c.receivable != "":
 		account = c.receivable
 		amount = c.amount
 	}
 
-	tx := portfolio.NewAccrue(day, c.memo, account, amount, c.currency)
+	tx := portfolio.NewAccrue(day, c.memo, account, portfolio.M(amount, c.currency))
 
 	// Call handleTransaction and receive the validated transaction
 	validatedTx, status := handleTransaction(tx, f)
@@ -338,11 +338,9 @@ func (c *accrueCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 	// Check if it's an Accrue transaction and if a new account was created
 	if accrueTx, ok := validatedTx.(portfolio.Accrue); ok {
 		if accrueTx.Create {
-			fmt.Printf("A new counterparty account '%s' will be created.\n", accrueTx.Counterparty)
+			fmt.Printf("A new counterparty account '%s' has been created.\n", accrueTx.Counterparty)
 		}
 	}
-
-	fmt.Printf("Successfully appended transaction to %s\n", *ledgerFile)
 	return subcommands.ExitSuccess
 }
 
@@ -384,9 +382,9 @@ func (*declareCmd) Synopsis() string { return "declare a new security" }
 func (*declareCmd) Usage() string {
 	return `pcs declare -s <ticker> -id <security-id> -c <currency> [-d <date>] [-m <memo>]
 
-  Declares a security, creating a mapping from a ledger-internal ticker to a
-  globally unique security ID and its currency. This declaration is required
-  before using the ticker in any transaction.
+	Declares a security, creating a mapping from a ledger-internal ticker to a
+	globally unique security ID and its currency. This declaration is required
+	before using the ticker in any transaction.
 `
 }
 
@@ -394,7 +392,7 @@ func (c *declareCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.ticker, "s", "", "Ledger-internal ticker to define (e.g., 'MY_AAPL')")
 	f.StringVar(&c.id, "id", "", "Full, unique security ID (e.g., 'US0378331005.XNAS')")
 	f.StringVar(&c.currency, "c", "", "The currency of the security (e.g., 'USD')")
-	f.StringVar(&c.date, "d", date.Today().String(), "Transaction date. See the user manual for supported date formats.")
+	f.StringVar(&c.date, "d", portfolio.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 }
 
@@ -404,12 +402,17 @@ func (c *declareCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitUsageError
 	}
 
-	day, err := date.Parse(c.date)
+	day, err := portfolio.ParseDate(c.date)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	tx := portfolio.NewDeclaration(day, c.memo, c.ticker, c.id, c.currency)
+	id, err := portfolio.ParseID(c.id)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid security ID: %v\n", err)
+		return subcommands.ExitUsageError
+	}
+	tx := portfolio.NewDeclare(day, c.memo, c.ticker, id, c.currency)
 	_, status := handleTransaction(tx, f)
 	return status
 }

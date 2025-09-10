@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/etnz/portfolio/date"
+	"github.com/etnz/portfolio"
 	"github.com/google/subcommands"
 )
 
@@ -82,16 +82,16 @@ func (c *importInvestingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...in
 // "09/30/2022","43.84","42.82","44.62","42.81","25.89M","2.57%"
 var csvFmt = regexp.MustCompile(`"(\d\d/\d\d/\d\d\d\d)","(\d+.\d+)"`)
 
-// parseCSV parses the CSV file in investing.com's format and returns a date.History of prices.
+// parseCSV parses the CSV file in investing.com's format and returns a portfolio.History of prices.
 // The CSV file is expected to have the following format:
 // "09/30/2022","43.84","42.82","44.62","42.81","25.89M","2.57%"
 // The first line is a header line and is skipped.
 // The date is in the format "MM/DD/YYYY" and the price is a float64 value.
 // The function returns an error if the format is invalid or if there are any parsing errors.
-func parseCSV(r io.Reader) (date.History[float64], error) {
+func parseCSV(r io.Reader) (portfolio.History[float64], error) {
 	line := 0
 	scanner := bufio.NewScanner(r)
-	var prices date.History[float64]
+	var prices portfolio.History[float64]
 
 	for scanner.Scan() {
 		line++
@@ -110,7 +110,7 @@ func parseCSV(r io.Reader) (date.History[float64], error) {
 		if err != nil {
 			return prices, fmt.Errorf("invalid Investing csv format line %d: invalid date %q: %w", line, sdate, err)
 		}
-		on := date.New(t.Date())
+		on := portfolio.NewDate(t.Date())
 
 		sclose := subs[2]
 		value, err := strconv.ParseFloat(sclose, 64)

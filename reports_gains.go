@@ -2,14 +2,11 @@ package portfolio
 
 import (
 	"fmt"
-
-	"github.com/etnz/portfolio/date"
-	"github.com/shopspring/decimal"
 )
 
 // GainsReport contains the results of a capital gains calculation.
 type GainsReport struct {
-	Range             date.Range
+	Range             Range
 	Method            CostBasisMethod
 	ReportingCurrency string
 	Securities        []SecurityGains
@@ -26,9 +23,9 @@ type SecurityGains struct {
 	Quantity   Quantity
 }
 
-// CalculateGains computes the realized and unrealized gains for all securities
+// NewGainsReport computes the realized and unrealized gains for all securities
 // over a given period, using a specified cost basis accounting method.
-func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMethod) (*GainsReport, error) {
+func (as *AccountingSystem) NewGainsReport(period Range, method CostBasisMethod) (*GainsReport, error) {
 
 	journal, err := as.getJournal()
 	if err != nil {
@@ -47,7 +44,7 @@ func (as *AccountingSystem) CalculateGains(period date.Range, method CostBasisMe
 }
 func (as *AccountingSystem) calculateGains(endBalance, startBalance *Balance, method CostBasisMethod) (*GainsReport, error) {
 	report := &GainsReport{
-		Range:             date.Range{From: startBalance.on.Add(1), To: endBalance.on},
+		Range:             Range{From: startBalance.on.Add(1), To: endBalance.on},
 		Method:            method,
 		ReportingCurrency: as.ReportingCurrency,
 		Securities:        []SecurityGains{},
@@ -63,14 +60,13 @@ func (as *AccountingSystem) calculateGains(endBalance, startBalance *Balance, me
 	//  market value gain:=  total gain - cash flow, and counterparty change
 	// Completely independant: realized gain:
 	// unrealized gains standing (does not depend on the period actually)
-
-	totalRealized := decimal.Zero
+	totalRealized := M(0, as.ReportingCurrency) // always in reporting currency, even 0
 	for sec := range endBalance.Securities() {
 
 		realizedGain := endBalance.RealizedGain(sec.Ticker()).Sub(startBalance.RealizedGain(sec.Ticker()))
 		unrealizedGain := endBalance.MarketValue(sec.Ticker()).Sub(endBalance.CostBasis(sec.Ticker()))
 
-		totalRealized = totalRealized.Add(endBalance.Convert(realizedGain, sec.currency))
+		totalRealized = totalRealized.Add(endBalance.Convert(realizedGain))
 
 		if realizedGain.IsZero() && unrealizedGain.IsZero() {
 			continue
@@ -78,17 +74,17 @@ func (as *AccountingSystem) calculateGains(endBalance, startBalance *Balance, me
 
 		report.Securities = append(report.Securities, SecurityGains{
 			Security:   sec.Ticker(),
-			Realized:   NewMoney(realizedGain, sec.currency),
-			Unrealized: NewMoney(unrealizedGain, sec.currency),
-			Quantity:   NewQuantity(endBalance.Position(sec.Ticker())),
+			Realized:   realizedGain,
+			Unrealized: unrealizedGain,
+			Quantity:   endBalance.Position(sec.Ticker()),
 		})
 	}
 
 	total := endBalance.TotalPortfolioValue().Sub(startBalance.TotalPortfolioValue())
 
-	report.Total = NewMoney(total, as.ReportingCurrency)
-	report.Realized = NewMoney(totalRealized, as.ReportingCurrency)
-	report.Unrealized = NewMoney(endBalance.TotalUnrealizedGain(), as.ReportingCurrency)
+	report.Total = total
+	report.Realized = totalRealized
+	report.Unrealized = endBalance.TotalUnrealizedGain()
 
 	return report, nil
 }

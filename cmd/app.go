@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/etnz/portfolio"
 	"github.com/google/subcommands"
+	"github.com/shopspring/decimal"
 )
 
 // Register registers all the application's subcommands with the provided Commander.
@@ -174,4 +175,65 @@ func printMarkdown(md string) {
 	}
 
 	fmt.Print(out)
+}
+
+type decimalVar struct {
+	f *decimal.Decimal
+}
+
+func (d decimalVar) String() string {
+	if d.f == nil {
+		return ""
+	}
+	return d.f.String()
+}
+
+func (d decimalVar) Set(s string) error {
+	val, err := decimal.NewFromString(s)
+	if err != nil {
+		return err
+	}
+	*d.f = val
+	return nil
+}
+
+func (d decimalVar) Type() string {
+	return "decimal"
+}
+
+func DecimalVar(f *decimal.Decimal, def string) decimalVar {
+	v := decimalVar{f: f}
+	if err := v.Set(def); err != nil {
+		panic("invalid default value for decimal var: " + err.Error())
+	}
+	return v
+}
+
+type quantityVar struct {
+	f *portfolio.Quantity
+}
+
+func (d quantityVar) String() string {
+	if d.f == nil {
+		return ""
+	}
+	return d.f.String()
+}
+
+func (d quantityVar) Set(s string) error {
+	dec, err := decimal.NewFromString(s)
+	if err != nil {
+		return err
+	}
+	val := portfolio.Q(dec)
+	*d.f = val
+	return nil
+}
+
+func QuantityVar(f *portfolio.Quantity, def string) quantityVar {
+	v := quantityVar{f: f}
+	if err := v.Set(def); err != nil {
+		panic("invalid default value for quantity var: " + err.Error())
+	}
+	return v
 }

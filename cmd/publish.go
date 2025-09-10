@@ -11,13 +11,13 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/etnz/portfolio/date"
+	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/renderer"
 	"github.com/google/subcommands"
 )
 
 type reportTask struct {
-	Period date.Range
+	Period portfolio.Range
 	Report string
 }
 
@@ -71,7 +71,7 @@ func (c *publishCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		fmt.Println("Ledger is empty, nothing to publish.")
 		return subcommands.ExitSuccess
 	}
-	endDate := date.Today().Add(-1)
+	endDate := portfolio.Today().Add(-1)
 
 	periods, err := generatePeriods(startDate, endDate)
 	if err != nil {
@@ -142,17 +142,17 @@ func (c *publishCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	return subcommands.ExitSuccess
 }
 
-func generatePeriods(startDate, endDate date.Date) ([]date.Range, error) {
+func generatePeriods(startDate, endDate portfolio.Date) ([]portfolio.Range, error) {
 	if startDate.IsZero() {
 		// no transactions
-		return []date.Range{}, nil
+		return []portfolio.Range{}, nil
 	}
 
-	var ranges []date.Range
+	var ranges []portfolio.Range
 
 	// Daily, Weekly, Monthly, Quarterly, Yearly
-	for _, periodType := range []date.Period{date.Daily, date.Weekly, date.Monthly, date.Quarterly, date.Yearly} {
-		for r := date.NewRange(startDate, periodType); !r.From.After(endDate); r = date.NewRange(r.To.Add(1), periodType) {
+	for _, periodType := range []portfolio.Period{portfolio.Daily, portfolio.Weekly, portfolio.Monthly, portfolio.Quarterly, portfolio.Yearly} {
+		for r := portfolio.NewRange(startDate, periodType); !r.From.After(endDate); r = portfolio.NewRange(r.To.Add(1), periodType) {
 			ranges = append(ranges, r)
 		}
 	}

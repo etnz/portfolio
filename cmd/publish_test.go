@@ -6,19 +6,30 @@ import (
 	"time"
 
 	"github.com/etnz/portfolio"
-	"github.com/etnz/portfolio/date"
 )
 
-func newDate(t *testing.T, s string) date.Date {
+// EUR is a helper for test to create euro money from const
+func EUR(v float64) portfolio.Money { return portfolio.M(v, "EUR") }
+
+// USD is a helper for test to create usd money from const
+func USD(v float64) portfolio.Money { return portfolio.M(v, "USD") }
+
+// NO is a helper for test to create money from const wit no currency set
+func NO(v float64) portfolio.Money { return portfolio.M(v, "") }
+
+// Q is a helper for test to create Quantity from const
+func Q(v float64) portfolio.Quantity { return portfolio.Q(v) }
+
+func newDate(t *testing.T, s string) portfolio.Date {
 	timeVal, err := time.Parse("2006-01-02", s)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return date.New(timeVal.Date())
+	return portfolio.NewDate(timeVal.Date())
 }
 
-func newTx(on date.Date) portfolio.Transaction {
-	return portfolio.NewBuy(on, "", "AAPL", 0, 0)
+func newTx(on portfolio.Date) portfolio.Transaction {
+	return portfolio.NewBuy(on, "", "AAPL", Q(0), USD(0))
 }
 
 func TestGeneratePeriods(t *testing.T) {
@@ -112,15 +123,15 @@ func TestGeneratePeriods(t *testing.T) {
 					continue
 				}
 				switch p {
-				case date.Daily:
+				case portfolio.Daily:
 					daily++
-				case date.Weekly:
+				case portfolio.Weekly:
 					weekly++
-				case date.Monthly:
+				case portfolio.Monthly:
 					monthly++
-				case date.Quarterly:
+				case portfolio.Quarterly:
 					quarterly++
-				case date.Yearly:
+				case portfolio.Yearly:
 					yearly++
 				}
 			}
@@ -155,7 +166,7 @@ func TestRenderFrontMatter(t *testing.T) {
 		{
 			name:     "basic template",
 			template: "---\ntitle: {{.Report}} Report for {{.Period.Identifier}}\n---",
-			task:     reportTask{Report: "review", Period: date.NewRange(newDate(t, "2025-01-01"), date.Daily)},
+			task:     reportTask{Report: "review", Period: portfolio.NewRange(newDate(t, "2025-01-01"), portfolio.Daily)},
 			want:     "---\ntitle: review Report for 2025-01-01\n---",
 			wantErr:  false,
 		},
@@ -168,7 +179,7 @@ func TestRenderFrontMatter(t *testing.T) {
 {{.Period.To.Full}}: The end date in RFC3339 format.
 {{.Period.Name}}: A human-readable name for the period (e.g., "Daily", "Weekly", "Monthly").
 {{.Period.To.Format "January 06"}}: A formatted string of the end date.`,
-			task: reportTask{Report: "review", Period: date.NewRange(newDate(t, "2025-01-01"), date.Weekly)},
+			task: reportTask{Report: "review", Period: portfolio.NewRange(newDate(t, "2025-01-01"), portfolio.Weekly)},
 			want: `
 review: The type of report (e.g., "review", "holding").
 2024-12-30: The start date of the report.
@@ -181,14 +192,14 @@ January 25: A formatted string of the end date.`,
 		{
 			name:     "empty template",
 			template: "",
-			task:     reportTask{Report: "review", Period: date.NewRange(newDate(t, "2025-01-01"), date.Daily)},
+			task:     reportTask{Report: "review", Period: portfolio.NewRange(newDate(t, "2025-01-01"), portfolio.Daily)},
 			want:     "",
 			wantErr:  false,
 		},
 		{
 			name:     "template with error",
 			template: "{{.NonExistentField}}",
-			task:     reportTask{Report: "review", Period: date.NewRange(newDate(t, "2025-01-01"), date.Daily)},
+			task:     reportTask{Report: "review", Period: portfolio.NewRange(newDate(t, "2025-01-01"), portfolio.Daily)},
 			want:     "",
 			wantErr:  true,
 		},

@@ -4,7 +4,6 @@ import (
 	"bytes"
 
 	"github.com/etnz/portfolio"
-	"github.com/etnz/portfolio/date"
 	md "github.com/nao1215/markdown"
 )
 
@@ -13,7 +12,7 @@ func HoldingMarkdown(r *portfolio.HoldingReport) string {
 	doc := md.NewMarkdown(&buf)
 
 	valDay := r.Date.String()
-	genDate := date.New(r.Time.Year(), r.Time.Month(), r.Time.Day())
+	genDate := portfolio.NewDate(r.Time.Year(), r.Time.Month(), r.Time.Day())
 	if r.Date == genDate {
 		valDay += " " + r.Time.Format("15:04:05")
 	}

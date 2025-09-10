@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/etnz/portfolio/date"
+	"github.com/etnz/portfolio"
 	"github.com/google/subcommands"
 )
 
@@ -18,11 +18,11 @@ type fetchSecurityCmd struct {
 	to     string
 }
 
-func yesterday() date.Date {
-	return date.Today().Add(-1)
+func yesterday() portfolio.Date {
+	return portfolio.Today().Add(-1)
 }
-func lastYear() date.Date {
-	return date.Today().Add(-365)
+func lastYear() portfolio.Date {
+	return portfolio.Today().Add(-365)
 }
 
 func (*fetchSecurityCmd) Name() string { return "fetch-security" }
@@ -53,13 +53,13 @@ func (c *fetchSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...inte
 		return subcommands.ExitFailure
 	}
 
-	start, err := date.Parse(c.from)
+	start, err := portfolio.ParseDate(c.from)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: invalid from date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
 
-	end, err := date.Parse(c.to)
+	end, err := portfolio.ParseDate(c.to)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: invalid to date: %v\n", err)
 		return subcommands.ExitUsageError

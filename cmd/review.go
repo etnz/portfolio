@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/etnz/portfolio/date"
+	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/renderer"
 	"github.com/google/subcommands"
 )
@@ -27,24 +27,24 @@ func (*reviewCmd) Usage() string {
 }
 
 func (c *reviewCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Date for the report. See the user manual for supported date formats.")
+	f.StringVar(&c.date, "d", portfolio.Today().String(), "Date for the report. See the user manual for supported date formats.")
 	f.StringVar(&c.period, "period", "month", "period for the review (week, month, quarter, year)")
 }
 
 func (c *reviewCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	// 1. Parse the date range for the report
-	var r date.Range
-	on, err := date.Parse(c.date)
+	var r portfolio.Range
+	on, err := portfolio.ParseDate(c.date)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	p, err := date.ParsePeriod(c.period)
+	p, err := portfolio.ParsePeriod(c.period)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Invalid period: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	r = date.NewRange(on, p)
+	r = portfolio.NewRange(on, p)
 
 	// 2. Create the accounting system
 	as, err := DecodeAccountingSystem()

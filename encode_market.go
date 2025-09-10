@@ -11,8 +11,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-
-	"github.com/etnz/portfolio/date"
 )
 
 const attrOn = "on"
@@ -21,7 +19,7 @@ const marketDataFilesGlob = "[0-9][0-9][0-9][0-9].jsonl"
 // This file contains code to persist market data in a folder, in a way that is still human-readable and git-friendly.
 // the main goal for such market data is to live on a private github repo.
 //
-// The overall strategy to Encode/Decode market data is as follow:
+// The overall strategy to Encode/Decode market data is as follows:
 //   Decode: read all files with a glob into a list of lines (with metadata like filename and line number)
 //         Then parse each json line and add append it to the database.
 //
@@ -123,12 +121,12 @@ func decodeDailyPrices(m *MarketData, l fileLine) error {
 		return fmt.Errorf("parse error %s:%v: property %q must be of type 'string'", l.filename, l.i, attrOn)
 	}
 
-	on, err := date.Parse(jstring)
+	on, err := ParseDate(jstring)
 	if err != nil {
 		return fmt.Errorf("parse error %s:%v: property %q must be a valid date: %w", l.filename, l.i, attrOn, err)
 	}
 
-	// Read all other attributes as (ticker,price) pairs.
+	// Read all other attributes as (ticker, price) pairs.
 	for ticker, price := range jobj {
 		if ticker == attrOn { // skip this one, we read it as the timestamp.
 			// reserved word for timestamp
@@ -151,7 +149,7 @@ func decodeDailyPrices(m *MarketData, l fileLine) error {
 	return nil
 }
 
-// DecodeMarketData reads a folder containing securities definition and prices, and returns a MarketData object.
+// DecodeMarketData reads a folder containing securities definitions and prices, and returns a MarketData object.
 func DecodeMarketData(marketFile string) (*MarketData, error) {
 	folder := filepath.Dir(marketFile)
 	// Creates an empty database.
@@ -237,7 +235,7 @@ func encodeSecurities(w io.Writer, m *MarketData) error {
 
 // encodeDailyPrices persists a single line in a security jsonl file.
 // Returns bare io errors.
-func encodeDailyPrices(w io.Writer, day date.Date, tickers []string, values []float64) error {
+func encodeDailyPrices(w io.Writer, day Date, tickers []string, values []float64) error {
 	var jw jsonObjectWriter
 	jw.Append(attrOn, day.String())
 
@@ -264,13 +262,13 @@ func encodeDailyPrices(w io.Writer, day date.Date, tickers []string, values []fl
 	return nil
 }
 
-// EncodeMarketData encodes the market data into a folder, creating a definition file and a set of jsonl files for each year.
+// EncodeMarketData encodes the market data into a folder, creating a definition file and a set of JSONL files for each year.
 func EncodeMarketData(definitionFile string, m *MarketData) error {
 
 	// we first generate the security price values into this list of structured items.
 	type line struct {
 		filename string
-		day      date.Date
+		day      Date
 		tickers  []string
 		prices   []float64
 	}
@@ -285,7 +283,7 @@ func EncodeMarketData(definitionFile string, m *MarketData) error {
 		return sortedSecurities[i].Ticker() < sortedSecurities[j].Ticker()
 	})
 
-	histories := make([]date.History[float64], 0, len(sortedSecurities))
+	histories := make([]History[float64], 0, len(sortedSecurities))
 	for _, sec := range sortedSecurities {
 		prices, exists := m.prices[sec.ID()]
 		if !exists {
@@ -313,11 +311,11 @@ func EncodeMarketData(definitionFile string, m *MarketData) error {
 
 	// Scan the database and fill the 'lines' list of structured lines.
 
-	for day := range date.Iterate(histories...) {
+	for day := range Iterate(histories...) {
 		// Init the line with current day, and a file name based on the year.
 		l := line{
 			day:      day,
-			filename: filepath.Join(folder, fmt.Sprintf("%v.jsonl", day.Year())),
+			filename: filepath.Join(folder, fmt.Sprintf("%d.jsonl", day.Year())),
 		}
 		// Append tickers that have values.
 		for _, sec := range sortedSecurities {

@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-
-	"github.com/etnz/portfolio/date"
 )
 
 // CommandType is a typed string for identifying transaction commands.
@@ -29,8 +27,8 @@ const (
 // that can be recorded in the ledger.
 type Transaction interface {
 	What() CommandType // What returns the command type of the transaction (e.g., "buy", "sell").
-	When() date.Date   // When returns the date on which the transaction occurred.
-	Rationale() string // Rationale returns an optional memo or explanation for the transaction.
+	When() Date        // When returns the date on which the transaction occurred.
+	Equal(Transaction) bool
 }
 
 // baseCmd contains fields common to all transaction types.
@@ -38,7 +36,7 @@ type Transaction interface {
 // embedded within more specific transaction structs.
 type baseCmd struct {
 	Command CommandType `json:"command"`        // Command specifies the type of transaction (e.g., "buy", "sell").
-	Date    date.Date   `json:"date"`           // Date is the date when the transaction took place.
+	Date    Date        `json:"date"`           // Date is the date when the transaction took place.
 	Memo    string      `json:"memo,omitempty"` // Memo provides an optional rationale or note for the transaction.
 }
 
@@ -48,7 +46,7 @@ func (t baseCmd) What() CommandType {
 }
 
 // When returns the date of the transaction.
-func (t baseCmd) When() date.Date {
+func (t baseCmd) When() Date {
 	return t.Date
 }
 
@@ -68,11 +66,10 @@ func (t baseCmd) MarshalJSON() ([]byte, error) {
 
 // Validate checks the base command fields. It sets the date to today if it's zero.
 // It's meant to be embedded in other transaction validation methods.
-func (t *baseCmd) Validate(as *AccountingSystem) error {
-	if t.Date == (date.Date{}) {
-		t.Date = date.Today()
+func (t *baseCmd) Validate() {
+	if t.Date == (Date{}) {
+		t.Date = Today()
 	}
-	return nil
 }
 
 // secCmd is a component for security-based transactions (buy, sell, dividend).
@@ -86,17 +83,15 @@ type secCmd struct {
 // Validate checks the security command fields. It validates the base command,
 // ensures a security ticker is present, and attempts to auto-populate the
 // currency from the security's definition if it's missing.
-func (t *secCmd) Validate(as *AccountingSystem) error {
-	if err := t.baseCmd.Validate(as); err != nil {
-		return err
-	}
+func (t *secCmd) Validate(ledger *Ledger) error {
+	t.baseCmd.Validate()
 
 	if t.Security == "" {
 		return errors.New("security ticker is missing")
 	}
 
 	// use ticker to resolve the ledger security
-	ledgerSec := as.Ledger.Get(t.Security)
+	ledgerSec := ledger.Security(t.Security)
 	if ledgerSec == nil {
 		return fmt.Errorf("security %q not declared in ledger", t.Security)
 	}
@@ -117,8 +112,8 @@ func (t secCmd) MarshalJSON() ([]byte, error) {
 // for a specified amount.
 type Buy struct {
 	secCmd
-	Quantity float64 `json:"quantity"` // Quantity is the number of shares or units bought.
-	Amount   float64 `json:"amount"`   // Amount is the total cost of the purchase.
+	Quantity Quantity `json:"quantity"` // Quantity is the number of shares or units bought.
+	Amount   Money    `json:"amount"`   // Amount is the total cost of the purchase.
 }
 
 // MarshalJSON implements the json.Marshaler interface for Buy.
@@ -126,40 +121,53 @@ func (t Buy) MarshalJSON() ([]byte, error) {
 	var w jsonObjectWriter
 	w.EmbedFrom(t.secCmd)
 	w.Append("quantity", t.Quantity)
-	w.Append("amount", t.Amount)
+	w.EmbedFrom(t.Amount)
 	return w.MarshalJSON()
 }
 
+func (t Buy) Equal(other Transaction) bool {
+	o, ok := other.(Buy)
+	return ok && t.secCmd == o.secCmd && t.Quantity.Equal(o.Quantity) && t.Amount.Equal(o.Amount)
+}
+
 // NewBuy creates a new Buy transaction.
-func NewBuy(day date.Date, memo, security string, quantity, amount float64) Buy {
+func NewBuy(day Date, memo, security string, quantity Quantity, amount Money) Buy {
 	return Buy{
 		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdBuy, Date: day, Memo: memo}, Security: security},
 		Quantity: quantity,
 		Amount:   amount,
 	}
 }
+func (t *Buy) Currency() string { return t.Amount.Currency() }
 
 // Validate checks the Buy transaction's fields. It ensures that the quantity
 // and price are positive. It also verifies that there is enough cash in the
 // corresponding currency account to cover the cost of the purchase on the
-// transaction date.
-func (t *Buy) Validate(as *AccountingSystem) error {
-	if err := t.secCmd.Validate(as); err != nil {
+// transaction date. It now accepts a Ledger object.
+func (t *Buy) Validate(ledger *Ledger) error {
+	if err := t.secCmd.Validate(ledger); err != nil {
 		return err
 	}
 
-	if t.Quantity <= 0 {
-		return fmt.Errorf("buy transaction quantity must be positive, got %f", t.Quantity)
+	if t.Quantity.IsNegative() || t.Quantity.IsZero() {
+		return fmt.Errorf("buy transaction quantity must be positive, got %s", t.Quantity.String())
 	}
-	if t.Amount/t.Quantity <= 0 {
-		return fmt.Errorf("buy transaction price must be positive, got %f", t.Amount/t.Quantity)
+	if t.Amount.IsNegative() || t.Amount.IsZero() {
+		return fmt.Errorf("buy transaction amount must be positive, got %s", t.Amount.String())
 	}
 
-	ledgerSec := as.Ledger.Get(t.Security) // We know this is not nil from secCmd.Validate
+	ledgerSec := ledger.Security(t.Security) // We know this is not nil from secCmd.Validate
 	currency := ledgerSec.Currency()
-	cash, cost := as.Ledger.CashBalance(currency, t.Date), t.Amount
-	if cash < cost {
-		return fmt.Errorf("cannot buy for %f %s cash balance is %f %s", cost, currency, cash, currency)
+	// first the quick fix
+	if t.Currency() == "" {
+		t.Amount = M(t.Amount.value, currency)
+	} else if currency != t.Currency() {
+		return fmt.Errorf("buy transaction currency %s does not match security currency %s", t.Currency(), currency)
+	}
+
+	cash, cost := ledger.CashBalance(t.Currency(), t.Date), t.Amount
+	if cash.LessThan(cost) {
+		return fmt.Errorf("cannot buy for %s cash balance is %s", cost, cash)
 	}
 	return nil
 }
@@ -169,8 +177,8 @@ func (t *Buy) Validate(as *AccountingSystem) error {
 // for a specified amount.
 type Sell struct {
 	secCmd
-	Quantity float64 `json:"quantity"` // Quantity is the number of shares or units sold.
-	Amount   float64 `json:"amount"`   // Amount is the total proceeds from the sale.
+	Quantity Quantity `json:"quantity"` // Quantity is the number of shares or units sold.
+	Amount   Money    `json:"amount"`   // Amount is the total proceeds from the sale.
 }
 
 // MarshalJSON implements the json.Marshaler interface for Sell.
@@ -178,15 +186,20 @@ func (t Sell) MarshalJSON() ([]byte, error) {
 	var w jsonObjectWriter
 	w.EmbedFrom(t.secCmd)
 	w.Append("quantity", t.Quantity)
-	w.Append("amount", t.Amount)
+	w.EmbedFrom(t.Amount)
 	return w.MarshalJSON()
+}
+
+func (t Sell) Equal(other Transaction) bool {
+	o, ok := other.(Sell)
+	return ok && t.secCmd == o.secCmd && t.Quantity.Equal(o.Quantity) && t.Amount.Equal(o.Amount)
 }
 
 // NewSell creates a new Sell transaction.
 // If the quantity is set to 0, it signifies a "sell all" instruction.
 // The actual number of shares will be determined during the validation phase
 // based on the portfolio's position on the transaction date.
-func NewSell(day date.Date, memo, security string, quantity, amount float64) Sell {
+func NewSell(day Date, memo, security string, quantity Quantity, amount Money) Sell {
 	return Sell{
 		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdSell, Date: day, Memo: memo}, Security: security},
 		Quantity: quantity,
@@ -194,29 +207,42 @@ func NewSell(day date.Date, memo, security string, quantity, amount float64) Sel
 	}
 }
 
+func (t *Sell) Currency() string { return t.Amount.Currency() }
+
 // Validate checks the Sell transaction's fields.
 // It handles the "sell all" case by resolving a quantity of 0 to the total
 // position size on the transaction date. It ensures the final quantity and
-// price are positive and that the position is sufficient to cover the sale.
-func (t *Sell) Validate(as *AccountingSystem) error {
-	if err := t.secCmd.Validate(as); err != nil {
+// price are positive and that the position is sufficient to cover the sale. It
+// now accepts a Ledger and a Balance object.
+func (t *Sell) Validate(ledger *Ledger, b *Balance) error {
+	if err := t.secCmd.Validate(ledger); err != nil {
 		return err
 	}
-	if t.Quantity == 0 {
+
+	// Quick fix currency and check
+	ledgerSec := ledger.Security(t.Security) // We know this is not nil from secCmd.Validate
+	currency := ledgerSec.Currency()
+	// first the quick fix
+	if t.Currency() == "" {
+		t.Amount = M(t.Amount.value, currency)
+	} else if currency != t.Currency() {
+		return fmt.Errorf("sell transaction currency %s does not match security currency %s", t.Currency(), currency)
+	}
+	if !t.Amount.IsPositive() {
+		return fmt.Errorf("sell transaction amount must be positive, got %v", t.Amount)
+	}
+
+	if t.Quantity.IsZero() {
 		// quick fix, sell all.
-		t.Quantity = as.Ledger.Position(t.Security, t.Date, as.MarketData)
+		t.Quantity = b.Position(t.Security)
 	}
 
-	if t.Quantity <= 0 {
-		// For Sell quantity == 0 is interpreted as sell all.
-		return fmt.Errorf("sell transaction quantity must be positive, got %f", t.Quantity)
-	}
-	if t.Amount/t.Quantity <= 0 {
-		return fmt.Errorf("sell transaction price must be positive, got %f", t.Amount/t.Quantity)
+	if !t.Quantity.IsPositive() {
+		return fmt.Errorf("sell transaction quantity must be positive, got %s", t.Quantity.String())
 	}
 
-	if as.Ledger.Position(t.Security, t.Date, as.MarketData) < t.Quantity {
-		return fmt.Errorf("cannot sell %f of %s, position is only %f", t.Quantity, t.Security, as.Ledger.Position(t.Security, t.Date, as.MarketData))
+	if b.Position(t.Security).LessThan(t.Quantity) {
+		return fmt.Errorf("cannot sell %v of %s, position is only %v", t.Quantity, t.Security, b.Position(t.Security))
 	}
 
 	return nil
@@ -245,8 +271,13 @@ func (t Declare) MarshalJSON() ([]byte, error) {
 	return w.MarshalJSON()
 }
 
-// NewDeclaration creates a new Declare transaction.
-func NewDeclaration(day date.Date, memo, ticker, id, currency string) Declare {
+func (t Declare) Equal(other Transaction) bool {
+	o, ok := other.(Declare)
+	return ok && t.baseCmd == o.baseCmd && t.Ticker == o.Ticker && t.ID == o.ID && t.Currency == o.Currency
+}
+
+// NewDeclare creates a new Declare transaction.
+func NewDeclare(day Date, memo, ticker string, id ID, currency string) Declare {
 	return Declare{
 		baseCmd:  baseCmd{Command: CmdDeclare, Date: day, Memo: memo},
 		Ticker:   ticker,
@@ -257,10 +288,8 @@ func NewDeclaration(day date.Date, memo, ticker, id, currency string) Declare {
 
 // Validate checks the Declare transaction's fields.
 // It ensures the ticker is not already declared and that the ID and currency are valid.
-func (t *Declare) Validate(as *AccountingSystem) error {
-	if err := t.baseCmd.Validate(as); err != nil {
-		return err
-	}
+func (t *Declare) Validate(ledger *Ledger) error {
+	t.baseCmd.Validate()
 	if t.Ticker == "" {
 		return errors.New("declaration ticker is missing")
 	}
@@ -274,6 +303,12 @@ func (t *Declare) Validate(as *AccountingSystem) error {
 		return fmt.Errorf("invalid currency for declaration: %w", err)
 	}
 
+	// TODO add a check that the dclared does not already exists
+	ledgerSec := ledger.Security(t.Ticker)
+	if ledgerSec != nil {
+		return fmt.Errorf("security %q already declared in ledger", t.Ticker)
+	}
+
 	return nil
 }
 
@@ -282,19 +317,24 @@ func (t *Declare) Validate(as *AccountingSystem) error {
 // for a held security.
 type Dividend struct {
 	secCmd
-	Amount float64 `json:"amount"` // Amount is the total dividend amount received.
+	Amount Money `json:"amount"` // Amount is the total dividend amount received.
 }
 
 // MarshalJSON implements the json.Marshaler interface for Dividend.
 func (t Dividend) MarshalJSON() ([]byte, error) {
 	var w jsonObjectWriter
 	w.EmbedFrom(t.secCmd)
-	w.Append("amount", t.Amount)
+	w.EmbedFrom(t.Amount)
 	return w.MarshalJSON()
 }
 
+func (t Dividend) Equal(other Transaction) bool {
+	o, ok := other.(Dividend)
+	return ok && t.secCmd == o.secCmd && t.Amount.Equal(o.Amount)
+}
+
 // NewDividend creates a new Dividend transaction.
-func NewDividend(day date.Date, memo, security string, amount float64) Dividend {
+func NewDividend(day Date, memo, security string, amount Money) Dividend {
 	return Dividend{
 		secCmd: secCmd{baseCmd: baseCmd{Command: CmdDividend, Date: day, Memo: memo}, Security: security},
 		Amount: amount,
@@ -303,13 +343,13 @@ func NewDividend(day date.Date, memo, security string, amount float64) Dividend 
 
 // Validate checks the Dividend transaction's fields. It ensures the dividend
 // amount is positive.
-func (t *Dividend) Validate(as *AccountingSystem) error {
-	if err := t.secCmd.Validate(as); err != nil {
+func (t *Dividend) Validate(ledger *Ledger) error {
+	if err := t.secCmd.Validate(ledger); err != nil {
 		return err
 	}
 
-	if t.Amount <= 0 {
-		return fmt.Errorf("dividend amount must be positive, got %f", t.Amount)
+	if !t.Amount.IsPositive() {
+		return fmt.Errorf("dividend amount must be positive, got %v", t.Amount)
 	}
 	return nil
 }
@@ -319,56 +359,57 @@ func (t *Dividend) Validate(as *AccountingSystem) error {
 // within the portfolio.
 type Deposit struct {
 	baseCmd
-	Amount   float64 `json:"amount"`             // Amount is the quantity of cash deposited.
-	Currency string  `json:"currency,omitempty"` // Currency is the currency of the deposited amount.
-	Settles  string  `json:"settles,omitempty"`  // Settles is an optional counterparty account that this deposit settles.
+	Amount  Money  `json:"amount"`            // Amount is the quantity of cash deposited.
+	Settles string `json:"settles,omitempty"` // Settles is an optional counterparty account that this deposit settles.
+}
+
+func (t Deposit) Currency() string {
+	return t.Amount.Currency()
 }
 
 // MarshalJSON implements the json.Marshaler interface for Deposit.
 func (t Deposit) MarshalJSON() ([]byte, error) {
 	var w jsonObjectWriter
 	w.EmbedFrom(t.baseCmd)
-	w.Append("amount", t.Amount)
-	w.Optional("currency", t.Currency)
+	w.EmbedFrom(t.Amount)
 	w.Optional("settles", t.Settles)
 	return w.MarshalJSON()
 }
 
+func (t Deposit) Equal(other Transaction) bool {
+	o, ok := other.(Deposit)
+	return ok && t.baseCmd == o.baseCmd && t.Amount.Equal(o.Amount) && t.Settles == o.Settles
+}
+
 // NewDeposit creates a new Deposit transaction.
-func NewDeposit(day date.Date, memo, currency string, amount float64, settles string) Deposit {
+func NewDeposit(day Date, memo string, amount Money, settles string) Deposit {
 	return Deposit{
-		baseCmd:  baseCmd{Command: CmdDeposit, Date: day, Memo: memo},
-		Amount:   amount,
-		Currency: currency,
-		Settles:  settles,
+		baseCmd: baseCmd{Command: CmdDeposit, Date: day, Memo: memo},
+		Amount:  amount,
+		Settles: settles,
 	}
 }
 
 // Validate checks the Deposit transaction's fields. It ensures the deposit
 // amount is positive and the currency code is valid.
-func (t *Deposit) Validate(as *AccountingSystem) error {
-	if err := t.baseCmd.Validate(as); err != nil {
-		return err
+func (t *Deposit) Validate(ledger *Ledger) error {
+	t.baseCmd.Validate()
+
+	if !t.Amount.IsPositive() {
+		return fmt.Errorf("deposit amount must be positive, got %v", t.Amount)
 	}
 
-	if t.Amount <= 0 {
-		return fmt.Errorf("deposit amount must be positive, got %f", t.Amount)
+	if err := ValidateCurrency(t.Amount.Currency()); err != nil {
+		return fmt.Errorf("invalid currency for deposit: %w", err)
 	}
-	if t.Currency != "" {
-		if err := ValidateCurrency(t.Currency); err != nil {
-			return fmt.Errorf("invalid currency for deposit: %w", err)
-		}
-	}
+
 	if t.Settles != "" {
-		accounts := slices.Collect(as.Ledger.AllCounterpartyAccounts())
-		if !slices.Contains(accounts, t.Settles) {
+		cur, exists := ledger.CounterPartyCurrency(t.Settles)
+		if !exists {
 			return fmt.Errorf("counterparty account %q not found", t.Settles)
 		}
-
-		if balance, currency := as.Ledger.CounterpartyAccountBalance(t.Settles, t.Date); balance != 0 {
-			if currency != t.Currency {
-				return fmt.Errorf("settlement currency %s does not match counterparty account currency %s", t.Currency, currency)
-			}
+		if cur != t.Amount.Currency() {
+			return fmt.Errorf("settlement currency %s does not match counterparty account currency %s", t.Amount.Currency(), cur)
 		}
 	}
 	return nil
@@ -379,83 +420,80 @@ func (t *Deposit) Validate(as *AccountingSystem) error {
 // within the portfolio.
 type Withdraw struct {
 	baseCmd
-	Amount   float64 `json:"amount"`             // Amount is the quantity of cash withdrawn.
-	Currency string  `json:"currency,omitempty"` // Currency is the currency of the withdrawn amount.
-	Settles  string  `json:"settles,omitempty"`  // Settles is an optional counterparty account that this withdrawal settles.
+	Amount  Money  `json:"amount"`            // Amount is the quantity of cash withdrawn.
+	Settles string `json:"settles,omitempty"` // Settles is an optional counterparty account that this withdrawal settles.
 }
 
 // MarshalJSON implements the json.Marshaler interface for Withdraw.
 func (t Withdraw) MarshalJSON() ([]byte, error) {
 	var w jsonObjectWriter
 	w.EmbedFrom(t.baseCmd)
-	w.Append("amount", t.Amount)
-	w.Optional("currency", t.Currency)
+	w.EmbedFrom(t.Amount)
 	w.Optional("settles", t.Settles)
 	return w.MarshalJSON()
+}
+
+func (t Withdraw) Equal(other Transaction) bool {
+	o, ok := other.(Withdraw)
+	return ok && t.baseCmd == o.baseCmd && t.Amount.Equal(o.Amount) && t.Settles == o.Settles
 }
 
 // NewWithdraw creates a new Withdraw transaction.
 // If the amount is set to 0, it signifies a "withdraw all" instruction for the specified currency.
 // The actual amount will be determined during the validation phase based on the cash balance on the transaction date.
-func NewWithdraw(day date.Date, memo, currency string, amount float64) Withdraw {
+func NewWithdraw(day Date, memo string, amount Money) Withdraw {
 	return Withdraw{
-		baseCmd:  baseCmd{Command: CmdWithdraw, Date: day, Memo: memo},
-		Amount:   amount,
-		Currency: currency,
+		baseCmd: baseCmd{Command: CmdWithdraw, Date: day, Memo: memo},
+		Amount:  amount,
 	}
 }
 
 // Validate checks the Withdraw transaction's fields.
 // It handles a "withdraw all" case if the amount is 0, ensures the final
-// amount is positive, and verifies there is sufficient cash to cover the withdrawal.
-func (t *Withdraw) Validate(as *AccountingSystem) error {
-	if err := t.baseCmd.Validate(as); err != nil {
-		return err
+// amount is positive, and verifies there is sufficient cash to cover the withdrawal
+func (t *Withdraw) Validate(ledger *Ledger) error {
+	t.baseCmd.Validate()
+
+	if err := ValidateCurrency(t.Amount.Currency()); err != nil {
+		return fmt.Errorf("invalid currency for withdraw: %w", err)
 	}
 
-	if t.Currency != "" {
-		if err := ValidateCurrency(t.Currency); err != nil {
-			return fmt.Errorf("invalid currency for withdraw: %w", err)
-		}
+	if t.Amount.IsZero() {
+		t.Amount = ledger.CashBalance(t.Amount.Currency(), t.Date)
 	}
 
-	if t.Amount == 0 {
-		// quick fix, cash all.
-		t.Amount = as.Ledger.CashBalance(t.Currency, t.Date)
+	if !t.Amount.IsPositive() {
+		return fmt.Errorf("withdraw amount must be positive, got %s", t.Amount.String())
 	}
 
-	if t.Amount <= 0 {
-		return fmt.Errorf("withdraw amount must be positive, got %f", t.Amount)
-	}
-
-	cash, cost := as.Ledger.CashBalance(t.Currency, t.Date), t.Amount
-	if cash < cost {
-		return fmt.Errorf("cannot withdraw for %f %s cash balance is %f %s", cost, t.Currency, cash, t.Currency)
+	cash := ledger.CashBalance(t.Amount.Currency(), t.Date)
+	if cash.LessThan(t.Amount) {
+		return fmt.Errorf("cannot withdraw for %s cash balance is %s", t.Amount.String(), cash.String())
 	}
 	if t.Settles != "" {
-		accounts := slices.Collect(as.Ledger.AllCounterpartyAccounts())
+		accounts := slices.Collect(ledger.AllCounterpartyAccounts())
 		if !slices.Contains(accounts, t.Settles) {
 			return fmt.Errorf("counterparty account %q not found", t.Settles)
 		}
 
-		if balance, currency := as.Ledger.CounterpartyAccountBalance(t.Settles, t.Date); balance != 0 {
-			if currency != t.Currency {
-				return fmt.Errorf("settlement currency %s does not match counterparty account currency %s", t.Currency, currency)
-			}
+		balance := ledger.CounterpartyAccountBalance(t.Settles, t.Date)
+		if balance.Currency() != t.Currency() {
+			return fmt.Errorf("settlement currency %s does not match counterparty account currency %s", t.Currency(), balance.Currency())
 		}
 	}
 	return nil
 }
+
+func (t *Withdraw) Currency() string { return t.Amount.Currency() }
 
 // Accrue represents a non-cash transaction that affects a counterparty account.
 // Accrue represents a non-cash transaction that affects a counterparty account,
 // such as a loan or an accrued expense/income.
 type Accrue struct {
 	baseCmd
-	Counterparty string  `json:"counterparty"`     // Counterparty is the name of the entity with whom the accrual is made.
-	Amount       float64 `json:"amount"`           // Amount is the value of the accrual. Positive for receivables, negative for payables.
-	Currency     string  `json:"currency"`         // Currency is the currency of the accrued amount.
-	Create       bool    `json:"create,omitempty"` // Create is true if this accrual creates a new counterparty account.
+	Counterparty string `json:"counterparty"`     // Counterparty is the name of the entity with whom the accrual is made.
+	Amount       Money  `json:"amount"`           // Amount is the value of the accrual. Positive for receivables, negative for payables.
+	Create       bool   `json:"create,omitempty"` // Create is true if this accrual creates a new counterparty account.
 }
 
 // MarshalJSON implements the json.Marshaler interface for Accrue.
@@ -464,69 +502,63 @@ func (t Accrue) MarshalJSON() ([]byte, error) {
 	w.EmbedFrom(t.baseCmd)
 	w.Append("counterparty", t.Counterparty)
 	w.Optional("create", t.Create)
-	w.Append("amount", t.Amount)
-	w.Append("currency", t.Currency)
+	w.EmbedFrom(t.Amount)
 	return w.MarshalJSON()
+}
+
+func (t Accrue) Equal(other Transaction) bool {
+	o, ok := other.(Accrue)
+	return ok && t.baseCmd == o.baseCmd && t.Counterparty == o.Counterparty && t.Amount.Equal(o.Amount) && t.Create == o.Create
 }
 
 // NewAccrue creates a new Accrue transaction.
 // A positive amount indicates a receivable (an asset), meaning the counterparty owes the user money.
 // A negative amount indicates a payable (a liability), meaning the user owes the counterparty money.
-func NewAccrue(day date.Date, memo, counterparty string, amount float64, currency string) Accrue {
+func NewAccrue(day Date, memo, counterparty string, amount Money) Accrue {
 	return Accrue{
 		baseCmd:      baseCmd{Command: CmdAccrue, Date: day, Memo: memo},
 		Counterparty: counterparty,
 		Amount:       amount,
-		Currency:     currency,
 	}
 }
 
 // NewCreatedAccrue creates a new Accrue transaction.
 // A positive amount indicates a receivable (an asset), meaning the counterparty owes the user money.
 // A negative amount indicates a payable (a liability), meaning the user owes the counterparty money.
-func NewCreatedAccrue(day date.Date, memo, counterparty string, amount float64, currency string) Accrue {
+func NewCreatedAccrue(day Date, memo, counterparty string, amount Money) Accrue {
 	return Accrue{
 		baseCmd:      baseCmd{Command: CmdAccrue, Date: day, Memo: memo},
 		Counterparty: counterparty,
 		Amount:       amount,
-		Currency:     currency,
 		Create:       true,
 	}
 }
 
+// Currency returns the currency of the transaction.
+func (t *Accrue) Currency() string { return t.Amount.Currency() }
+
 // Validate checks the Accrue transaction's fields.
-func (t *Accrue) Validate(as *AccountingSystem) error {
-	if err := t.baseCmd.Validate(as); err != nil {
-		return err
-	}
+func (t *Accrue) Validate(ledger *Ledger) error {
+	t.baseCmd.Validate()
 	if t.Counterparty == "" {
 		return errors.New("accrue transaction counterparty is missing")
 	}
-	if t.Amount == 0 {
+	if t.Amount.IsZero() {
 		return errors.New("accrue transaction amount cannot be zero")
 	}
-	if err := ValidateCurrency(t.Currency); err != nil {
+	if err := ValidateCurrency(t.Currency()); err != nil {
 		return fmt.Errorf("invalid currency for accrue: %w", err)
 	}
 
 	// Check if the account already exists in the ledger at any point in time
-	accountExistsInLedger := false
-	for existingAccount := range as.Ledger.AllCounterpartyAccounts() {
-		if existingAccount == t.Counterparty {
-			accountExistsInLedger = true
-			break
-		}
-	}
-
+	currency, exists := ledger.CounterPartyCurrency(t.Counterparty)
 	// If the account does not exist in the ledger at all, then it's a new creation.
-	if !accountExistsInLedger {
+	if !exists {
 		t.Create = true
 	}
 
-	if balance, currency := as.Ledger.CounterpartyAccountBalance(t.Counterparty, t.Date); balance != 0 {
-		if currency != t.Currency {
-			return fmt.Errorf("new accrue currency %s does not match counterparty account currency %s", t.Currency, currency)
-		}
+	if !t.Create && currency != t.Currency() {
+		return fmt.Errorf("new accrue currency %s does not match counterparty account currency %s", t.Currency(), currency)
 	}
 	return nil
 }
@@ -535,66 +567,70 @@ func (t *Accrue) Validate(as *AccountingSystem) error {
 // Convert represents an internal currency conversion.
 type Convert struct {
 	baseCmd
-	FromCurrency string  `json:"fromCurrency"`
-	FromAmount   float64 `json:"fromAmount"`
-	ToCurrency   string  `json:"toCurrency"`
-	ToAmount     float64 `json:"toAmount"`
+	FromAmount Money
+	ToAmount   Money
 }
 
 // MarshalJSON implements the json.Marshaler interface for Convert.
 func (t Convert) MarshalJSON() ([]byte, error) {
 	var w jsonObjectWriter
 	w.EmbedFrom(t.baseCmd)
-	w.Append("fromCurrency", t.FromCurrency)
-	w.Append("fromAmount", t.FromAmount)
-	w.Append("toCurrency", t.ToCurrency)
-	w.Append("toAmount", t.ToAmount)
+	w.Append("fromCurrency", t.FromCurrency())
+	w.Append("fromAmount", t.FromAmount.value)
+	w.Append("toCurrency", t.ToCurrency())
+	w.Append("toAmount", t.ToAmount.value)
 	return w.MarshalJSON()
 }
 
+func (t Convert) Equal(other Transaction) bool {
+	o, ok := other.(Convert)
+	return ok && t.baseCmd == o.baseCmd && t.FromAmount.Equal(o.FromAmount) && t.ToAmount.Equal(o.ToAmount)
+}
+
 // NewConvert creates a new Convert transaction.
-func NewConvert(day date.Date, memo, fromCurrency string, fromAmount float64, toCurrency string, toAmount float64) Convert {
+func NewConvert(day Date, memo string, fromAmount Money, toAmount Money) Convert {
 	return Convert{
-		baseCmd:      baseCmd{Command: CmdConvert, Date: day, Memo: memo},
-		FromCurrency: fromCurrency,
-		FromAmount:   fromAmount,
-		ToCurrency:   toCurrency,
-		ToAmount:     toAmount,
+		baseCmd:    baseCmd{Command: CmdConvert, Date: day, Memo: memo},
+		FromAmount: fromAmount,
+		ToAmount:   toAmount,
 	}
 }
+
+func (t *Convert) FromCurrency() string { return t.FromAmount.Currency() }
+func (t *Convert) ToCurrency() string   { return t.ToAmount.Currency() }
 
 // Validate checks the Convert transaction's fields.
 // It handles a "convert all" case if the from-amount is 0. It ensures both
 // amounts are positive, currencies are valid, and there is sufficient cash in
 // the source currency account to cover the conversion.
-func (t *Convert) Validate(as *AccountingSystem) error {
-	if err := t.baseCmd.Validate(as); err != nil {
-		return err
-	}
+func (t *Convert) Validate(ledger *Ledger) error {
+	t.baseCmd.Validate()
 
-	if err := ValidateCurrency(t.FromCurrency); err != nil {
+	if err := ValidateCurrency(t.FromCurrency()); err != nil {
 		return fmt.Errorf("invalid 'from' currency: %w", err)
 	}
-	if err := ValidateCurrency(t.ToCurrency); err != nil {
+	if err := ValidateCurrency(t.ToCurrency()); err != nil {
 		return fmt.Errorf("invalid 'to' currency: %w", err)
 	}
-	if t.ToAmount <= 0 {
-		return fmt.Errorf("convert 'to' amount must be positive, got %f", t.ToAmount)
+	if t.FromCurrency() == t.ToCurrency() {
+		return fmt.Errorf("cannot convert to the same currency: %s", t.FromCurrency())
 	}
 
-	if t.FromAmount == 0 {
-		// quick fix, cash all.
-		t.FromAmount = as.Ledger.CashBalance(t.FromCurrency, t.Date)
+	if !t.ToAmount.IsPositive() {
+		return fmt.Errorf("convert 'to' amount must be positive, got %v", t.ToAmount)
 	}
 
-	if t.FromAmount <= 0 {
+	if t.FromAmount.IsZero() && t.FromAmount.Currency() != "" {
+		t.FromAmount = ledger.CashBalance(t.FromCurrency(), t.Date)
+	}
+	if !t.FromAmount.IsPositive() {
 		// fromAmount == 0 is interpreted as "convert all".
-		return fmt.Errorf("convert 'from' amount must be positive, got %f", t.FromAmount)
+		return fmt.Errorf("convert 'from' amount must be positive, got %v", t.FromAmount)
 	}
 
-	cash, cost := as.Ledger.CashBalance(t.FromCurrency, t.Date), t.FromAmount
-	if cash < cost {
-		return fmt.Errorf("cannot withdraw for %f %s cash balance is %f %s", cost, t.FromCurrency, cash, t.FromCurrency)
+	cash, cost := ledger.CashBalance(t.FromCurrency(), t.Date), t.FromAmount
+	if cash.LessThan(cost) {
+		return fmt.Errorf("cannot withdraw for %v cash balance is %v", cost, cash)
 	}
 
 	return nil

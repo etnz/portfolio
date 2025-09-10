@@ -5,10 +5,8 @@ import (
 	"iter"
 	"maps"
 	"slices"
-
 	"sort"
 
-	"github.com/etnz/portfolio/date"
 	"github.com/shopspring/decimal"
 )
 
@@ -49,36 +47,27 @@ func ParseCostBasisMethod(s string) (CostBasisMethod, error) {
 //
 // In a Ledger transactions are always in chronological order.
 type Ledger struct {
-	transactions []Transaction
-	securities   map[string]Security // index securities by ticker
-	// lots is a map from security ticker to a slice of its open lots (purchases not yet fully sold).
-	// These lots are used for cost basis calculations (e.g., FIFO, AverageCost) and are kept
-	// sorted by date for FIFO accounting.
-	lots map[string][]lot
-}
-
-// Declared return a iterator over all declared securities in the ledger.
-func (l *Ledger) Declared() iter.Seq[Security] {
-	// Put securities in a slice.
-	securities := slices.Collect(maps.Values(l.securities))
-	// Sort securities by ticker.
-	sort.Slice(securities, func(i, j int) bool {
-		return securities[i].Ticker() < securities[j].Ticker()
-	})
-	return slices.Values(securities)
+	transactions   []Transaction
+	securities     map[string]Security // index securities by ticker
+	counterparties map[string]string   // index counterparties currency by counterparty name
 }
 
 // NewLedger creates an empty ledger.
 func NewLedger() *Ledger {
 	return &Ledger{
-		transactions: make([]Transaction, 0),
-		securities:   make(map[string]Security),
-		lots:         make(map[string][]lot),
+		transactions:   make([]Transaction, 0),
+		securities:     make(map[string]Security),
+		counterparties: make(map[string]string),
 	}
 }
 
-// Get return the security declared with this ticker, or nil if unknown.
-func (l *Ledger) Get(ticker string) *Security {
+func (l *Ledger) CounterPartyCurrency(account string) (cur string, exists bool) {
+	cur, ok := l.counterparties[account]
+	return cur, ok
+}
+
+// Security return the security declared with this ticker, or nil if unknown.
+func (l *Ledger) Security(ticker string) *Security {
 	sec, ok := l.securities[ticker]
 	if !ok {
 		return nil
@@ -89,26 +78,19 @@ func (l *Ledger) Get(ticker string) *Security {
 // Append appends transactions to this ledger and maintains the chronological order of transactions.
 func (l *Ledger) Append(txs ...Transaction) {
 	l.transactions = append(l.transactions, txs...)
-	// process security declarations and update lots
+	// process security declarations and counterparty account creation.
 	for _, tx := range txs {
 		switch v := tx.(type) {
 		case Declare:
 			sec := NewSecurity(v.ID, v.Ticker, v.Currency)
 			l.securities[sec.Ticker()] = sec
-		case Buy:
-			// Add to lots for cost basis tracking
-			l.lots[v.Security] = append(l.lots[v.Security], lot{
-				Date:     v.When(),
-				Quantity: decimal.NewFromFloat(v.Quantity),
-				Cost:     decimal.NewFromFloat(v.Amount),
-			})
-			// Keep lots sorted by date for FIFO
-			sort.Slice(l.lots[v.Security], func(i, j int) bool {
-				return l.lots[v.Security][i].Date.Before(l.lots[v.Security][j].Date)
-			})
+		case Accrue:
+			if v.Create {
+				l.counterparties[v.Counterparty] = v.Amount.cur
+			}
 		}
 	}
-
+	// The ledger is not sorted anymore, the journal is.
 	l.stableSort() // Ensure the ledger remains sorted after appending
 }
 
@@ -144,73 +126,25 @@ func (l *Ledger) stableSort() {
 
 // OldestTransactionDate returns the date of the earliest transaction in the ledger.
 // It returns false if the ledger has no transactions.
-func (l *Ledger) OldestTransactionDate() date.Date {
-	if len(l.transactions) == 0 {
-		return date.Date{}
+func (l *Ledger) OldestTransactionDate() Date {
+	if len(l.transactions) == 0 { // The ledger is not sorted anymore
+		return Date{}
 	}
-	return l.transactions[0].When()
+	return l.transactions[0].When() // The ledger is not sorted anymore
 }
 
 // NewestTransactionDate returns the date of the latest transaction in the ledger.
 // It returns false if the ledger has no transactions.
-func (l *Ledger) NewestTransactionDate() date.Date {
-	if len(l.transactions) == 0 {
-		return date.Date{}
+func (l *Ledger) NewestTransactionDate() Date {
+	if len(l.transactions) == 0 { // The ledger is not sorted anymore
+		return Date{}
 	}
-	return l.transactions[len(l.transactions)-1].When()
-}
-
-// Position computes the total quantity of a security held on a specific date.
-// It now requires market data to correctly adjust for any stock splits that
-// have occurred.
-func (l *Ledger) Position(ticker string, on date.Date, market *MarketData) float64 {
-	totalPosition := decimal.NewFromInt(0)
-	secID := l.securities[ticker].ID()
-	splits := market.Splits(secID)
-
-	for _, tx := range l.SecurityTransactions(ticker, on) {
-		var quantity decimal.Decimal
-		var txDate date.Date
-
-		switch v := tx.(type) {
-		case Buy:
-			quantity = decimal.NewFromFloat(v.Quantity)
-			txDate = v.When()
-		case Sell:
-			quantity = decimal.NewFromFloat(v.Quantity).Neg() // Sell is a negative quantity
-			txDate = v.When()
-		default:
-			continue // Not a position-affecting transaction
-		}
-
-		quantity = adjustForSplits(quantity, txDate, on, splits)
-		totalPosition = totalPosition.Add(quantity)
-	}
-
-	pos, _ := totalPosition.Float64()
-	return pos
-}
-
-func adjustForSplits(quantity decimal.Decimal, txDate date.Date, on date.Date, splits []Split) decimal.Decimal {
-	if AdjustedPrices {
-		return quantity
-	}
-	adjustmentFactor := decimal.NewFromInt(1)
-	for _, split := range splits {
-		// A split applies if it happened AFTER the transaction but ON OR BEFORE the query date
-		if split.Date.After(txDate) && !split.Date.After(on) {
-			num := decimal.NewFromInt(split.Numerator)
-			den := decimal.NewFromInt(split.Denominator)
-			splitRatio := num.Div(den)
-			adjustmentFactor = adjustmentFactor.Mul(splitRatio)
-		}
-	}
-	return quantity.Mul(adjustmentFactor)
+	return l.transactions[len(l.transactions)-1].When() // The ledger is not sorted anymore
 }
 
 // CashBalance computes the total cash in a specific currency on a specific date.
-func (l *Ledger) CashBalance(currency string, on date.Date) float64 {
-	var balance float64
+func (l *Ledger) CashBalance(currency string, on Date) Money {
+	balance := M(decimal.Zero, currency)
 	for _, tx := range l.transactions {
 		if tx.When().After(on) {
 			// The ledger is sorted by date, so it's safe to break.
@@ -219,30 +153,31 @@ func (l *Ledger) CashBalance(currency string, on date.Date) float64 {
 		switch v := tx.(type) {
 		case Buy:
 			if sec, ok := l.securities[v.Security]; ok && sec.Currency() == currency {
-				balance -= v.Amount
+				balance = balance.Sub(v.Amount)
 			}
 		case Sell:
 			if sec, ok := l.securities[v.Security]; ok && sec.Currency() == currency {
-				balance += v.Amount
+				balance = balance.Add(v.Amount)
 			}
 		case Dividend:
 			if sec, ok := l.securities[v.Security]; ok && sec.Currency() == currency {
-				balance += v.Amount
+				balance = balance.Add(v.Amount)
 			}
 		case Deposit:
-			if v.Currency == currency {
-				balance += v.Amount
+			if v.Currency() == currency {
+				balance = balance.Add(v.Amount)
 			}
 		case Withdraw:
-			if v.Currency == currency {
-				balance -= v.Amount
+			if v.Currency() == currency {
+				balance = balance.Sub(v.Amount)
 			}
 		case Convert:
-			if v.FromCurrency == currency {
-				balance -= v.FromAmount
+			// Fix: Use decimal.Decimal's Sub and Add methods for Convert transaction amounts
+			if v.FromCurrency() == currency {
+				balance = balance.Sub(v.FromAmount)
 			}
-			if v.ToCurrency == currency {
-				balance += v.ToAmount
+			if v.ToCurrency() == currency {
+				balance = balance.Add(v.ToAmount)
 			}
 		}
 	}
@@ -250,9 +185,9 @@ func (l *Ledger) CashBalance(currency string, on date.Date) float64 {
 }
 
 // CounterpartyAccountBalance computes the balance of a counterparty account on a specific date.
-func (l *Ledger) CounterpartyAccountBalance(account string, on date.Date) (float64, string) {
-	var balance float64
-	var currency string
+func (l *Ledger) CounterpartyAccountBalance(account string, on Date) Money {
+	var balance Money
+
 	for _, tx := range l.transactions {
 		if tx.When().After(on) {
 			break
@@ -260,22 +195,20 @@ func (l *Ledger) CounterpartyAccountBalance(account string, on date.Date) (float
 		switch v := tx.(type) {
 		case Accrue:
 			if v.Counterparty == account {
-				balance += v.Amount
-				currency = v.Currency
+				balance = balance.Add(v.Amount)
 			}
 		case Deposit:
 			if v.Settles == account {
-				balance -= v.Amount
-				currency = v.Currency
+				balance = balance.Add(v.Amount)
 			}
 		case Withdraw:
 			if v.Settles == account {
-				balance += v.Amount
-				currency = v.Currency
+				balance = balance.Add(v.Amount)
 			}
+
 		}
 	}
-	return balance, currency
+	return balance
 }
 
 // AllCounterpartyAccounts returns a sequence of all unique counterparty account names.
@@ -317,7 +250,7 @@ func (l *Ledger) AllCounterpartyAccounts() iter.Seq[string] {
 // SecurityTransactions returns an iterator over transactions related to a specific
 // security (Buy, Sell, Dividend) up to and including a given date.
 // The ledger must be sorted by date for this to work correctly.
-func (l Ledger) SecurityTransactions(ticker string, max date.Date) iter.Seq2[int, Transaction] {
+func (l Ledger) SecurityTransactions(ticker string, max Date) iter.Seq2[int, Transaction] {
 	return func(yield func(int, Transaction) bool) {
 		for i, tx := range l.transactions {
 
@@ -372,20 +305,20 @@ func (l *Ledger) AllCurrencies() iter.Seq[string] {
 		for _, tx := range l.transactions {
 			switch v := tx.(type) {
 			case Deposit:
-				visitedCurrencies[v.Currency] = struct{}{}
+				visitedCurrencies[v.Currency()] = struct{}{}
 			case Withdraw:
-				visitedCurrencies[v.Currency] = struct{}{}
+				visitedCurrencies[v.Currency()] = struct{}{}
 			case Convert:
-				visitedCurrencies[v.FromCurrency] = struct{}{}
-				visitedCurrencies[v.ToCurrency] = struct{}{}
+				visitedCurrencies[v.FromCurrency()] = struct{}{}
+				visitedCurrencies[v.ToCurrency()] = struct{}{}
 			case Declare:
 				visitedCurrencies[v.Currency] = struct{}{}
 			case Buy:
-				if sec := l.Get(v.Security); sec != nil {
+				if sec := l.Security(v.Security); sec != nil {
 					visitedCurrencies[sec.Currency()] = struct{}{}
 				}
 			case Sell:
-				if sec := l.Get(v.Security); sec != nil {
+				if sec := l.Security(v.Security); sec != nil {
 					visitedCurrencies[sec.Currency()] = struct{}{}
 				}
 			}
@@ -424,20 +357,20 @@ func (l *Ledger) ByCurrency(currency string) func(Transaction) bool {
 	return func(tx Transaction) bool {
 		switch v := tx.(type) {
 		case Buy:
-			sec := l.Get(v.Security)
+			sec := l.Security(v.Security)
 			return sec != nil && sec.Currency() == currency
 		case Sell:
-			sec := l.Get(v.Security)
+			sec := l.Security(v.Security)
 			return sec != nil && sec.Currency() == currency
 		case Dividend:
-			sec := l.Get(v.Security)
+			sec := l.Security(v.Security)
 			return sec != nil && sec.Currency() == currency
 		case Deposit:
-			return v.Currency == currency
+			return v.Currency() == currency
 		case Withdraw:
-			return v.Currency == currency
+			return v.Currency() == currency
 		case Convert:
-			return v.FromCurrency == currency || v.ToCurrency == currency
+			return v.FromCurrency() == currency || v.ToCurrency() == currency
 		case Declare:
 			return v.Currency == currency
 		default:

@@ -2,13 +2,11 @@ package portfolio
 
 import (
 	"time"
-
-	"github.com/etnz/portfolio/date"
 )
 
 // HoldingReport represents a detailed view of portfolio holdings at a specific date.
 type HoldingReport struct {
-	Date              date.Date
+	Date              Date
 	Time              time.Time // Generation time
 	ReportingCurrency string
 	Securities        []SecurityHolding
@@ -35,7 +33,7 @@ type CashHolding struct {
 }
 
 func (c CashHolding) Equals(other CashHolding) bool {
-	return c.Currency == other.Currency && c.Balance.Equals(other.Balance) && c.Value.Equals(other.Value)
+	return c.Currency == other.Currency && c.Balance.Equal(other.Balance) && c.Value.Equal(other.Value)
 }
 
 // CounterpartyHolding represents the balance of a single counterparty account.
@@ -44,4 +42,75 @@ type CounterpartyHolding struct {
 	Currency string
 	Balance  Money
 	Value    Money // In reporting currency
+}
+
+// TODO convert from a method of accountingsystem to a constructor of Holding Report
+
+// NewHoldingReport calculates and returns a detailed holdings report for a given date.
+func (as *AccountingSystem) NewHoldingReport(on Date) (*HoldingReport, error) {
+	report := &HoldingReport{
+		Date:              on,
+		Time:              time.Now(), // Generation time
+		ReportingCurrency: as.ReportingCurrency,
+		Securities:        []SecurityHolding{},
+		Cash:              []CashHolding{},
+		Counterparties:    []CounterpartyHolding{},
+	}
+
+	balance, err := as.Balance(on)
+	if err != nil {
+		return nil, err
+	}
+
+	// Securities
+	for sec := range balance.Securities() {
+		ticker := sec.Ticker()
+		id := sec.ID()
+		currency := sec.Currency()
+		position := balance.Position(ticker)
+		if position.IsZero() {
+			continue
+		}
+		report.Securities = append(report.Securities, SecurityHolding{
+			Ticker:      ticker,
+			ID:          id.String(),
+			Currency:    currency,
+			Quantity:    position,
+			Price:       balance.Price(ticker),
+			MarketValue: balance.Convert(balance.MarketValue(ticker)),
+		})
+	}
+
+	// Cash
+	for currency := range balance.Currencies() {
+		bal := balance.Cash(currency)
+		if bal.IsZero() {
+			continue
+		}
+		convertedBalance := balance.Convert(bal)
+		report.Cash = append(report.Cash, CashHolding{
+			Currency: currency,
+			Balance:  bal,
+			Value:    convertedBalance,
+		})
+	}
+
+	// Counterparties
+	for account := range balance.Counterparties() {
+		bal, currency := balance.Counterparty(account), balance.CounterpartyCurrency(account)
+		if bal.IsZero() {
+			continue
+		}
+		convertedBalance := balance.Convert(bal)
+		report.Counterparties = append(report.Counterparties, CounterpartyHolding{
+			Name:     account,
+			Currency: currency,
+			Balance:  bal,
+			Value:    convertedBalance,
+		})
+	}
+
+	report.TotalValue = balance.TotalPortfolioValue()
+
+	return report, nil
 }

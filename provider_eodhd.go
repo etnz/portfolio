@@ -18,7 +18,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/etnz/portfolio/date"
 	"github.com/shopspring/decimal"
 )
 
@@ -47,7 +46,7 @@ type diskCache struct {
 func (c *diskCache) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	// get from disk
 	// diskcache implements a unique key per day, so the local tmp expires every day.
-	key := fmt.Sprintf("%s %s %s", date.Today().String(), req.Method, req.URL.String())
+	key := fmt.Sprintf("%s %s %s", Today().String(), req.Method, req.URL.String())
 	key = fmt.Sprintf("daily-%x", sha1.Sum([]byte(key)))
 	//key = url.PathEscape(key)
 
@@ -274,7 +273,7 @@ func eodhdSearchByISIN(apiKey string, isin string) (ticker string, err error) {
 var AdjustedPrices = false
 
 // eodhdDailyMSSI returns the daily prices for a given ISIN and MIC.
-func eodhdDailyMSSI(apiKey, isin, mic string, from, to date.Date) (prices date.History[float64], err error) {
+func eodhdDailyMSSI(apiKey, isin, mic string, from, to Date) (prices History[float64], err error) {
 	// find the eodhd ticker for the given isin and mic
 	ticker, err := eodhdSearchByMSSI(apiKey, isin, mic)
 	if err != nil {
@@ -285,7 +284,7 @@ func eodhdDailyMSSI(apiKey, isin, mic string, from, to date.Date) (prices date.H
 }
 
 // eodhdDailyCurrencyPair returns the daily prices for a given currency pair.
-func eodhdDailyCurrencyPair(apiKey, fromCurrency, toCurrency string, from, to date.Date) (prices date.History[float64], err error) {
+func eodhdDailyCurrencyPair(apiKey, fromCurrency, toCurrency string, from, to Date) (prices History[float64], err error) {
 	// The Ticker for forex is in the format "fromCurrency+toCurrency.FOREX".
 	ticker := fmt.Sprintf("%s%s.FOREX", fromCurrency, toCurrency)
 	open, _, err := eodhdDaily(apiKey, ticker, from, to)
@@ -294,7 +293,7 @@ func eodhdDailyCurrencyPair(apiKey, fromCurrency, toCurrency string, from, to da
 	}
 	// eodhd forex sucks, the so called close value is probably buggy and equal to the open most of the time.
 	// Instead the open of the next day is the closer to the truth, so be it.
-	var close date.History[float64]
+	var close History[float64]
 	for t, v := range open.Values() {
 		close.Append(t.Add(-1), v)
 	}
@@ -302,7 +301,7 @@ func eodhdDailyCurrencyPair(apiKey, fromCurrency, toCurrency string, from, to da
 }
 
 // eodhdDailyISIN returns the daily prices for a given ISIN and MIC.
-func eodhdDailyISIN(apiKey, isin string, from, to date.Date) (prices date.History[float64], err error) {
+func eodhdDailyISIN(apiKey, isin string, from, to Date) (prices History[float64], err error) {
 	// find the eodhd ticker for the given isin and mic
 	ticker, err := eodhdSearchByISIN(apiKey, isin)
 	if err != nil {
@@ -314,7 +313,7 @@ func eodhdDailyISIN(apiKey, isin string, from, to date.Date) (prices date.Histor
 
 // eodhdDaily returns the daily open and adjusted close prices for a given EODHD ticker.
 // The EODHD ticker format is typically "SYMBOL.EXCHANGECODE".
-func eodhdDaily(apiKey, ticker string, from, to date.Date) (open, close date.History[float64], err error) {
+func eodhdDaily(apiKey, ticker string, from, to Date) (open, close History[float64], err error) {
 	// https://eodhd.com/api/eod/NVD.F?api_token=67adc13417e148.00145034&fmt=json
 	// [
 	//
@@ -336,10 +335,10 @@ func eodhdDaily(apiKey, ticker string, from, to date.Date) (open, close date.His
 
 	addr := fmt.Sprintf("https://eodhd.com/api/eod/%s?fmt=json&api_token=%s&from=%s&to=%s", ticker, apiKey, from, to)
 	type Info struct {
-		Date          date.Date `json:"date"`
-		Close         float64   `json:"close"`
-		Open          float64   `json:"open"`
-		AdjustedClose float64   `json:"adjusted_close"`
+		Date          Date    `json:"date"`
+		Close         float64 `json:"close"`
+		Open          float64 `json:"open"`
+		AdjustedClose float64 `json:"adjusted_close"`
 	}
 
 	// that's the payload
@@ -391,8 +390,8 @@ func eodhdSplits(apiKey, ticker string) ([]Split, error) {
 	addr := fmt.Sprintf("https://eodhd.com/api/splits/%s?fmt=json&api_token=%s", ticker, apiKey)
 
 	type apiSplit struct {
-		Date  date.Date `json:"date"`
-		Split string    `json:"split"`
+		Date  Date   `json:"date"`
+		Split string `json:"split"`
 	}
 
 	content := make([]apiSplit, 0)
@@ -432,16 +431,16 @@ func eodhdSplits(apiKey, ticker string) ([]Split, error) {
 
 // SearchResult matches the structure of a single item in the EODHD search API response.
 type SearchResult struct {
-	Code              string    `json:"Code"`
-	Exchange          string    `json:"Exchange"`
-	Name              string    `json:"Name"`
-	Type              string    `json:"Type"`
-	Country           string    `json:"Country"`
-	Currency          string    `json:"Currency"`
-	ISIN              string    `json:"ISIN"`
-	PreviousClose     float64   `json:"previousClose"`
-	PreviousCloseDate date.Date `json:"previousCloseDate"`
-	MIC               string    `json:"-"` // Populated by Search, not from API directly.
+	Code              string  `json:"Code"`
+	Exchange          string  `json:"Exchange"`
+	Name              string  `json:"Name"`
+	Type              string  `json:"Type"`
+	Country           string  `json:"Country"`
+	Currency          string  `json:"Currency"`
+	ISIN              string  `json:"ISIN"`
+	PreviousClose     float64 `json:"previousClose"`
+	PreviousCloseDate Date    `json:"previousCloseDate"`
+	MIC               string  `json:"-"` // Populated by Search, not from API directly.
 }
 
 // Search searches for securities via EOD Historical Data API.

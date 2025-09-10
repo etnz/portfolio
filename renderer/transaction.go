@@ -10,22 +10,27 @@ import (
 func Transaction(tx portfolio.Transaction) string {
 	switch v := tx.(type) {
 	case portfolio.Buy:
-		return fmt.Sprintf("Bought %.2f of %s for %.2f", v.Quantity, v.Security, v.Amount)
+		return fmt.Sprintf("Bought %v of %s for %v", v.Quantity, v.Security, v.Amount)
 	case portfolio.Sell:
-		return fmt.Sprintf("Sold %.2f of %s for %.2f", v.Quantity, v.Security, v.Amount)
+		return fmt.Sprintf("Sold %v of %s for %v", v.Quantity, v.Security, v.Amount)
 	case portfolio.Dividend:
-		return fmt.Sprintf("Dividend of %.2f for %s", v.Amount, v.Security)
+		return fmt.Sprintf("Dividend of %v for %s", v.Amount, v.Security)
 	case portfolio.Deposit:
-		return fmt.Sprintf("Deposited %.2f %s", v.Amount, v.Currency)
+		m := v.Amount
+		return fmt.Sprintf("Deposited %v", m)
 	case portfolio.Withdraw:
-		return fmt.Sprintf("Withdrew %.2f %s", v.Amount, v.Currency)
+		m := v.Amount
+		return fmt.Sprintf("Withdrew %v", m)
 	case portfolio.Accrue:
-		if v.Amount > 0 {
-			return fmt.Sprintf("Accrued receivable %.2f %s from %s", v.Amount, v.Currency, v.Counterparty)
+
+		if v.Amount.IsPositive() {
+			m := v.Amount
+			return fmt.Sprintf("Accrued receivable %v from %s", m, v.Counterparty)
 		}
-		return fmt.Sprintf("Accrued payable %.2f %s to %s", -v.Amount, v.Currency, v.Counterparty)
+		m := v.Amount.Neg()
+		return fmt.Sprintf("Accrued payable %v to %s", m, v.Counterparty)
 	case portfolio.Convert:
-		return fmt.Sprintf("Converted %.2f %s to %.2f %s", v.FromAmount, v.FromCurrency, v.ToAmount, v.ToCurrency)
+		return fmt.Sprintf("Converted %v to %v", v.FromAmount, v.ToAmount)
 	case portfolio.Declare:
 		return fmt.Sprintf("Declared %s as %s in %s", v.Ticker, v.ID, v.Currency)
 	default:

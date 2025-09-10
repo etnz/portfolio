@@ -117,5 +117,5 @@ pcs daily -d 2025-01-03 -c EUR
   
   ## Today's Transactions
   
-  1. Deposited 500.00 EUR
+  1. Deposited €500.00
 ```

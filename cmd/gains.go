@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/etnz/portfolio"
-	"github.com/etnz/portfolio/date"
 	"github.com/etnz/portfolio/renderer"
 	"github.com/google/subcommands"
 )
@@ -32,9 +31,9 @@ func (*gainsCmd) Usage() string {
 }
 
 func (c *gainsCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.period, "period", "", "Predefined period (day, week, month, quarter, year)")
+	f.StringVar(&c.period, "period", portfolio.Monthly.String(), "Predefined period (day, week, month, quarter, year)")
 	f.StringVar(&c.start, "s", "", "Start date of the reporting period. See the user manual for supported date formats.")
-	f.StringVar(&c.end, "d", date.Today().String(), "End date of the reporting period. See the user manual for supported date formats.")
+	f.StringVar(&c.end, "d", portfolio.Today().String(), "End date of the reporting period. See the user manual for supported date formats.")
 	f.StringVar(&c.currency, "c", "EUR", "Reporting currency")
 	f.StringVar(&c.method, "method", "average", "Cost basis method (average, fifo)")
 	f.BoolVar(&c.update, "u", false, "update with latest intraday prices before calculating gains")
@@ -47,13 +46,13 @@ func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 	}
 
 	// Determine the reporting period
-	var period date.Range
-	endDate, err := date.Parse(c.end)
+	var period portfolio.Range
+	endDate, err := portfolio.ParseDate(c.end)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing end date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	p, err := date.ParsePeriod(c.period)
+	p, err := portfolio.ParsePeriod(c.period)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing period: %v\n", err)
 		return subcommands.ExitUsageError
@@ -65,15 +64,15 @@ func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 
 	if c.start != "" {
 		// Special range
-		startDate, err := date.Parse(c.start)
+		startDate, err := portfolio.ParseDate(c.start)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error parsing start date: %v\n", err)
 			return subcommands.ExitUsageError
 		}
-		period = date.Range{From: startDate, To: endDate}
+		period = portfolio.Range{From: startDate, To: endDate}
 	} else {
 		// standard range
-		period = date.NewRange(endDate, p)
+		period = portfolio.NewRange(endDate, p)
 	}
 
 	// Decode market data and ledger
@@ -113,7 +112,7 @@ func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 	}
 
 	// Calculate gains
-	report, err := as.CalculateGains(period, method)
+	report, err := as.NewGainsReport(period, method)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error calculating gains: %v\n", err)
 		return subcommands.ExitFailure

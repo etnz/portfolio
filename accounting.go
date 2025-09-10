@@ -2,10 +2,6 @@ package portfolio
 
 import (
 	"fmt"
-	"time"
-
-	"github.com/etnz/portfolio/date"
-	"github.com/shopspring/decimal"
 )
 
 // AccountingSystem encapsulates all the data required for portfolio management,
@@ -42,61 +38,40 @@ func NewAccountingSystem(ledger *Ledger, marketData *MarketData, reportingCurren
 	return as, nil
 }
 
-// DeclareSecurities scans all securities (and currencies) in the ledger and
-// ensures they are declared in the marketdata. This function is crucial for
-// maintaining consistency between the ledger's transactional records and the
-// market data's security definitions.
-func DeclareSecurities(ledger *Ledger, marketData *MarketData, defaultCurrency string) error {
-	if err := ValidateCurrency(defaultCurrency); err != nil {
-		return fmt.Errorf("invalid default currency: %w", err)
-	}
-
-	for sec := range ledger.AllSecurities() {
-		marketData.Add(sec)
-	}
-	for currency := range ledger.AllCurrencies() {
-		if currency == defaultCurrency {
-			// skip absurd self currency
-			continue
-		}
-		id, err := NewCurrencyPair(currency, defaultCurrency)
-		if err != nil {
-			return fmt.Errorf("could not create currency pair: %w", err)
-		}
-		marketData.Add(NewSecurity(id, id.String(), currency))
-	}
-	return nil
-}
-
 // Validate checks a transaction for correctness and applies quick fixes where
 // applicable (e.g., resolving "sell all"). It returns the validated (and
 // potentially modified) transaction or an error detailing any validation failures.
 func (as *AccountingSystem) Validate(tx Transaction) (Transaction, error) {
-	var err error
+	// For validations that need the state of the portfolio, we compute the balance
+	// on the transaction date.
+	balance, err := as.Balance(tx.When())
+	if err != nil {
+		return nil, fmt.Errorf("could not compute balance for validation: %w", err)
+	}
 	switch v := tx.(type) {
 	case Buy:
-		err = v.Validate(as)
+		err = v.Validate(as.Ledger)
 		return v, err
 	case Sell:
-		err = v.Validate(as)
+		err = v.Validate(as.Ledger, balance)
 		return v, err
 	case Dividend:
-		err = v.Validate(as)
+		err = v.Validate(as.Ledger)
 		return v, err
 	case Deposit:
-		err = v.Validate(as)
+		err = v.Validate(as.Ledger)
 		return v, err
 	case Withdraw:
-		err = v.Validate(as)
+		err = v.Validate(as.Ledger)
 		return v, err
 	case Convert:
-		err = v.Validate(as)
+		err = v.Validate(as.Ledger)
 		return v, err
 	case Declare:
-		err = v.Validate(as)
+		err = v.Validate(as.Ledger)
 		return v, err
 	case Accrue:
-		err = v.Validate(as)
+		err = v.Validate(as.Ledger)
 		return v, err
 	default:
 		return tx, fmt.Errorf("unsupported transaction type for validation: %T", tx)
@@ -114,7 +89,7 @@ func (as *AccountingSystem) getJournal() (*Journal, error) {
 }
 
 // Balance computes the Balance on a given day.
-func (as *AccountingSystem) Balance(on date.Date) (*Balance, error) {
+func (as *AccountingSystem) Balance(on Date) (*Balance, error) {
 	j, err := as.getJournal()
 	if err != nil {
 		return nil, fmt.Errorf("could not get journal: %w", err)
@@ -126,319 +101,28 @@ func (as *AccountingSystem) Balance(on date.Date) (*Balance, error) {
 	return balance, nil
 }
 
-// TotalPortfolioValue calculates the total value of all security positions and cash balances on a given
-// date, expressed in a single reporting currency. It uses the market data to find
-// security prices and currency exchange rates.
-func (as *AccountingSystem) TotalPortfolioValue(on date.Date) (float64, error) {
-	balance, err := as.Balance(on)
-	if err != nil {
-		return 0, fmt.Errorf("could not get balance for %s: %w", on, err)
-	}
-	return balance.TotalPortfolioValue().InexactFloat64(), nil
-}
-
-// NewSummary calculates and returns a comprehensive summary of the portfolio's
-// state and performance on a given date.
-func (as *AccountingSystem) NewSummary(on date.Date) (*Summary, error) {
-	if as.ReportingCurrency == "" {
-		return nil, fmt.Errorf("reporting currency is not set in accounting system")
+// DeclareSecurities scans all securities (and currencies) in the ledger and
+// ensures they are declared in the marketdata. This function is crucial for
+// maintaining consistency between the ledger's transactional records and the
+// market data's security definitions.
+func (as *AccountingSystem) DeclareSecurities() error {
+	if err := ValidateCurrency(as.ReportingCurrency); err != nil {
+		return fmt.Errorf("invalid default currency: %w", err)
 	}
 
-	summary := &Summary{
-		Date:              on,
-		ReportingCurrency: as.ReportingCurrency,
+	for sec := range as.Ledger.AllSecurities() {
+		as.MarketData.Add(sec)
 	}
-
-	endBalance, err := as.Balance(on)
-	if err != nil {
-		return nil, err
-	}
-
-	yesterdayBalance, err := as.Balance(on.Add(-1))
-	if err != nil {
-		return nil, err
-	}
-
-	weekBalance, err := as.Balance(on.StartOf(date.Weekly).Add(-1))
-	if err != nil {
-		return nil, err
-	}
-
-	monthBalance, err := as.Balance(on.StartOf(date.Monthly).Add(-1))
-	if err != nil {
-		return nil, err
-	}
-
-	quarterBalance, err := as.Balance(on.StartOf(date.Quarterly).Add(-1))
-	if err != nil {
-		return nil, err
-	}
-
-	yearBalance, err := as.Balance(on.StartOf(date.Yearly).Add(-1))
-	if err != nil {
-		return nil, err
-	}
-
-	// 1. Calculate current total market value
-	summary.TotalMarketValue = NewMoney(endBalance.TotalPortfolioValue(), as.ReportingCurrency)
-
-	// 2. Calculate performance for each period
-	periodTWR := func(start *Balance) (perf Performance) {
-		perf = NewPerformanceFromDecimal(start.TotalPortfolioValue(), endBalance.TotalPortfolioValue(), as.ReportingCurrency)
-		perf.Return = Percent(endBalance.linkedTWR/start.linkedTWR - 1)
-		return perf
-	}
-
-	summary.Daily = periodTWR(yesterdayBalance)
-	summary.WTD = periodTWR(weekBalance)
-	summary.MTD = periodTWR(monthBalance)
-	summary.QTD = periodTWR(quarterBalance)
-	summary.YTD = periodTWR(yearBalance)
-	summary.Inception = Performance{
-		Start:  NewMoney(decimal.Zero, as.ReportingCurrency),
-		Return: Percent(endBalance.linkedTWR - 1),
-	}
-	return summary, nil
-}
-
-// NewDailyReport calculates and returns a summary of the portfolio's performance for a single day.
-func (as *AccountingSystem) NewDailyReport(on date.Date) (*DailyReport, error) {
-	endBalance, err := as.Balance(on)
-	if err != nil {
-		return nil, err
-	}
-	// 1. Calculate value at previous day's close
-	startBalance, err := as.Balance(on.Add(-1))
-	if err != nil {
-		return nil, err
-	}
-
-	report := &DailyReport{
-		Date:              on,
-		Time:              time.Now(), // Generation time
-		ReportingCurrency: as.ReportingCurrency,
-		ActiveAssets:      []AssetGain{},
-		Transactions:      []Transaction{},
-	}
-
-	valueAtClose := endBalance.TotalPortfolioValue()
-	valueAtPrevClose := startBalance.TotalPortfolioValue()
-	report.ValueAtClose = NewMoney(valueAtClose, as.ReportingCurrency)
-	report.ValueAtPrevClose = NewMoney(valueAtPrevClose, as.ReportingCurrency)
-
-	// 3. Get all transactions for the specified day
-	for _, tx := range as.Ledger.transactions {
-		if tx.When() == on {
-			report.Transactions = append(report.Transactions, tx)
-		}
-	}
-
-	// 4. Calculate Net Cash Flow and Realized Gains for the day
-	netCashFlow := endBalance.TotalCash().Sub(startBalance.TotalCash())
-	report.NetCashFlow = NewMoney(netCashFlow, as.ReportingCurrency)
-	// Gains have to be computed per security (in fact per securities currency)
-	// then converted to the reporting currency.
-	totalRealized := decimal.Zero
-	for sec := range endBalance.Securities() {
-		ticker := sec.Ticker()
-		gain := endBalance.RealizedGain(ticker).Sub(startBalance.RealizedGain(ticker))
-		gain = endBalance.Convert(gain, sec.Currency())
-		totalRealized = totalRealized.Add(gain)
-	}
-	report.RealizedGains = NewMoney(totalRealized, as.ReportingCurrency)
-
-	// 5. Calculate Total Gain and Market Gains
-	report.TotalGain = NewMoney(valueAtClose.Sub(valueAtPrevClose), as.ReportingCurrency)
-	report.MarketGains = NewMoney(valueAtClose.Sub(valueAtPrevClose).Sub(totalRealized).Sub(netCashFlow), as.ReportingCurrency)
-
-	// 6. Calculate Active Asset Gains
-	for sec := range endBalance.Securities() {
-
-		if endBalance.Position(sec.Ticker()).IsZero() {
-			continue // ignore assets not held today
-		}
-
-		valueToday := endBalance.MarketValue(sec.Ticker())
-		valuePrev := startBalance.MarketValue(sec.Ticker())
-		gain := valueToday.Sub(valuePrev)
-
-		// Adjust for buys/sells during the day
-		for _, tx := range report.Transactions {
-			switch v := tx.(type) {
-			case Buy:
-				if v.Security == sec.Ticker() {
-					cost := decimal.NewFromFloat(v.Amount)
-					gain = gain.Sub(cost)
-				}
-			case Sell:
-				if v.Security == sec.Ticker() {
-					proceeds := decimal.NewFromFloat(v.Amount)
-					gain = gain.Add(proceeds)
-				}
-			}
-		}
-
-		yield := 0.0
-		if !valuePrev.IsZero() { // if there was an initial value
-			yield = (gain.Div(valuePrev).InexactFloat64()) * 100
-		}
-
-		// convert to reporting currency
-		gain = endBalance.Convert(gain, sec.Currency())
-		assetGain := AssetGain{
-			Security: sec.Ticker(),
-			Gain:     NewMoney(gain, as.ReportingCurrency),
-			Return:   Percent(yield),
-		}
-
-		report.ActiveAssets = append(report.ActiveAssets, assetGain)
-
-	}
-
-	return report, nil
-}
-
-// CostBasis calculates the total net cash invested in the portfolio as of a
-// specific date.
-// It provides a stable cost basis by converting each cash flow
-// (Deposit/Withdraw) to the reporting currency using the exchange rate on the
-// day of the transaction. This method correctly separates investment performance
-// from currency fluctuations.
-func (as *AccountingSystem) CostBasis(on date.Date) (float64, error) {
-	bal, err := as.Balance(on)
-	if err != nil {
-		return 0, err
-	}
-	return bal.TotalCostBasis().InexactFloat64(), nil
-}
-
-// NewHoldingReport calculates and returns a detailed holdings report for a given date.
-func (as *AccountingSystem) NewHoldingReport(on date.Date) (*HoldingReport, error) {
-	report := &HoldingReport{
-		Date:              on,
-		Time:              time.Now(), // Generation time
-		ReportingCurrency: as.ReportingCurrency,
-		Securities:        []SecurityHolding{},
-		Cash:              []CashHolding{},
-		Counterparties:    []CounterpartyHolding{},
-	}
-
-	balance, err := as.Balance(on)
-	if err != nil {
-		return nil, err
-	}
-
-	// Securities
-	for sec := range balance.Securities() {
-		ticker := sec.Ticker()
-		id := sec.ID()
-		currency := sec.Currency()
-		position := balance.Position(ticker)
-		if position.IsZero() {
+	for currency := range as.Ledger.AllCurrencies() {
+		if currency == as.ReportingCurrency {
+			// skip absurd self currency
 			continue
 		}
-		price := balance.Price(ticker)
-		value := balance.MarketValue(ticker)
-		convertedValue := balance.Convert(value, currency)
-		report.Securities = append(report.Securities, SecurityHolding{
-			Ticker:      ticker,
-			ID:          id.String(),
-			Currency:    currency,
-			Quantity:    NewQuantity(position),
-			Price:       NewMoney(price, currency),
-			MarketValue: NewMoney(convertedValue, as.ReportingCurrency),
-		})
-	}
-
-	// Cash
-	for currency := range balance.Currencies() {
-		bal := balance.Cash(currency)
-		if bal.IsZero() {
-			continue
-		}
-		convertedBalance := balance.Convert(bal, currency)
-		report.Cash = append(report.Cash, CashHolding{
-			Currency: currency,
-			Balance:  NewMoney(bal, currency),
-			Value:    NewMoney(convertedBalance, as.ReportingCurrency),
-		})
-	}
-
-	// Counterparties
-	for account := range balance.Counterparties() {
-		bal, currency := balance.Counterparty(account), balance.CounterpartyCurrency(account)
-		if bal.IsZero() {
-			continue
-		}
-		convertedBalance := balance.Convert(bal, currency)
-		report.Counterparties = append(report.Counterparties, CounterpartyHolding{
-			Name:     account,
-			Currency: currency,
-			Balance:  NewMoney(bal, currency),
-			Value:    NewMoney(convertedBalance, as.ReportingCurrency),
-		})
-	}
-
-	report.TotalValue = NewMoney(balance.TotalPortfolioValue(), as.ReportingCurrency)
-
-	return report, nil
-}
-
-// NewHistory computes the history of a security or currency.
-func (as *AccountingSystem) NewHistory(security, currency string) (*HistoryReport, error) {
-	// TODO: this is not a report, so it should not be here
-	report := &HistoryReport{
-		Security: security,
-		Currency: currency,
-		Entries:  []HistoryEntry{},
-	}
-
-	var predicate func(Transaction) bool
-	if security != "" {
-		predicate = BySecurity(security)
-	} else {
-		predicate = as.Ledger.ByCurrency(currency)
-	}
-
-	// Build a list of all days where there was a significant transaction.
-	days := make([]date.Date, 0, len(as.Ledger.transactions))
-	previous := date.Date{}
-	for _, tx := range as.Ledger.Transactions(predicate) {
-		on := tx.When()
-		if on == previous {
-			continue // already done for that day
-		}
-		previous = on
-		days = append(days, on)
-	}
-
-	for _, on := range days {
-		balance, err := as.Balance(on)
+		id, err := NewCurrencyPair(currency, as.ReportingCurrency)
 		if err != nil {
-			return nil, fmt.Errorf("could not get balance for %s: %w", on, err)
+			return fmt.Errorf("could not create currency pair: %w", err)
 		}
-
-		var entry HistoryEntry
-		if security != "" {
-			sec := balance.Security(security)
-			position := balance.Position(security)
-			price := balance.Price(security)
-			value := balance.MarketValue(security)
-			entry = HistoryEntry{
-				Date:     on,
-				Position: NewQuantity(position),
-				Price:    NewMoney(price, sec.Currency()),
-				Value:    NewMoney(value, as.ReportingCurrency),
-			}
-		} else {
-			value := balance.Cash(currency)
-			entry = HistoryEntry{
-				Date:  on,
-				Value: NewMoney(value, currency),
-			}
-		}
-		report.Entries = append(report.Entries, entry)
+		as.MarketData.Add(NewSecurity(id, id.String(), currency))
 	}
-
-	return report, nil
+	return nil
 }

@@ -4,40 +4,35 @@ import (
 	"sort"
 	"testing"
 	"time"
-
-	"github.com/etnz/portfolio/date"
 )
-
-func EUR(v float64) Money  { return NewMoneyFromFloat(v, "EUR") }
-func USD(v float64) Money  { return NewMoneyFromFloat(v, "USD") }
-func Q(v float64) Quantity { return NewQuantityFromFloat(v) }
 
 func TestAccountingSystem_NewHoldingReport(t *testing.T) {
 	ledger := NewLedger()
-	o := date.New(2025, time.January, 1)
+	o := NewDate(2025, time.January, 1)
+
 	ledger.Append(
-		NewDeclaration(o, "", "AAPL", "US0378331005.XNAS", "USD"),
-		NewDeclaration(o, "", "GOOG", "US38259P5089.XNAS", "USD"),
-		NewBuy(date.New(2025, time.January, 10), "", "AAPL", 100, 100*150.0),
-		NewBuy(date.New(2025, time.January, 15), "", "GOOG", 50, 50*2800.0),
-		NewSell(date.New(2025, time.February, 1), "", "AAPL", 25, 25*160.0),
-		NewDeposit(date.New(2025, time.February, 5), "", "EUR", 10000, ""),
+		NewDeclare(o, "", "AAPL", AAPL, "USD"),
+		NewDeclare(o, "", "GOOG", GOOG, "USD"),
+		NewBuy(NewDate(2025, time.January, 10), "", "AAPL", Q(100), USD(100*150.0)),
+		NewBuy(NewDate(2025, time.January, 15), "", "GOOG", Q(50), USD(50*2800.0)),
+		NewSell(NewDate(2025, time.February, 1), "", "AAPL", Q(25), USD(25*160.0)),
+		NewDeposit(NewDate(2025, time.February, 5), "", EUR(10000), ""),
 	)
 
 	market := NewMarketData()
-	market.Add(NewSecurity(must(NewMSSI("US0378331005", "XNAS")), "AAPL", "USD"))
-	market.Add(NewSecurity(must(NewMSSI("US38259P5089", "XNAS")), "GOOG", "USD"))
-	market.Add(NewSecurity(must(NewCurrencyPair("USD", "EUR")), "USDEUR", "EUR"))
-	market.Append(must(NewMSSI("US0378331005", "XNAS")), date.New(2025, time.February, 1), 160.0)
-	market.Append(must(NewMSSI("US38259P5089", "XNAS")), date.New(2025, time.February, 1), 2900.0)
-	market.Append(must(NewCurrencyPair("USD", "EUR")), date.New(2025, time.February, 1), 0.9)
+	market.Add(NewSecurity(AAPL, "AAPL", "USD"))
+	market.Add(NewSecurity(GOOG, "GOOG", "USD"))
+	market.Add(NewSecurity(USDEUR, "USDEUR", "EUR"))
+	market.Append(AAPL, NewDate(2025, time.February, 1), 160.0)
+	market.Append(GOOG, NewDate(2025, time.February, 1), 2900.0)
+	market.Append(USDEUR, NewDate(2025, time.February, 1), 0.9)
 
 	as, err := NewAccountingSystem(ledger, market, "EUR")
 	if err != nil {
 		t.Fatalf("NewAccountingSystem() error = %v", err)
 	}
 
-	report, err := as.NewHoldingReport(date.New(2025, time.February, 5))
+	report, err := as.NewHoldingReport(NewDate(2025, time.February, 5))
 	if err != nil {
 		t.Fatalf("NewHoldingReport() error = %v", err)
 	}
@@ -64,19 +59,19 @@ func TestAccountingSystem_NewHoldingReport(t *testing.T) {
 	} else {
 		for i := range wantSecurities {
 			if report.Securities[i].Ticker != wantSecurities[i].Ticker {
-				t.Errorf("Ticker = %s, want %s", report.Securities[i].Ticker, wantSecurities[i].Ticker)
+				t.Errorf("Ticker[%d] = %s, want %s", i, report.Securities[i].Ticker, wantSecurities[i].Ticker)
 			}
 			if report.Securities[i].ID != wantSecurities[i].ID {
-				t.Errorf("ID = %s, want %s", report.Securities[i].ID, wantSecurities[i].ID)
+				t.Errorf("ID[%d] = %s, want %s", i, report.Securities[i].ID, wantSecurities[i].ID)
 			}
-			if !report.Securities[i].Quantity.Equals(wantSecurities[i].Quantity) {
-				t.Errorf("Quantity = %v, want %v", report.Securities[i].Quantity, wantSecurities[i].Quantity)
+			if !report.Securities[i].Quantity.Equal(wantSecurities[i].Quantity) {
+				t.Errorf("Quantity[%d] = %v, want %v", i, report.Securities[i].Quantity, wantSecurities[i].Quantity)
 			}
-			if !report.Securities[i].Price.Equals(wantSecurities[i].Price) {
-				t.Errorf("Price = %v, want %v", report.Securities[i].Price, wantSecurities[i].Price)
+			if !report.Securities[i].Price.Equal(wantSecurities[i].Price) {
+				t.Errorf("Price[%d] = %v, want %v", i, report.Securities[i].Price, wantSecurities[i].Price)
 			}
-			if !report.Securities[i].MarketValue.Equals(wantSecurities[i].MarketValue) {
-				t.Errorf("MarketValue = %v, want %v", report.Securities[i].MarketValue, wantSecurities[i].MarketValue)
+			if !report.Securities[i].MarketValue.Equal(wantSecurities[i].MarketValue) {
+				t.Errorf("MarketValue[%d] = %v, want %v", i, report.Securities[i].MarketValue, wantSecurities[i].MarketValue)
 			}
 		}
 	}
@@ -98,7 +93,7 @@ func TestAccountingSystem_NewHoldingReport(t *testing.T) {
 	}
 
 	wantTotalValue := EUR(15400.0)
-	if !report.TotalValue.Equals(wantTotalValue) {
+	if !report.TotalValue.Equal(wantTotalValue) {
 		t.Errorf("NewHoldingReport().TotalValue = %v, want %v", report.TotalValue, wantTotalValue)
 	}
 }

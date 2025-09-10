@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/etnz/portfolio"
-	"github.com/etnz/portfolio/date"
 	"github.com/etnz/portfolio/renderer"
 	"github.com/google/subcommands"
 )
@@ -31,14 +30,14 @@ func (*dailyCmd) Usage() string {
 }
 
 func (c *dailyCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", date.Today().String(), "Date for the report. See the user manual for supported date formats.")
+	f.StringVar(&c.date, "d", portfolio.Today().String(), "Date for the report. See the user manual for supported date formats.")
 	f.StringVar(&c.currency, "c", "EUR", "Reporting currency for the report")
 	f.BoolVar(&c.update, "u", false, "update with latest intraday prices before calculating the report")
 	f.IntVar(&c.watch, "w", 0, "run every n seconds")
 }
 
 func (c *dailyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	on, err := date.Parse(c.date)
+	on, err := portfolio.ParseDate(c.date)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError

@@ -5,13 +5,11 @@ import (
 	"fmt"
 	"iter"
 	"log"
-
-	"github.com/etnz/portfolio/date"
 )
 
 // Split represents a stock split event.
 type Split struct {
-	Date        date.Date `json:"date"`
+	Date        Date `json:"date"`
 	Numerator   int64     `json:"num"`
 	Denominator int64     `json:"den"`
 }
@@ -20,7 +18,7 @@ type Split struct {
 type MarketData struct {
 	securities map[ID]Security
 	tickers    map[string]ID
-	prices     map[ID]*date.History[float64]
+	prices     map[ID]*History[float64]
 	splits     map[ID][]Split
 }
 
@@ -29,7 +27,7 @@ func NewMarketData() *MarketData {
 	return &MarketData{
 		securities: make(map[ID]Security),
 		tickers:    make(map[string]ID),
-		prices:     make(map[ID]*date.History[float64]),
+		prices:     make(map[ID]*History[float64]),
 		splits:     make(map[ID][]Split),
 	}
 }
@@ -52,7 +50,7 @@ func (m *MarketData) Add(s Security) {
 	}
 	m.securities[s.ID()] = s
 	m.tickers[s.Ticker()] = s.ID()
-	m.prices[s.ID()] = &date.History[float64]{}
+	m.prices[s.ID()] = &History[float64]{}
 	m.splits[s.ID()] = []Split{}
 }
 
@@ -65,14 +63,14 @@ func (m *MarketData) Resolve(ticker string) ID {
 }
 
 // PriceAsOf returns the price of a security on a given date.
-func (m *MarketData) PriceAsOf(id ID, on date.Date) (float64, bool) {
+func (m *MarketData) PriceAsOf(id ID, on Date) (float64, bool) {
 	if prices, ok := m.prices[id]; ok {
 		return prices.ValueAsOf(on)
 	}
 	return 0, false
 }
 
-func (m *MarketData) Append(id ID, day date.Date, price float64) bool {
+func (m *MarketData) Append(id ID, day Date, price float64) bool {
 	if prices, ok := m.prices[id]; ok {
 		prices.Append(day, price)
 		return true
@@ -82,7 +80,7 @@ func (m *MarketData) Append(id ID, day date.Date, price float64) bool {
 
 // SetPrice sets the price for a security on a specific date.
 // This is used for manual price adjustments.
-func (m *MarketData) SetPrice(id ID, day date.Date, price float64) error {
+func (m *MarketData) SetPrice(id ID, day Date, price float64) error {
 	// check that the security exists
 	if _, ok := m.securities[id]; !ok {
 		return fmt.Errorf("security with ID %q not found", id)
@@ -96,10 +94,10 @@ func (m *MarketData) SetPrice(id ID, day date.Date, price float64) error {
 }
 
 // Values return a iterator on date and prices for the given ID (or nil)
-func (m *MarketData) Prices(id ID) iter.Seq2[date.Date, float64] {
+func (m *MarketData) Prices(id ID) iter.Seq2[Date, float64] {
 	prices, ok := m.prices[id]
 	if !ok {
-		return func(yield func(date.Date, float64) bool) {}
+		return func(yield func(Date, float64) bool) {}
 	}
 	return prices.Values()
 
@@ -113,7 +111,7 @@ func (m *MarketData) Has(ticker string) bool {
 
 // read retrieves the price for a given security on a specific day.
 // It returns the price and true if found, otherwise it returns 0.0 and false.
-func (m *MarketData) read(id ID, day date.Date) (float64, bool) {
+func (m *MarketData) read(id ID, day Date) (float64, bool) {
 	prices, ok := m.prices[id]
 	if !ok {
 		return 0.0, false
@@ -137,13 +135,13 @@ func (m *MarketData) SetSplits(id ID, splits []Split) {
 }
 
 // updateSecurityPrices attempts to fetch and update prices for a single security.
-func updateSecurityPrices(sec Security, prices *date.History[float64], from, to date.Date) error {
+func updateSecurityPrices(sec Security, prices *History[float64], from, to Date) error {
 	apiKey := eodhdApiKey()
 	if apiKey == "" {
 		return errors.New("EODHD API key is not set. Use -eodhd-api-key flag or EODHD_API_KEY environment variable")
 	}
 
-	var newPrices date.History[float64]
+	var newPrices History[float64]
 	var err error
 
 	// Determine security type and fetch prices accordingly.
@@ -187,7 +185,7 @@ func updateSecurityPrices(sec Security, prices *date.History[float64], from, to 
 // prices for each updatable security (i.e., those with an MSSI or CurrencyPair ID).
 // It fetches prices from the day after the last known price up to yesterday.
 // It returns a joined error if any updates fail.
-func (m *MarketData) UpdatePrices(start, end date.Date) error {
+func (m *MarketData) UpdatePrices(start, end Date) error {
 
 	var errs error
 
@@ -271,7 +269,7 @@ func (m *MarketData) UpdateIntraday() error {
 		return err
 	}
 	id, _ := NewCurrencyPair("USD", "EUR")
-	m.Append(id, date.Today(), 1/val)
+	m.Append(id, Today(), 1/val)
 
 	// then update stocks
 	for id, sec := range m.securities {
@@ -292,10 +290,10 @@ func (m *MarketData) UpdateIntraday() error {
 		} else {
 			if sec.Currency() == "USD" {
 				// all assets in tradegate are in eur (so far) so convert back to USD if needed.
-				m.Append(id, date.Today(), latest*val)
+				m.Append(id, Today(), latest*val)
 			}
 			if sec.Currency() == "EUR" {
-				m.Append(id, date.Today(), latest)
+				m.Append(id, Today(), latest)
 			}
 		}
 	}

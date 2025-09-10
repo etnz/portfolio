@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/etnz/portfolio"
-	"github.com/etnz/portfolio/date"
 	"github.com/google/subcommands"
 )
 
@@ -37,7 +36,7 @@ At least one of -p, -num, or -den must be provided.
 
 func (c *updateSecurityCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.id, "id", "", "Unique security identifier (required)")
-	f.StringVar(&c.date, "d", date.Today().String(), "Date for the update")
+	f.StringVar(&c.date, "d", portfolio.Today().String(), "Date for the update")
 	f.Float64Var(&c.price, "p", 0, "Price to set for the security")
 	f.Int64Var(&c.num, "num", 1, "Split numerator")
 	f.Int64Var(&c.den, "den", 1, "Split denominator")
@@ -58,7 +57,7 @@ func (c *updateSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...int
 		return subcommands.ExitUsageError
 	}
 
-	day, err := date.Parse(c.date)
+	day, err := portfolio.ParseDate(c.date)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error: invalid date:", err)
 		return subcommands.ExitUsageError

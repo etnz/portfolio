@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/etnz/portfolio"
+	"github.com/etnz/portfolio/docs"
 	"github.com/google/subcommands"
 )
 
@@ -29,7 +29,7 @@ func (c *topicCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		topics = []string{"readme"}
 	}
 
-	doc, err := portfolio.GetTopics(topics...)
+	doc, err := docs.GetTopics(topics...)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading doc: %v\n", err)
 		return subcommands.ExitFailure

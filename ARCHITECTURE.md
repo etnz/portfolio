@@ -30,8 +30,8 @@ This section describes the main Go packages and their distinct responsibilities.
 
 * **`portfolio` (Core Logic):** This is the main library package containing the implementation of the Core Ontology (`ledger.go`, `market.go`, `security.go`) and the business logic (`accounting.go`). This package is completely decoupled from the user interface and data persistence layers.
 * **`cmd` (User Interface):** This package implements the command-line interface. Each command is a thin wrapper that is responsible for parsing flags, validating user input, and calling the appropriate logic in the `portfolio` package to perform actions or calculations. It also contains the logic for discovering and executing external extension commands.
-* **Persistence (`encode.go`, `impexp.go`):** This component is responsible for all I/O operations. It handles the encoding and decoding of the Ledger and Market Data to and from the `.jsonl` file format. It ensures data is read and written in a canonical, backward-compatible way.
-* **External Data Sources (`eodhd.go`, `tradegate.go`):** These components are responsible for fetching data from third-party APIs. They are the only parts of the application that are permitted to make network requests.
+* **Persistence (within `portfolio` package):** This component is responsible for all I/O operations. It handles the encoding and decoding of the Ledger and Market Data to and from the `.jsonl` file format. It ensures data is read and written in a canonical, backward-compatible way. Import/export logic for specific formats (e.g., Amundi) is handled by dedicated commands in the `cmd` package.
+* **External Data Sources (within `portfolio` package):** These components (e.g., `eodhd.go`) are responsible for fetching data from third-party APIs. They are the only parts of the application that are permitted to make network requests.
 
 ---
 ## 4. Data View (The Files)
@@ -39,16 +39,16 @@ This section describes the main Go packages and their distinct responsibilities.
 This section describes the physical layout and format of the data stored on disk.
 
 * **`transactions.jsonl`:** Stores the **Ledger**. It is an append-only file where each line is a single JSON object representing a transaction. For canonical representation, the file is sorted by date.
-* **`market.jsonl`:** Stores the **Market Data** definitions and price history. Security definitions are stored in this file, while price history is stored in year-specific files (e.g., `2025.jsonl`).
+* **`market.jsonl`:** Stores the **Market Data**, including security definitions and their complete price and split histories. Each line represents a distinct piece of market data.
 
 ---
 ## 5. Documentation and Artifacts
 
 This defines the relationship between the code and the documentation, enforcing the "Single Source of Truth" principle.
 
-* **User Manual (`UserManual.md`):** The primary user-facing documentation. Its "Command Reference" section **must be derived directly** from the Go source code of the commands to ensure accuracy.
+* **User Manual (`docs/readme.md`):** The primary user-facing documentation, which serves as an index for all documentation topics. Its "Command Reference" section **must be derived directly** from the Go source code of the commands to ensure accuracy.
 * **README (`README.md`):** A high-level introduction and getting-started guide for new users.
-* **Testable README (`readme_test.go`):** The examples in `README.md` are not merely illustrative; they are part of an integration test that must always pass, ensuring the primary documentation is always correct.
+* **Testable Documentation (`docs/topics_test.go`):** The examples in `README.md` and all topic files inside `docs/` are not merely illustrative; they are part of an integration test that must always pass, ensuring the primary documentation is always correct.
 
 ---
 ## 6. Development Workflow

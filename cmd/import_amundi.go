@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/etnz/portfolio"
-	"github.com/etnz/portfolio/date"
 	"github.com/google/subcommands"
+	"github.com/shopspring/decimal"
 )
 
 // --- Structs to unmarshal the Amundi JSON file ---
@@ -26,8 +26,8 @@ type AmundiOperation struct {
 	Memo         string              `json:"libelleCommunication"`
 	Id           string              `json:"idOpeInd"`
 	Type         string              `json:"type"`
-	DateDemand   date.Date           `json:"dateDeLaDemande"`
-	DateCompta   date.Date           `json:"dateComptabilisation"`
+	DateDemand   portfolio.Date      `json:"dateDeLaDemande"`
+	DateCompta   portfolio.Date      `json:"dateComptabilisation"`
 	Instructions []AmundiInstruction `json:"instructions"`
 	Reglements   []AmundiReglement   `json:"reglements"`
 }
@@ -38,7 +38,7 @@ type AmundiInstruction struct {
 	Id         string    `json:"idInstruction"`       // e.g.,
 	Statut     string    `json:"statut"`              // e.g: "ANNULE",
 	Indicator  string    `json:"indicateurArbitrage"` // "Source" or "Cible" for ARB
-	DateVL     date.Date `json:"dateVlReel"`
+	DateVL     portfolio.Date `json:"dateVlReel"`
 	Price      float64   `json:"vlReel"`
 	Quantity   float64   `json:"nombreDeParts"`
 	Security   string    `json:"codeFonds"`
@@ -49,8 +49,8 @@ type AmundiInstruction struct {
 
 // AmundiReglement represents a cash settlement, like a withdrawal.
 type AmundiReglement struct {
-	Type   string  `json:"type"` // e.g., "VIROUT"
-	Amount float64 `json:"montant"`
+	Type   string          `json:"type"` // e.g., "VIROUT"
+	Amount decimal.Decimal `json:"montant"`
 }
 
 // --- import-amundi Command ---
@@ -145,11 +145,11 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 			switch inst.Indicator {
 			case "Source":
 				instructionIds[inst.Id] = struct{}{}
-				sellTx := portfolio.NewSell(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Amount)
+				sellTx := portfolio.NewSell(inst.DateVL, memo, inst.Security, portfolio.Q(inst.Quantity), portfolio.M(inst.Amount, ""))
 				transactions = append(transactions, sellTx)
 			case "Cible":
 				instructionIds[inst.Id] = struct{}{}
-				buyTx := portfolio.NewBuy(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Amount)
+				buyTx := portfolio.NewBuy(inst.DateVL, memo, inst.Security, portfolio.Q(inst.Quantity), portfolio.M(inst.Amount, ""))
 				transactions = append(transactions, buyTx)
 			}
 		}
@@ -159,9 +159,9 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 			if inst.Type == "RACH_TIT" {
 				instructionIds[inst.Id] = struct{}{}
 				memo := strings.Join([]string{inst.Id, inst.Dispositif, memo, inst.FundName}, ": ")
-				sellTx := portfolio.NewSell(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Quantity*inst.Price)
-				// record the associated withdrawal
-				withdrawTx := portfolio.NewWithdraw(inst.DateVL, memo, currency, inst.Amount)
+				sellTx := portfolio.NewSell(inst.DateVL, memo, inst.Security, portfolio.Q(inst.Quantity), portfolio.M(inst.Amount, ""))
+				// record the associated withdrawal (inst.Amount is float64, convert to decimal.Decimal)
+				withdrawTx := portfolio.NewWithdraw(inst.DateVL, memo, portfolio.M(inst.Amount, ""))
 				transactions = append(transactions, sellTx, withdrawTx)
 
 			}
@@ -182,13 +182,13 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 			if inst.Type == "SOUS_MTT" {
 				instructionIds[inst.Id] = struct{}{}
 				totalAmount += inst.Amount // accumulate buy amounts to create a global deposit after
-				buyTx := portfolio.NewBuy(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Amount)
+				buyTx := portfolio.NewBuy(inst.DateVL, memo, inst.Security, portfolio.Q(inst.Quantity), portfolio.M(inst.Amount, ""))
 				transactions = append(transactions, buyTx)
 			}
 		}
 
 		if totalAmount > 0 {
-			depositTx := portfolio.NewDeposit(op.DateDemand, memo, currency, totalAmount, "")
+			depositTx := portfolio.NewDeposit(op.DateDemand, memo, portfolio.M(totalAmount, currency), "")
 			transactions = append(transactions, depositTx)
 		}
 	case "TRSF": // Arbitrage, Transfert, Réallocation
@@ -206,12 +206,12 @@ func parseAmundiOperation(op AmundiOperation) ([]portfolio.Transaction, error) {
 				totalAmount += inst.Amount
 			case "Cible":
 				instructionIds[inst.Id] = struct{}{}
-				buyTx := portfolio.NewBuy(inst.DateVL, memo, inst.Security, inst.Quantity, inst.Amount)
+				buyTx := portfolio.NewBuy(inst.DateVL, memo, inst.Security, portfolio.Q(inst.Quantity), portfolio.M(inst.Amount, ""))
 				transactions = append(transactions, buyTx)
 			}
 		}
 		if totalAmount > 0 {
-			depositTx := portfolio.NewDeposit(op.DateDemand, memo, currency, totalAmount, "")
+			depositTx := portfolio.NewDeposit(op.DateDemand, memo, portfolio.M(totalAmount, currency), "")
 			transactions = append(transactions, depositTx)
 		}
 

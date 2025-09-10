@@ -17,7 +17,6 @@ import (
 	"strings"
 
 	"github.com/etnz/portfolio"
-	"github.com/etnz/portfolio/date"
 	"github.com/google/subcommands"
 )
 
@@ -84,7 +83,7 @@ func (*updateAmundiCmd) Usage() string {
 }
 
 func (c *updateAmundiCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.start, "start", date.Today().Add(-7).String(), "Start date. See the user manual for supported date formats.")
+	f.StringVar(&c.start, "start", portfolio.Today().Add(-7).String(), "Start date. See the user manual for supported date formats.")
 
 	f.Var(&HeaderVal{Header: &c.header}, "H", "pass headers to run the uri (use chrome copy as curl to help)")
 	s := "" // we complitely ignore those curl parameters.
@@ -94,12 +93,12 @@ func (c *updateAmundiCmd) SetFlags(f *flag.FlagSet) {
 
 func (c *updateAmundiCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 
-	start, err := date.Parse(c.start)
+	start, err := portfolio.ParseDate(c.start)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	end := date.Today()
+	end := portfolio.Today()
 
 	market, err := DecodeMarketData()
 	if err != nil {
@@ -280,7 +279,7 @@ func parseAmundiSnapshot(market *portfolio.MarketData, data []byte) (err error) 
 			CodeFonds    string    `json:"codeFonds"`
 			LibelleFonds string    `json:"libelleFonds"`
 			VL           float64   `json:"vl"`
-			DateVL       date.Date `json:"dateVl"`
+			DateVL       portfolio.Date `json:"dateVl"`
 		} `json:"fonds"`
 	}
 
@@ -308,7 +307,7 @@ func parseAmundiSnapshot(market *portfolio.MarketData, data []byte) (err error) 
 }
 
 // appendMarketPoint add the (ticker, day, price) found from amundi portal.
-func appendMarketPoint(market *portfolio.MarketData, ticker string, day date.Date, price float64) error {
+func appendMarketPoint(market *portfolio.MarketData, ticker string, day portfolio.Date, price float64) error {
 	id, err := portfolio.NewPrivate("Amundi-" + ticker)
 	if err != nil {
 		return fmt.Errorf("cannot create ID from fund name %q: %w", ticker, err)

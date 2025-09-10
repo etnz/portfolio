@@ -1,4 +1,7 @@
-package portfolio
+package docs
+
+// this file handles
+// documentation topics.
 
 import (
 	"bytes"
@@ -10,7 +13,7 @@ import (
 	"strings"
 )
 
-//go:embed docs/*
+//go:embed *.md
 var docs embed.FS
 
 // GetTopic returns the content of a documentation topic.
@@ -23,7 +26,7 @@ func GetTopic(topic string) (string, error) {
 		return GetTopics(topics...)
 	}
 
-	path := "docs/" + topic + ".md"
+	path := topic + ".md"
 
 	content, err := docs.ReadFile(path)
 	if err != nil {
@@ -66,7 +69,7 @@ func GetTopics(topics ...string) (string, error) {
 // GetAllTopics returns a list of all available documentation topics.
 func GetAllTopics() ([]string, error) {
 	var topics []string
-	err := fs.WalkDir(docs, "docs", func(path string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(docs, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
