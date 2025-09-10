@@ -41,7 +41,7 @@ type AssetReview struct {
 // Flow returns the net trading flow for the asset (Sells - Buys).
 // A positive value indicates more was sold than bought, representing a net cash inflow from this asset's trading activity.
 func (ar AssetReview) Flow() Money {
-	return ar.Sells.Sub(ar.Buys)
+	return ar.Buys.Sub(ar.Sells)
 }
 
 // Gain returns the net gain from holding the asset, excluding trading flow.
