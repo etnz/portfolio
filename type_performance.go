@@ -12,6 +12,13 @@ func NewPerformance(start, end Money) Performance {
 		End:   end,
 	}
 }
+func NewPerformanceWithReturn(start, end Money, ret Percent) Performance {
+	return Performance{
+		Start: start,
+		End:   end,
+		Return: ret,
+	}
+}
 
 func (p Performance) Change() Money {
 	return p.End.Sub(p.Start)

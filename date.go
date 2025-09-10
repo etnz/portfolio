@@ -402,7 +402,7 @@ const (
 )
 
 func ParsePeriod(p string) (Period, error) {
-	p = strings.ToLower(p)
+	p = strings.ToLower(strings.TrimSpace(p))
 	switch p {
 	case "daily", "day":
 		return Daily, nil

@@ -210,7 +210,7 @@ func (as *AccountingSystem) newJournal() (*Journal, error) {
 			)
 		case Accrue:
 			if v.Create {
-				journal.events = append(journal.events, declareCounterparty{on: v.When(), account: v.Counterparty})
+				journal.events = append(journal.events, declareCounterparty{on: v.When(), account: v.Counterparty, currency: v.Currency()})
 			}
 			amount := v.Amount
 			if amount.IsPositive() { // Receivable: counterparty owes us (asset) -> increase asset

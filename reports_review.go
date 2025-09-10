@@ -1,6 +1,7 @@
 package portfolio
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -14,35 +15,45 @@ type ReviewReport struct {
 	ReportingCurrency string
 
 	PortfolioValue Performance
-	MarketValue    Performance
 	Cash           Performance // Variation of total cash in accounts.
 	Counterparty   Performance // Variation of Counterpary Value.
-
-	CashFlow   Money // Algebraic sum of moeny crossing the boundaries of the portfolio (in/out)
-	Unrealized Money // Total Unrealized gains at the end of the period.
-	Realized   Money // Realized gains during the period.
-
+	CashFlow       Money       // Algebraic sum of money crossing the boundaries of the portfolio (in/out)
 	// Gains              *GainsReport
 	CashAccounts   []CashAccountReview
 	Counterparties []CoutnerpartyAccountReview
-	Assets         []AssetReview
 	Transactions   []Transaction
+	Assets         []AssetReview
+	Total          AssetReview // Total of asset review columns.
 }
 
 // AssetReview provides a summary of an asset's performance over a period.
 type AssetReview struct {
 	Security         string
 	StartingPosition Quantity
-	StartingValue    Money
 	EndingPosition   Quantity
-	EndingValue      Money
+	Value            Performance
+	Buys             Money
+	Sells            Money
 	RealizedGains    Money
 	UnrealizedGains  Money
 }
 
+// Flow returns the net trading flow for the asset (Sells - Buys).
+// A positive value indicates more was sold than bought, representing a net cash inflow from this asset's trading activity.
+func (ar AssetReview) Flow() Money {
+	return ar.Sells.Sub(ar.Buys)
+}
+
+// Gain returns the net gain from holding the asset, excluding trading flow.
+// It's calculated as the change in market value minus the net trading flow.
+func (ar AssetReview) Gain() Money {
+	return ar.Value.Change().Sub(ar.Flow())
+}
+
 type CashAccountReview struct {
-	Label string
-	Value Money
+	Label  string
+	Value  Money
+	Return Percent
 }
 type CoutnerpartyAccountReview struct {
 	Label string
@@ -56,7 +67,7 @@ func (as *AccountingSystem) NewReviewReport(period Range) (*ReviewReport, error)
 	// different metrics from there.
 	endBalance, err := as.Balance(period.To)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to compute end balance on %s: %w", period.To, err)
 	}
 
 	// compute the balance the day before the first day of the period.
@@ -82,14 +93,18 @@ func (as *AccountingSystem) NewReviewReport(period Range) (*ReviewReport, error)
 		totalCounterparties = totalCounterparties.Add(endBalance.Convert(change))
 	}
 
-	// Sum realized gains in the period per security
-	var totalRealized Money
-
 	cashAccounts := make([]CashAccountReview, 0, 100)
 	for cur := range endBalance.Currencies() {
+		var forexReturn Percent
+		startRate := startBalance.forex[cur]
+		endRate := endBalance.forex[cur]
+		if !startRate.IsZero() {
+			forexReturn = Percent(100 * (endRate.AsFloat() - startRate.AsFloat()) / startRate.AsFloat())
+		}
 		cashAccounts = append(cashAccounts, CashAccountReview{
-			Label: cur,
-			Value: endBalance.Cash(cur),
+			Label:  cur,
+			Value:  endBalance.Cash(cur),
+			Return: forexReturn,
 		})
 	}
 
@@ -101,36 +116,6 @@ func (as *AccountingSystem) NewReviewReport(period Range) (*ReviewReport, error)
 		})
 	}
 
-	// Calculate Security breakdown
-	assets := make([]AssetReview, 0, len(endBalance.securities))
-
-	for sec := range endBalance.Securities() {
-		ticker := sec.Ticker()
-
-		startPos := startBalance.Position(ticker)
-		startValue := startBalance.MarketValue(ticker)
-		endPos := endBalance.Position(ticker)
-		endValue := endBalance.MarketValue(ticker)
-
-		// Gains
-		realizedGain := endBalance.RealizedGain(ticker).Sub(startBalance.RealizedGain(ticker))
-		unrealizedGain := endBalance.MarketValue(ticker).Sub(endBalance.CostBasis(ticker))
-		totalRealized = totalRealized.Add(endBalance.Convert(realizedGain))
-
-		if startPos.IsZero() && endPos.IsZero() && realizedGain.IsZero() {
-			continue
-		}
-		assets = append(assets, AssetReview{
-			Security:         ticker,
-			StartingPosition: startPos,
-			EndingPosition:   endPos,
-			StartingValue:    startValue,
-			EndingValue:      endValue,
-			RealizedGains:    realizedGain,
-			UnrealizedGains:  unrealizedGain,
-		})
-	}
-
 	// Create the transaction in this range.
 	transactions := make([]Transaction, 0, 1000)
 	for _, tx := range as.Ledger.transactions {
@@ -138,31 +123,75 @@ func (as *AccountingSystem) NewReviewReport(period Range) (*ReviewReport, error)
 			transactions = append(transactions, tx)
 		}
 	}
+	// Sum realized gains in the period per security
+	total := AssetReview{
+		Security: "Total",
+		Value:    NewPerformance(startBalance.TotalMarketValue(), endBalance.TotalMarketValue()),
+	}
 
+	assets := make([]AssetReview, 0, 100)
+
+	// Calculate Security breakdown
+	for s := range endBalance.Securities() {
+		ticker := s.Ticker()
+		startPos := startBalance.Position(ticker)
+		startValue := startBalance.MarketValue(ticker)
+		endPos := endBalance.Position(ticker)
+		endValue := endBalance.MarketValue(ticker)
+
+		// Calculate flows and gains within the period
+		buysInPeriod := endBalance.Buys(ticker).Sub(startBalance.Buys(ticker))
+		sellsInPeriod := endBalance.Sells(ticker).Sub(startBalance.Sells(ticker))
+		realizedGain := endBalance.RealizedGain(ticker).Sub(startBalance.RealizedGain(ticker))
+		unrealizedGain := endBalance.MarketValue(ticker).Sub(endBalance.CostBasis(ticker))
+
+		// Sum up total realized gains for the report summary
+		total.Buys = total.Buys.Add(endBalance.Convert(buysInPeriod))
+		total.Sells = total.Sells.Add(endBalance.Convert(sellsInPeriod))
+		total.RealizedGains = total.RealizedGains.Add(endBalance.Convert(realizedGain))
+		total.UnrealizedGains = total.UnrealizedGains.Add(endBalance.Convert(unrealizedGain))
+
+		// Skip assets that were not held and had no activity during the period
+		if startPos.IsZero() && endPos.IsZero() && realizedGain.IsZero() && buysInPeriod.IsZero() && sellsInPeriod.IsZero() && unrealizedGain.IsZero() {
+			continue
+		}
+
+		// Calculate the price return for the period
+		startPrice := startBalance.Price(ticker)
+		endPrice := endBalance.Price(ticker)
+		priceReturn := Percent(100 * (endPrice.AsFloat() - startPrice.AsFloat()) / startPrice.AsFloat())
+		// Fill the AssetReview with the Data.
+		assets = append(assets, AssetReview{
+			Security:         ticker,
+			StartingPosition: startPos,
+			EndingPosition:   endPos,
+			Value:            NewPerformanceWithReturn(startValue, endValue, priceReturn),
+			Buys:             buysInPeriod,
+			Sells:            sellsInPeriod,
+			RealizedGains:    realizedGain,
+			UnrealizedGains:  unrealizedGain,
+		})
+	}
+
+	totalTWR := Percent((endBalance.linkedTWR/startBalance.linkedTWR - 1) * 100)
 	// Calculate top metrics.
 	report := &ReviewReport{
 		Range:             period,
 		ReportingCurrency: as.ReportingCurrency,
-		PortfolioValue:    NewPerformance(startBalance.TotalPortfolioValue(), endBalance.TotalPortfolioValue()),
-		MarketValue:       NewPerformance(startBalance.TotalMarketValue(), endBalance.TotalMarketValue()),
+		PortfolioValue:    NewPerformanceWithReturn(startBalance.TotalPortfolioValue(), endBalance.TotalPortfolioValue(), totalTWR),
 		Cash:              NewPerformance(startBalance.TotalCash(), endBalance.TotalCash()),
 		Counterparty:      NewPerformance(startBalance.TotalCounterparty(), endBalance.TotalCounterparty()),
 		CashFlow:          totalCashFlow,
-		Realized:          totalRealized,
-		Unrealized:        endBalance.TotalUnrealizedGain(),
 		CashAccounts:      cashAccounts,
 		Counterparties:    counterpartyAccounts,
 		Assets:            assets,
 		Transactions:      transactions,
+		Total:             total,
 	}
-	report.PortfolioValue.Return = Percent((endBalance.linkedTWR/startBalance.linkedTWR - 1) * 100)
 
 	return report, nil
 }
 
 func (r *ReviewReport) NetGains() Money {
 	return r.PortfolioValue.End.Sub(r.PortfolioValue.Start).Sub(r.CashFlow)
-}
-func (r *ReviewReport) MarketChange() Money {
-	return r.MarketValue.End.Sub(r.MarketValue.Start)
 }

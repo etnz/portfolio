@@ -15,42 +15,75 @@ import (
 type reviewCmd struct {
 	period string
 	date   string
+	start  string
+	update bool
 }
 
 func (*reviewCmd) Name() string     { return "review" }
 func (*reviewCmd) Synopsis() string { return "review a portfolio performance" }
 func (*reviewCmd) Usage() string {
-	return `pcs review [-period <period>] [-d <date>]
-
+	return `pcs review [-period <period>| -s <date>] [-d <date>]
+	
   Review the portfolio transactions for a given period.
 `
 }
 
 func (c *reviewCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", portfolio.Today().String(), "Date for the report. See the user manual for supported date formats.")
-	f.StringVar(&c.period, "period", "month", "period for the review (week, month, quarter, year)")
+	f.StringVar(&c.period, "period", portfolio.Daily.String(), "period for the review (day, week, month, quarter, year)")
+	f.StringVar(&c.start, "s", "", "Start date of the reporting period. Overrides -period.")
+	f.BoolVar(&c.update, "u", false, "update with latest intraday prices before generating the report")
 }
 
 func (c *reviewCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	// 1. Parse the date range for the report
 	var r portfolio.Range
-	on, err := portfolio.ParseDate(c.date)
+	endDate, err := portfolio.ParseDate(c.date)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	p, err := portfolio.ParsePeriod(c.period)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid period: %v\n", err)
-		return subcommands.ExitUsageError
+
+	if c.start != "" {
+		// Custom range using start and end dates
+		startDate, err := portfolio.ParseDate(c.start)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing start date: %v\n", err)
+			return subcommands.ExitUsageError
+		}
+		r = portfolio.Range{From: startDate, To: endDate}
+	} else {
+		// Predefined period
+		p, err := portfolio.ParsePeriod(c.period)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Invalid period: %v\n", err)
+			return subcommands.ExitUsageError
+		}
+		r = portfolio.NewRange(endDate, p)
 	}
-	r = portfolio.NewRange(on, p)
+
+	// Truncate the range if it goes beyond the present day.
+	today := portfolio.Today()
+	if r.To.After(today) {
+		r.To = today
+	}
+
+	if r.To.IsToday() {
+		c.update = true
+	}
 
 	// 2. Create the accounting system
 	as, err := DecodeAccountingSystem()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating accounting system: %v\n", err)
 		return subcommands.ExitFailure
+	}
+
+	if c.update {
+		if err := as.MarketData.UpdateIntraday(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
+			// We can continue with stale prices, so this is not a fatal error.
+		}
 	}
 
 	// 3. Generate the report

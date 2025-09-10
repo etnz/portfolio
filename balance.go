@@ -26,6 +26,10 @@ type Balance struct {
 	lots map[string]lots
 	// realizedGains holds the cumulative realized gains for each security ticker.
 	realizedGains map[string]Money
+	// buys holds the total amount spent on buying a security.
+	buys map[string]Money
+	// sells holds the total amount received from selling a security.
+	sells map[string]Money
 	// prices holds the price of each security.
 	prices map[string]Money
 	// forex rate to convert to the reporting currency.
@@ -56,6 +60,8 @@ func newBalance(on Date) *Balance {
 		securities:           make(map[string]Security),
 		lots:                 make(map[string]lots),
 		realizedGains:        make(map[string]Money),
+		buys:                 make(map[string]Money),
+		sells:                make(map[string]Money),
 		prices:               make(map[string]Money),
 		forex:                make(map[string]Money),
 		linkedTWR:            1.0,
@@ -121,6 +127,7 @@ func (b *Balance) apply(e event, method CostBasisMethod) error {
 			Cost:     v.cost,
 		}
 		b.lots[v.security] = append(b.lots[v.security], newLot)
+		b.buys[v.security] = b.buys[v.security].Add(v.cost)
 	case disposeLot:
 		currentLots := b.lots[v.security]
 		var costOfSale Money
@@ -137,6 +144,7 @@ func (b *Balance) apply(e event, method CostBasisMethod) error {
 		b.lots[v.security] = currentLots.sell(v.quantity)
 		gain := v.proceeds.Sub(costOfSale)
 		b.realizedGains[v.security] = b.realizedGains[v.security].Add(gain)
+		b.sells[v.security] = b.sells[v.security].Add(v.proceeds)
 
 	case creditCounterparty:
 		b.counterpartyAccounts[v.account] = b.counterpartyAccounts[v.account].Add(v.amount)
@@ -361,4 +369,27 @@ func (b *Balance) TotalPortfolioValue() Money {
 	return b.TotalMarketValue().
 		Add(b.TotalCash()).
 		Add(b.TotalCounterparty())
+}
+
+// Buys returns the total amount spent on buying a given security up to the balance's `on` date.
+func (b *Balance) Buys(ticker string) Money {
+	buy, ok := b.buys[ticker]
+	if !ok {
+		// Ensure a zero-value Money with the correct currency is returned if no buys exist.
+		if sec, ok := b.securities[ticker]; ok {
+			return M(0, sec.Currency())
+		}
+	}
+	return buy
+}
+
+// Sells returns the total amount received from selling a given security up to the balance's `on` date.
+func (b *Balance) Sells(ticker string) Money {
+	sell, ok := b.sells[ticker]
+	if !ok {
+		if sec, ok := b.securities[ticker]; ok {
+			return M(0, sec.Currency())
+		}
+	}
+	return sell
 }

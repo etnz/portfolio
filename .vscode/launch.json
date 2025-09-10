@@ -37,7 +37,7 @@
             "request": "launch",
             "mode": "debug",
             "program": "pcs/main.go",
-            "args": ["review", "-period=month", "-d=2025-08-31"],
+            "args": ["review", "-period=week"],
             "cwd": "/tmp/",
         },
         {

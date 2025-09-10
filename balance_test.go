@@ -116,6 +116,96 @@ func TestBalance_Position(t *testing.T) {
 	}
 }
 
+func TestBalance_BuysAndSells(t *testing.T) {
+	ledger := NewLedger()
+	as, err := NewAccountingSystem(ledger, NewMarketData(), "USD")
+	if err != nil {
+		t.Fatalf("NewAccountingSystem() error = %v", err)
+	}
+	o := NewDate(2025, time.January, 1)
+	ledger.Append(
+		NewDeclare(o, "", "AAPL", AAPL, "USD"),
+		NewDeclare(o, "", "GOOG", GOOG, "USD"),
+		NewBuy(NewDate(2025, time.January, 10), "", "AAPL", Q(100), USD(15000)),      // Buy 1
+		NewBuy(NewDate(2025, time.January, 15), "", "GOOG", Q(50), USD(140000)),     // Buy 1
+		NewSell(NewDate(2025, time.February, 1), "", "AAPL", Q(25), USD(4000)),       // Sell 1
+		NewBuy(NewDate(2025, time.February, 10), "", "AAPL", Q(10), USD(1550)),       // Buy 2
+		NewSell(NewDate(2025, time.March, 1), "", "GOOG", Q(50), USD(145000)),      // Sell 1
+		NewSell(NewDate(2025, time.March, 15), "", "AAPL", Q(50), USD(8000)),        // Sell 2
+	)
+
+	journal, err := as.newJournal()
+	if err != nil {
+		t.Fatalf("NewJournal() error = %v", err)
+	}
+
+	testCases := []struct {
+		name      string
+		ticker    string
+		date      Date
+		wantBuys  Money
+		wantSells Money
+	}{
+		{
+			name:      "AAPL before any transactions",
+			ticker:    "AAPL",
+			date:      NewDate(2025, time.January, 9),
+			wantBuys:  USD(0),
+			wantSells: USD(0),
+		},
+		{
+			name:      "AAPL after first buy",
+			ticker:    "AAPL",
+			date:      NewDate(2025, time.January, 10),
+			wantBuys:  USD(15000),
+			wantSells: USD(0),
+		},
+		{
+			name:      "AAPL after first sell",
+			ticker:    "AAPL",
+			date:      NewDate(2025, time.February, 1),
+			wantBuys:  USD(15000),
+			wantSells: USD(4000),
+		},
+		{
+			name:      "AAPL after second buy",
+			ticker:    "AAPL",
+			date:      NewDate(2025, time.February, 10),
+			wantBuys:  USD(16550), // 15000 + 1550
+			wantSells: USD(4000),
+		},
+		{
+			name:      "AAPL final state",
+			ticker:    "AAPL",
+			date:      NewDate(2025, time.April, 1),
+			wantBuys:  USD(16550),
+			wantSells: USD(12000), // 4000 + 8000
+		},
+		{
+			name:      "GOOG final state",
+			ticker:    "GOOG",
+			date:      NewDate(2025, time.April, 1),
+			wantBuys:  USD(140000),
+			wantSells: USD(145000),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			balance, err := NewBalance(journal, tc.date, FIFO)
+			if err != nil {
+				t.Fatalf("NewBalance() error = %v", err)
+			}
+			if gotBuys := balance.Buys(tc.ticker); !gotBuys.Equal(tc.wantBuys) {
+				t.Errorf("Buys() = %v, want %v", gotBuys, tc.wantBuys)
+			}
+			if gotSells := balance.Sells(tc.ticker); !gotSells.Equal(tc.wantSells) {
+				t.Errorf("Sells() = %v, want %v", gotSells, tc.wantSells)
+			}
+		})
+	}
+}
+
 func TestBalance_CashBalance(t *testing.T) {
 	ledger := NewLedger()
 	as, err := NewAccountingSystem(ledger, NewMarketData(), "USD")
