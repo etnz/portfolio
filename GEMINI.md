@@ -17,24 +17,20 @@ when merging a feature branch, always use e `ff-only` flag, and if it is not fas
 
 ### The Commit Rules
 
-When I'm asking you to commit here is what you shall do.
+When I'm asking you to generate a commit message you should:
 
-Check that you know for sure the github issue we are working on, and if this commit is a final fix (use `Fix <issue number>`) or an intermediate step (use `See <issue number>`)
-
-Commit messages must follow the seven rules from Chris Beams' post "[How to Write a Git Commit Message](https://chris.beams.io/posts/git-commit/)":
-1. Separate subject from body with a blank line
-2. Limit the subject line to 50 characters
-3. Capitalize the subject line
-4. Do not end the subject line with a period
-5. Use the imperative mood in the subject line
-6. Wrap the body at 72 characters
-7. Use the body to explain what and why vs. how
-
-Do not use Conventional Commits style i.e. do not use prefixes like `feat:`, `fix:`, etc.
-
-Commit messages must be clear, descriptive and comprehensive.
-
-Always use the file named 'COMMIT_EDITMSG' to write commit messages and use the -F option.
+- Check that you know for sure the github issue we are working on, and if this commit is a final fix (use `Fix <issue number>`) or an intermediate step (use `See <issue number>`)
+- Commit messages must follow the seven rules from Chris Beams' post "[How to Write a Git Commit Message](https://chris.beams.io/posts/git-commit/)":
+  1. Separate subject from body with a blank line
+  2. Limit the subject line to 50 characters
+  3. Capitalize the subject line
+  4. Do not end the subject line with a period
+  5. Use the imperative mood in the subject line
+  6. Wrap the body at 72 characters
+  7. Use the body to explain what and why vs. how
+- Do not use Conventional Commits style i.e. do not use prefixes like `feat:`, `fix:`, etc.
+- Commit messages must be clear, descriptive and comprehensive.
+- Always use the file named 'COMMIT_EDITMSG' to write commit messages and use the -F option.
 
 ### The Github CLI Rule
 
