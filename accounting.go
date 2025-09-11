@@ -47,6 +47,7 @@ func (as *AccountingSystem) Validate(tx Transaction) (Transaction, error) {
 	switch v := tx.(type) {
 	case Buy:
 		err = v.Validate(as.Ledger)
+		tx = v
 	case Sell:
 		// todo: recomputing the whole journal everytime is expensive.
 		var j *Journal
@@ -60,18 +61,25 @@ func (as *AccountingSystem) Validate(tx Transaction) (Transaction, error) {
 			return nil, fmt.Errorf("could not create balance from journal: %w", e)
 		}
 		err = v.Validate(as.Ledger, balance)
+		tx = v
 	case Dividend:
 		err = v.Validate(as.Ledger)
+		tx = v
 	case Deposit:
 		err = v.Validate(as.Ledger)
+		tx = v
 	case Withdraw:
 		err = v.Validate(as.Ledger)
+		tx = v
 	case Convert:
 		err = v.Validate(as.Ledger)
+		tx = v
 	case Declare:
 		err = v.Validate(as.Ledger)
+		tx = v
 	case Accrue:
 		err = v.Validate(as.Ledger)
+		tx = v
 	default:
 		return tx, fmt.Errorf("unsupported transaction type for validation: %T %v", tx, tx)
 	}

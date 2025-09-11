@@ -92,7 +92,7 @@ func TestTopics(t *testing.T) {
 }
 
 func TestCodeBlocks(t *testing.T) {
-	files, err := filepath.Glob("docs/*.md")
+	files, err := filepath.Glob("*.md")
 	if err != nil {
 		t.Fatal(err)
 	}

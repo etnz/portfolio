@@ -47,21 +47,24 @@ pcs daily -d 2025-01-03 -c EUR
 ```console check
 # Daily Report
   
-   **Value at Day's Close** | **€11,863.63** 
-  --------------------------|----------------
-   Value at Prev. Close     |     €11,818.18 
+  Report for 2025-01-03
+  
+   **Value**            | **€11,863.63** 
+  ----------------------|----------------
+   Value at Prev. Close |     €11,818.18 
   
   ## Breakdown of Change
   
-   **Total Day's Gain** | **+€45.45** | +0.38% 
-  ----------------------|-------------|--------
-   Unrealized Market    |     +€45.45 |        
+   **Total Day's Gain** | **+€45.45** 
+  ----------------------|-------------
+   Unrealized Market    |     +€45.45 
   
   ## Active Assets
   
-   Ticker | Gain / Loss | Change 
-  --------|-------------|--------
-   MSFT   |      €45.45 | +5.00% 
+   Ticker    | Gain / Loss |     Change 
+  -----------|-------------|------------
+   MSFT      |      €45.45 |     +5.00% 
+   **Total** | **+€45.45** | **+0.38%**
 ```
 
 ### Cash Flow Impact on Daily Gains
@@ -98,24 +101,27 @@ pcs daily -d 2025-01-03 -c EUR
 ```console check
 # Daily Report
   
-   **Value at Day's Close** | **€12,272.72** 
-  --------------------------|----------------
-   Value at Prev. Close     |     €11,818.18 
+  Report for 2025-01-03
+  
+   **Value**            | **€12,272.72** 
+  ----------------------|----------------
+   Value at Prev. Close |     €11,818.18 
   
   ## Breakdown of Change
   
-   **Total Day's Gain** | **+€454.54** | +3.85% 
-  ----------------------|--------------|--------
-   Unrealized Market    |      -€45.45 |        
-   Net Cash Flow        |     +€500.00 |        
+   **Total Day's Gain** | **+€454.54** 
+  ----------------------|--------------
+   Unrealized Market    |      -€45.45 
+   Net Cash Flow        |     +€500.00 
   
   ## Active Assets
   
-   Ticker | Gain / Loss | Change 
-  --------|-------------|--------
-   MSFT   |     -€45.45 | -5.00% 
+   Ticker    | Gain / Loss |     Change 
+  -----------|-------------|------------
+   MSFT      |     -€45.45 |     -5.00% 
+   **Total** | **-€45.45** | **+3.85%** 
   
-  ## Today's Transactions
+  ## Intraday's Transactions
   
   1. Deposited €500.00
-```
+ ```

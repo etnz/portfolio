@@ -150,6 +150,7 @@ func NewJournal(ledger *Ledger, marketData *MarketData, reportingCurrency string
 			if sec == nil {
 				return nil, fmt.Errorf("security %q not declared for buy transaction on %s", v.Security, v.When())
 			}
+			
 			journal.events = append(journal.events,
 				acquireLot{on: v.When(), security: v.Security, quantity: v.Quantity, cost: v.Amount},
 				debitCash{on: v.When(), amount: v.Amount, external: false},
@@ -283,6 +284,7 @@ func NewJournal(ledger *Ledger, marketData *MarketData, reportingCurrency string
 			for on, price := range history.Values() {
 				// TODO: History should use Money, not float64 anymore
 				p := M(1/price, base)
+				p.value = p.value.Round(5) // is enought for an approximate price anyway.
 
 				journal.events = append(journal.events,
 					updateForex{on: on, rate: p, currency: quote},

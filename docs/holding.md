@@ -44,20 +44,20 @@ pcs holding -d 2025-03-05 -c EUR
 ```console check
 # Holding Report on 2025-03-05
   
-  Total Portfolio Value: **€14,727.27**
+  Total Portfolio Value: **€14,727.26**
   
   ## Securities
   
    Ticker | Quantity |   Price | Market Value 
   --------|----------|---------|--------------
-   MSFT   |       10 | $420.00 |    €3,818.18 
+   MSFT   |       10 | $420.00 |    €3,818.17 
   
   ## Cash
   
    Currency |    Balance |      Value 
   ----------|------------|------------
    EUR      | €10,000.00 | €10,000.00 
-   USD      |  $1,000.00 |    €909.09        
+   USD      |  $1,000.00 |    €909.09
  ```
 
 ### Counterparty Accounts

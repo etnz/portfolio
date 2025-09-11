@@ -116,6 +116,15 @@ type Buy struct {
 	Amount   Money    `json:"amount"`   // Amount is the total cost of the purchase.
 }
 
+// NewBuy creates a new Buy transaction.
+func NewBuy(day Date, memo, security string, quantity Quantity, amount Money) Buy {
+	return Buy{
+		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdBuy, Date: day, Memo: memo}, Security: security},
+		Quantity: quantity,
+		Amount:   amount,
+	}
+}
+
 // MarshalJSON implements the json.Marshaler interface for Buy.
 func (t Buy) MarshalJSON() ([]byte, error) {
 	var w jsonObjectWriter
@@ -130,14 +139,6 @@ func (t Buy) Equal(other Transaction) bool {
 	return ok && t.secCmd == o.secCmd && t.Quantity.Equal(o.Quantity) && t.Amount.Equal(o.Amount)
 }
 
-// NewBuy creates a new Buy transaction.
-func NewBuy(day Date, memo, security string, quantity Quantity, amount Money) Buy {
-	return Buy{
-		secCmd:   secCmd{baseCmd: baseCmd{Command: CmdBuy, Date: day, Memo: memo}, Security: security},
-		Quantity: quantity,
-		Amount:   amount,
-	}
-}
 func (t *Buy) Currency() string { return t.Amount.Currency() }
 
 // Validate checks the Buy transaction's fields. It ensures that the quantity

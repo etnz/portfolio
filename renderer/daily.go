@@ -1,106 +1,73 @@
 package renderer
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/etnz/portfolio"
-	md "github.com/nao1215/markdown"
 )
 
 func DailyMarkdown(r *portfolio.DailyReport) string {
-	var buf bytes.Buffer
-	doc := md.NewMarkdown(&buf)
+	var b strings.Builder
 
-	doc.H1("Daily Report")
+	fmt.Fprint(&b, "# Daily Report\n\n")
 
-	valDay := "Value at Day's Close"
 	genDate := portfolio.NewDate(r.Time.Year(), r.Time.Month(), r.Time.Day())
 	if r.Date == genDate {
-		valDay = fmt.Sprintf("Value at %s", r.Time.Format("15:04:05"))
+		fmt.Fprint(&b, "Report for "+r.Time.Format("2006-01-02 15:04:05")+"\n\n")
+
+	} else {
+		fmt.Fprint(&b, "Report for "+r.Date.String()+"\n\n")
 	}
-	doc.Table(md.TableSet{
-		Alignment: []md.TableAlignment{
-			md.AlignLeft,
-			md.AlignRight,
-		},
-		Header: []string{
-			md.Bold(valDay),
-			md.Bold(r.ValueAtClose.String()),
-		},
-		Rows: [][]string{
-			{"Value at Prev. Close", r.ValueAtPrevClose.String()},
-		},
-	})
+
+	fmt.Fprintf(&b, "| **%s** | **%s** |\n", "Value", r.ValueAtClose.String())
+	fmt.Fprintln(&b, "|:---|---:|")
+	fmt.Fprintf(&b, "| Value at Prev. Close | %s |\n", r.ValueAtPrevClose.String())
 
 	if r.HasBreakdown() {
-		doc.H2("Breakdown of Change")
-		table := md.TableSet{
-			Alignment: []md.TableAlignment{md.AlignLeft,
-				md.AlignRight,
-			},
-			Header: []string{
-				md.Bold("Total Day's Gain"),
-				md.Bold(r.TotalGain.SignedString()),
-				r.PercentageGain().SignedString()},
-		}
+		fmt.Fprintf(&b, "\n## Breakdown of Change\n\n")
+		fmt.Fprintf(&b, "| **%s** | **%s** |\n", "Total Day's Gain", r.TotalGain.SignedString())
+		fmt.Fprintln(&b, "|:---|---:|")
+
 		if !r.MarketGains.IsZero() {
-			table.Rows = append(table.Rows, []string{
-				"Unrealized Market",
-				r.MarketGains.SignedString(),
-				"",
-			})
+			fmt.Fprintf(&b, "| Unrealized Market | %s |\n", r.MarketGains.SignedString())
 		}
 		if !r.RealizedGains.IsZero() {
-			table.Rows = append(table.Rows, []string{
-				"Realized Market",
-				r.RealizedGains.SignedString(),
-				"",
-			})
+			fmt.Fprintf(&b, "| Realized Market | %s |\n", r.RealizedGains.SignedString())
 		}
 		if !r.NetCashFlow.IsZero() {
-			table.Rows = append(table.Rows, []string{
-				"Net Cash Flow",
-				r.NetCashFlow.SignedString(),
-				"",
-			})
+			fmt.Fprintf(&b, "| Net Cash Flow | %s |\n", r.NetCashFlow.SignedString())
 		}
-		doc.Table(table)
 	}
 
 	if len(r.ActiveAssets) > 0 {
-		doc.H2("Active Assets")
-		table := md.TableSet{
-			Alignment: []md.TableAlignment{md.AlignLeft,
-				md.AlignRight,
-				md.AlignRight,
-			},
-			Header: []string{
-				"Ticker",
-				"Gain / Loss",
-				"Change",
-			},
-		}
+		fmt.Fprintf(&b, "\n## Active Assets\n\n")
+		fmt.Fprintln(&b, "| Ticker | Gain / Loss | Change |")
+		fmt.Fprintln(&b, "|:---|---:|---:|")
+
 		for _, asset := range r.ActiveAssets {
 			if !asset.Gain.IsZero() {
-				table.Rows = append(table.Rows, []string{
+				fmt.Fprintf(&b, "| %s | %s | %s |\n",
 					asset.Security,
 					asset.Gain.String(),
 					asset.Return.SignedString(),
-				})
+				)
 			}
 		}
-		doc.Table(table)
+		// and the total row.
+		fmt.Fprintf(&b, "| **%s** | **%s** | **%s** |\n",
+			"Total",
+			r.MarketGains.SignedString(),
+			r.PercentageGain().SignedString(),
+		)
 	}
 
 	if len(r.Transactions) > 0 {
-		doc.H2("Today's Transactions")
-		var transactions []string
-		for _, tx := range r.Transactions {
-			transactions = append(transactions, Transaction(tx))
+		fmt.Fprintf(&b, "\n## Intraday's Transactions\n\n")
+		for i, tx := range r.Transactions {
+			fmt.Fprintf(&b, "%d. %s\n", i+1, Transaction(tx))
 		}
-		doc.OrderedList(transactions...)
 	}
 
-	return doc.String()
+	return b.String()
 }
