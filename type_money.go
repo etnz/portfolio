@@ -77,6 +77,6 @@ func (m Money) SignedString() string {
 func (m Money) MarshalJSON() ([]byte, error) {
 	var w jsonObjectWriter
 	w.Optional("currency", m.cur)
-	w.Append("amount", m.value)
+	w.Append("amount", m.value.Round(2))
 	return w.MarshalJSON()
 }

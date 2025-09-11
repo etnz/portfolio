@@ -137,16 +137,16 @@ func (e updateForex) date() Date { return e.on }
 
 // newJournal converts a Ledger of high-level transactions and market data events
 // into a Journal of low-level, atomic events.
-func (as *AccountingSystem) newJournal() (*Journal, error) {
+func NewJournal(ledger *Ledger, marketData *MarketData, reportingCurrency string) (*Journal, error) {
 	journal := &Journal{
-		events: make([]event, 0, len(as.Ledger.transactions)*2), // Pre-allocate with a guess
-		cur:    as.ReportingCurrency,
+		events: make([]event, 0, len(ledger.transactions)*2), // Pre-allocate with a guess
+		cur:    reportingCurrency,
 	}
 
-	for _, tx := range as.Ledger.transactions {
+	for _, tx := range ledger.transactions {
 		switch v := tx.(type) {
 		case Buy:
-			sec := as.Ledger.Security(v.Security)
+			sec := ledger.Security(v.Security)
 			if sec == nil {
 				return nil, fmt.Errorf("security %q not declared for buy transaction on %s", v.Security, v.When())
 			}
@@ -155,7 +155,7 @@ func (as *AccountingSystem) newJournal() (*Journal, error) {
 				debitCash{on: v.When(), amount: v.Amount, external: false},
 			)
 		case Sell:
-			sec := as.Ledger.Security(v.Security)
+			sec := ledger.Security(v.Security)
 			if sec == nil {
 				return nil, fmt.Errorf("security %q not declared for sell transaction on %s", v.Security, v.When())
 			}
@@ -164,7 +164,7 @@ func (as *AccountingSystem) newJournal() (*Journal, error) {
 				creditCash{on: v.When(), amount: v.Amount, external: false},
 			)
 		case Dividend:
-			sec := as.Ledger.Security(v.Security)
+			sec := ledger.Security(v.Security)
 			if sec == nil {
 				return nil, fmt.Errorf("security %q not declared for dividend transaction on %s", v.Security, v.When())
 			}
@@ -231,11 +231,11 @@ func (as *AccountingSystem) newJournal() (*Journal, error) {
 
 	// Map market data ID to delcared securities in the ledger.
 	idToTickers := make(map[ID][]string)
-	for ticker, sec := range as.Ledger.securities {
+	for ticker, sec := range ledger.securities {
 		idToTickers[sec.ID()] = append(idToTickers[sec.ID()], ticker)
 	}
 
-	for id, splits := range as.MarketData.splits {
+	for id, splits := range marketData.splits {
 		tickers := idToTickers[id]
 		for _, ticker := range tickers {
 			for _, s := range splits {
@@ -247,12 +247,12 @@ func (as *AccountingSystem) newJournal() (*Journal, error) {
 	}
 
 	// UpdatePrice of security declared in the ledger.
-	for id, history := range as.MarketData.prices {
+	for id, history := range marketData.prices {
 		tickers := idToTickers[id]
 		for _, ticker := range tickers {
 			for on, price := range history.Values() {
 				// TODO: History should use Money, not float64 anymore
-				cur := as.MarketData.securities[id].Currency()
+				cur := marketData.securities[id].Currency()
 				p := M(price, cur)
 				journal.events = append(journal.events,
 					updatePrice{on: on, security: ticker, price: p},
@@ -262,7 +262,7 @@ func (as *AccountingSystem) newJournal() (*Journal, error) {
 	}
 
 	// UpdateForex update currency forex rate into the reporting one.
-	for id, history := range as.MarketData.prices {
+	for id, history := range marketData.prices {
 		base, quote, err := id.CurrencyPair()
 		if err != nil {
 			// not a forex

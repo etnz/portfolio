@@ -112,12 +112,7 @@ func (c *addSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interf
 			fmt.Fprintf(os.Stderr, "Error loading ledger: %v\n", err)
 			return subcommands.ExitFailure
 		}
-		as, err := portfolio.NewAccountingSystem(ledger, market, *defaultCurrency)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating accounting system: %v\n", err)
-			return subcommands.ExitFailure
-		}
-		err = as.DeclareSecurities()
+		err = portfolio.DeclareSecurities(ledger, market, *defaultCurrency)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error declaring securities: %v\n", err)
 			return subcommands.ExitFailure

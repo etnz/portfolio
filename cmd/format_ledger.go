@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 
@@ -16,14 +18,17 @@ type formatLedgerCmd struct {
 	outputFile string
 }
 
-func (*formatLedgerCmd) Name() string     { return "format-ledger" }
-func (*formatLedgerCmd) Synopsis() string { return "formats the ledger file into a canonical form" }
+func (*formatLedgerCmd) Name() string { return "format-ledger" }
+func (*formatLedgerCmd) Synopsis() string {
+	return "validates and formats the ledger file into a canonical form"
+}
 func (*formatLedgerCmd) Usage() string {
 	return `pcs format-ledger [-o <file_path>]
 
-  Formats the ledger file into a canonical form, sorting transactions by date
-  and JSON keys alphabetically. If -o is not specified, it overwrites the
-  default ledger file. Use -o - to write to stdout.
+  Validates and formats the ledger file. This command reads all transactions,
+  validates them, applies available quick-fixes (like resolving "sell all"),
+  sorts them by date, and writes them back in a canonical JSONL format.
+  If -o is not specified, it overwrites the default ledger file. Use -o - to write to stdout.
 
 Usage Examples:
 # Writes to the default ledger file.
@@ -43,7 +48,26 @@ func (p *formatLedgerCmd) SetFlags(f *flag.FlagSet) {
 
 func (p *formatLedgerCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	log.Printf("input file=%s", *ledgerFile)
-	ledger, err := DecodeLedger()
+
+	// market data is required to Validate the Ledger
+	market, err := DecodeMarketData()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error decoding market data: %v\n", err)
+		return subcommands.ExitFailure
+	}
+
+	// We need to decode with validation the
+	file, err := os.Open(*ledgerFile)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			fmt.Fprintf(os.Stderr, "No ledger file found at %q\n", *ledgerFile)
+			return subcommands.ExitFailure
+		}
+		fmt.Fprintf(os.Stderr, "could not open ledger file %q: %v", *ledgerFile, err)
+		return subcommands.ExitFailure
+	}
+	ledger, err := portfolio.DecodeValidateLedger(file, market)
+	file.Close()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error decoding ledger: %v\n", err)
 		return subcommands.ExitFailure

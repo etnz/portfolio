@@ -79,6 +79,12 @@ func (l *Ledger) Security(ticker string) *Security {
 func (l *Ledger) Append(txs ...Transaction) {
 	l.transactions = append(l.transactions, txs...)
 	// process security declarations and counterparty account creation.
+	l.processTx(txs...)
+	// The ledger is not sorted anymore, the journal is.
+	l.stableSort() // Ensure the ledger remains sorted after appending
+}
+
+func (l *Ledger) processTx(txs ...Transaction) {
 	for _, tx := range txs {
 		switch v := tx.(type) {
 		case Declare:
@@ -90,8 +96,6 @@ func (l *Ledger) Append(txs ...Transaction) {
 			}
 		}
 	}
-	// The ledger is not sorted anymore, the journal is.
-	l.stableSort() // Ensure the ledger remains sorted after appending
 }
 
 // Transactions returns an iterator that yields each transaction in its original order.

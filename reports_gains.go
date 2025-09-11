@@ -27,7 +27,7 @@ type SecurityGains struct {
 // over a given period, using a specified cost basis accounting method.
 func (as *AccountingSystem) NewGainsReport(period Range, method CostBasisMethod) (*GainsReport, error) {
 
-	journal, err := as.getJournal()
+	journal, err := as.newJournal()
 	if err != nil {
 		return nil, fmt.Errorf("could not get journal: %w", err)
 	}

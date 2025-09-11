@@ -575,10 +575,8 @@ type Convert struct {
 func (t Convert) MarshalJSON() ([]byte, error) {
 	var w jsonObjectWriter
 	w.EmbedFrom(t.baseCmd)
-	w.Append("fromCurrency", t.FromCurrency())
-	w.Append("fromAmount", t.FromAmount.value)
-	w.Append("toCurrency", t.ToCurrency())
-	w.Append("toAmount", t.ToAmount.value)
+	w.PrefixFrom("from", t.FromAmount)
+	w.PrefixFrom("to", t.ToAmount)
 	return w.MarshalJSON()
 }
 

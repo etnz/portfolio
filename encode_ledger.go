@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/shopspring/decimal"
 )
@@ -44,6 +45,51 @@ func (a convertCmd) ToMoney() Money {
 // decodes each line into the appropriate transaction struct, and returns a sorted Ledger.
 func DecodeLedger(r io.Reader) (*Ledger, error) {
 	ledger := NewLedger()
+	if err := decodeLedger(r, ledger); err != nil {
+		return nil, err
+	}
+	// Perform a stable sort and index securities and accounts.
+	ledger.stableSort()
+	// fill up the maps
+	ledger.processTx(ledger.transactions...)
+
+	return ledger, nil
+}
+
+// DecodeValidateLedger decode the ledger and validate every transactions.
+// if market is nil, skip all validations.
+func DecodeValidateLedger(r io.Reader, market *MarketData) (*Ledger, error) {
+	// Same as DecodeLedger except that it will perform a stricter validation.
+	ledger := NewLedger()
+	if err := decodeLedger(r, ledger); err != nil {
+		return nil, err
+	}
+
+	// perform strict validation, and quick fixes.
+	ledger.stableSort()
+	// move all transactions out and insert them one by one with strict validation from
+	// the accounting system.
+	// For validation, a reporting currency is not needed. We pass an empty string.
+	as, _ := NewAccountingSystem(ledger, market, "")
+	txs := ledger.transactions
+	ledger.transactions = make([]Transaction, 0, len(txs))
+	for _, tx := range txs {
+		log.Println("validating", tx)
+		t, err := as.Validate(tx)
+		if err != nil {
+			return nil, err
+		}
+		ledger.Append(t)
+	}
+	return ledger, nil
+}
+
+// decodeLedger read transactions from the reader, and simply append them to the ledger.
+// this method is private, since the ledger could be unsorted, and with invalid indexes
+// of securities etc. It is meant to be called to either simply sort transactions and compute indexes
+// or perform a strict validation.
+func decodeLedger(r io.Reader, ledger *Ledger) error {
+
 	scanner := bufio.NewScanner(r)
 
 	for scanner.Scan() {
@@ -56,7 +102,7 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 			Command CommandType `json:"command"`
 		}
 		if err := json.Unmarshal(lineBytes, &identifier); err != nil {
-			return nil, fmt.Errorf("could not identify command in line %q: %w", string(lineBytes), err)
+			return fmt.Errorf("could not identify command in line %q: %w", string(lineBytes), err)
 		}
 
 		var decodedTx Transaction
@@ -72,7 +118,7 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 				Quantity Quantity `json:"quantity"`
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
+				return err
 			}
 
 			// Create the final transaction struct
@@ -90,7 +136,7 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 				Quantity Quantity `json:"quantity"`
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
+				return err
 			}
 
 			// Create the final transaction struct
@@ -107,7 +153,7 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 				Quantity Quantity `json:"quantity"`
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
+				return err
 			}
 
 			// Create the final transaction struct
@@ -123,7 +169,7 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 				Settles string `json:"settles,omitempty"`
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
+				return err
 			}
 
 			// Create the final transaction struct
@@ -140,7 +186,7 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 				Settles string `json:"settles,omitempty"`
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
+				return err
 			}
 
 			// Create the final transaction struct
@@ -153,7 +199,7 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 			// Use a temporary type that has all possible fields.
 			temp := convertCmd{}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
+				return err
 			}
 
 			// Create the final transaction struct
@@ -175,7 +221,7 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 				Create       bool   `json:"create,omitempty"`
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
+				return err
 			}
 
 			// Create the final transaction struct
@@ -190,19 +236,16 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 		}
 
 		if err != nil {
-			return nil, err
+			return err
 		}
-		ledger.Append(decodedTx)
+		// Raw append in this function.
+		ledger.transactions = append(ledger.transactions, decodedTx)
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error reading from input: %w", err)
+		return fmt.Errorf("error reading from input: %w", err)
 	}
-
-	// Perform a stable sort on the ledger based on the transaction date.
-	ledger.stableSort()
-
-	return ledger, nil
+	return nil
 }
 
 // EncodeTransaction marshals a single transaction to JSON and writes it to the

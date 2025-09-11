@@ -84,4 +84,36 @@ func TestJsonObjectWriter(t *testing.T) {
 			t.Errorf("got %q, want %q", got, want)
 		}
 	})
+
+	t.Run("prefix from", func(t *testing.T) {
+		var w jsonObjectWriter
+		// This struct will be embedded with a prefix
+		embedded := struct {
+			Amount   int    `json:"amount"`
+			Currency string `json:"currency"`
+		}{
+			Amount:   100,
+			Currency: "USD",
+		}
+
+		w.Append("command", "deposit")
+		// The implementation of PrefixFrom is currently incomplete.
+		// This test is written for the *intended* behavior.
+		w.PrefixFrom("to", embedded) // Intended to produce "toAmount" and "toCurrency"
+		w.Append("memo", "test")
+
+		// This test will fail until PrefixFrom is correctly implemented.
+		// The current implementation will produce: `{"command":"deposit","amount":100,"currency":"USD","memo":"test"}`
+		// The desired output is:
+		want := `{"command":"deposit","toAmount":100,"toCurrency":"USD","memo":"test"}`
+
+		got, err := w.MarshalJSON()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if string(got) != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
 }

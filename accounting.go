@@ -15,7 +15,6 @@ import (
 type AccountingSystem struct {
 	Ledger            *Ledger
 	MarketData        *MarketData
-	journal           *Journal
 	ReportingCurrency string
 }
 
@@ -44,53 +43,50 @@ func NewAccountingSystem(ledger *Ledger, marketData *MarketData, reportingCurren
 func (as *AccountingSystem) Validate(tx Transaction) (Transaction, error) {
 	// For validations that need the state of the portfolio, we compute the balance
 	// on the transaction date.
-	balance, err := as.Balance(tx.When())
-	if err != nil {
-		return nil, fmt.Errorf("could not compute balance for validation: %w", err)
-	}
+	var err error
 	switch v := tx.(type) {
 	case Buy:
 		err = v.Validate(as.Ledger)
-		return v, err
 	case Sell:
+		// todo: recomputing the whole journal everytime is expensive.
+		var j *Journal
+		j, err = NewJournal(as.Ledger, as.MarketData, as.ReportingCurrency)
+		if err != nil {
+			return nil, fmt.Errorf("Invalid journal: %w", err)
+		}
+
+		balance, e := NewBalance(j, tx.When(), FIFO) // TODO: Make cost basis method configurable
+		if e != nil {
+			return nil, fmt.Errorf("could not create balance from journal: %w", e)
+		}
 		err = v.Validate(as.Ledger, balance)
-		return v, err
 	case Dividend:
 		err = v.Validate(as.Ledger)
-		return v, err
 	case Deposit:
 		err = v.Validate(as.Ledger)
-		return v, err
 	case Withdraw:
 		err = v.Validate(as.Ledger)
-		return v, err
 	case Convert:
 		err = v.Validate(as.Ledger)
-		return v, err
 	case Declare:
 		err = v.Validate(as.Ledger)
-		return v, err
 	case Accrue:
 		err = v.Validate(as.Ledger)
-		return v, err
 	default:
-		return tx, fmt.Errorf("unsupported transaction type for validation: %T", tx)
-	}
-}
-func (as *AccountingSystem) getJournal() (*Journal, error) {
-	var err error
-	if as.journal == nil {
-		as.journal, err = as.newJournal()
+		return tx, fmt.Errorf("unsupported transaction type for validation: %T %v", tx, tx)
 	}
 	if err != nil {
-		return nil, err
+		return tx, fmt.Errorf("invalid %s transaction on %v: %w", tx.What(), tx.When(), err)
 	}
-	return as.journal, nil
+	return tx, nil
+}
+func (as *AccountingSystem) newJournal() (*Journal, error) {
+	return NewJournal(as.Ledger, as.MarketData, as.ReportingCurrency)
 }
 
 // Balance computes the Balance on a given day.
 func (as *AccountingSystem) Balance(on Date) (*Balance, error) {
-	j, err := as.getJournal()
+	j, err := as.newJournal()
 	if err != nil {
 		return nil, fmt.Errorf("could not get journal: %w", err)
 	}
@@ -101,28 +97,28 @@ func (as *AccountingSystem) Balance(on Date) (*Balance, error) {
 	return balance, nil
 }
 
-// DeclareSecurities scans all securities (and currencies) in the ledger and
-// ensures they are declared in the marketdata. This function is crucial for
-// maintaining consistency between the ledger's transactional records and the
-// market data's security definitions.
-func (as *AccountingSystem) DeclareSecurities() error {
-	if err := ValidateCurrency(as.ReportingCurrency); err != nil {
+// DeclareSecurities scans all securities and currencies in the ledger and
+// ensures they are declared in the market data. This function is crucial for
+// maintaining consistency between the ledger's transactional records and the market
+// data's security definitions.
+func DeclareSecurities(ledger *Ledger, marketData *MarketData, reportingCurrency string) error {
+	if err := ValidateCurrency(reportingCurrency); err != nil {
 		return fmt.Errorf("invalid default currency: %w", err)
 	}
 
-	for sec := range as.Ledger.AllSecurities() {
-		as.MarketData.Add(sec)
+	for sec := range ledger.AllSecurities() {
+		marketData.Add(sec)
 	}
-	for currency := range as.Ledger.AllCurrencies() {
-		if currency == as.ReportingCurrency {
+	for currency := range ledger.AllCurrencies() {
+		if currency == reportingCurrency {
 			// skip absurd self currency
 			continue
 		}
-		id, err := NewCurrencyPair(currency, as.ReportingCurrency)
+		id, err := NewCurrencyPair(currency, reportingCurrency)
 		if err != nil {
 			return fmt.Errorf("could not create currency pair: %w", err)
 		}
-		as.MarketData.Add(NewSecurity(id, id.String(), currency))
+		marketData.Add(NewSecurity(id, id.String(), currency))
 	}
 	return nil
 }
