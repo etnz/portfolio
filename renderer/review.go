@@ -73,11 +73,13 @@ func ReviewMarkdown(report *portfolio.ReviewReport) string {
 	fmt.Fprintln(&b, "| Asset | Gain | Return % |")
 	fmt.Fprintln(&b, "|:---|---:|---:|")
 	for _, asset := range report.Assets {
-		fmt.Fprintf(&b, "| %s | %s | %s |\n",
-			asset.Security,
-			asset.Gain().SignedString(),
-			asset.Value.Return.SignedString(),
-		)
+		if !asset.Gain().IsZero() || asset.Value.Return != 0 {
+			fmt.Fprintf(&b, "| %s | %s | %s |\n",
+				asset.Security,
+				asset.Gain().SignedString(),
+				asset.Value.Return.SignedString(),
+			)
+		}
 	}
 	fmt.Fprintf(&b, "| **%s** | **%s** | **%s** |\n",
 		"Total",
@@ -90,12 +92,14 @@ func ReviewMarkdown(report *portfolio.ReviewReport) string {
 	fmt.Fprintln(&b, "| Asset | Invested | Realized | Unrealized |")
 	fmt.Fprintln(&b, "|:---|---:|---:|---:|")
 	for _, asset := range report.Assets {
-		fmt.Fprintf(&b, "| %s | %s | %s | %s |\n",
-			asset.Security,
-			asset.Buys.String(),
-			asset.RealizedGains.SignedString(),
-			asset.UnrealizedGains.SignedString(),
-		)
+		if !asset.Buys.IsZero() || !asset.RealizedGains.IsZero() || !asset.UnrealizedGains.IsZero() {
+			fmt.Fprintf(&b, "| %s | %s | %s | %s |\n",
+				asset.Security,
+				asset.Buys.String(),
+				asset.RealizedGains.SignedString(),
+				asset.UnrealizedGains.SignedString(),
+			)
+		}
 	}
 	fmt.Fprintf(&b, "| **%s** | **%s** | **%s** | **%s** |\n",
 		"Total",
