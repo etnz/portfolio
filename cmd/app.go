@@ -22,10 +22,10 @@ func Register(c *subcommands.Commander) {
 	c.Register(&updateSecurityCmd{}, "securities")
 	c.Register(NewAddSecurityCmd(), "securities")
 	c.Register(&searchSecurityCmd{addSecurityCmd: NewAddSecurityCmd()}, "securities")
-	c.Register(&fetchSecurityCmd{}, "securities")
+	c.Register(&fetchCmd{}, "securities")
 
-	c.Register(&updateAmundiCmd{}, "amundi")
 	c.Register(&importAmundiCmd{}, "amundi")
+	c.Register(&amundiLoginCmd{}, "amundi")
 
 	c.Register(&buyCmd{}, "transactions")
 	c.Register(&sellCmd{}, "transactions")

@@ -72,7 +72,7 @@ func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		period = portfolio.Range{From: startDate, To: endDate}
 	} else {
 		// standard range
-		period = portfolio.NewRange(endDate, p)
+		period = p.Range(endDate)
 	}
 
 	// Decode market data and ledger

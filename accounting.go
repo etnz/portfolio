@@ -63,7 +63,16 @@ func (as *AccountingSystem) Validate(tx Transaction) (Transaction, error) {
 		err = v.Validate(as.Ledger, balance)
 		tx = v
 	case Dividend:
-		err = v.Validate(as.Ledger)
+		var j *Journal
+		j, err = NewJournal(as.Ledger, as.MarketData, as.ReportingCurrency)
+		if err != nil {
+			return nil, fmt.Errorf("invalid journal: %w", err)
+		}
+		balance, e := NewBalance(j, tx.When(), FIFO) // TODO: Make cost basis method configurable
+		if e != nil {
+			return nil, fmt.Errorf("could not create balance from journal: %w", e)
+		}
+		err = v.Validate(as.Ledger, balance)
 		tx = v
 	case Deposit:
 		err = v.Validate(as.Ledger)

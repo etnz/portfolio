@@ -31,12 +31,14 @@ func createTempLedger(t *testing.T, content string) string {
 // TestFormatLedgerDefaultOutput tests the default behavior (writes to default ledger file)
 func TestFormatLedgerDefaultOutput(t *testing.T) {
 	// Arrange
-	originalLedgerContent := `{"command":"deposit","date":"2025-08-01","amount":1000, "memo":"this is a comment"}
-{"command":"buy","date":"2025-08-03","security":"AAPL","quantity":10,"amount":1500}
+	originalLedgerContent := `
+	{"command":"buy","date":"2025-01-02","security":"MSFT","quantity":10,"amount":1000}
+{"command":"deposit","date":"2025-01-01","currency":"USD","amount":2000}
+{"command":"declare","date":"2025-01-01","ticker":"MSFT","id":"US0378331005.XNAS","currency":"USD"}
 `
-	expectedFormattedContent := `{"command":"deposit","date":"2025-08-01","memo":"this is a comment","amount":1000}
-{"command":"buy","date":"2025-08-03","security":"AAPL","quantity":10,"amount":1500}
-`
+	expectedFormattedContent := `{"command":"deposit","date":"2025-01-01","currency":"USD","amount":2000}
+{"command":"declare","date":"2025-01-01","ticker":"MSFT","id":"US0378331005.XNAS","currency":"USD"}
+{"command":"buy","date":"2025-01-02","security":"MSFT","quantity":10,"currency":"USD","amount":1000}`
 
 	// Create a temporary default ledger file
 	tempLedgerFile := createTempLedger(t, originalLedgerContent)
@@ -72,12 +74,14 @@ func TestFormatLedgerDefaultOutput(t *testing.T) {
 // TestFormatLedgerToFileOutput tests writing to a specified output file
 func TestFormatLedgerToFileOutput(t *testing.T) {
 	// Arrange
-	originalLedgerContent := `{"command":"deposit","date":"2025-08-01","amount":1000}
-{"command":"buy","date":"2025-08-03","security":"AAPL","quantity":10,"amount":1500}
+	originalLedgerContent := `
+	{"command":"buy","date":"2025-01-02","security":"MSFT","quantity":10,"amount":1000}
+{"command":"deposit","date":"2025-01-01","currency":"USD","amount":2000}
+{"command":"declare","date":"2025-01-01","ticker":"MSFT","id":"US0378331005.XNAS","currency":"USD"}
 `
-	expectedFormattedContent := `{"command":"deposit","date":"2025-08-01","amount":1000}
-{"command":"buy","date":"2025-08-03","security":"AAPL","quantity":10,"amount":1500}
-`
+	expectedFormattedContent := `{"command":"deposit","date":"2025-01-01","currency":"USD","amount":2000}
+{"command":"declare","date":"2025-01-01","ticker":"MSFT","id":"US0378331005.XNAS","currency":"USD"}
+{"command":"buy","date":"2025-01-02","security":"MSFT","quantity":10,"currency":"USD","amount":1000}`
 
 	// Create a temporary input ledger file
 	tempInputLedger := createTempLedger(t, originalLedgerContent)
@@ -117,11 +121,14 @@ func TestFormatLedgerToFileOutput(t *testing.T) {
 // TestFormatLedgerToStdoutOutput tests writing to stdout
 func TestFormatLedgerToStdoutOutput(t *testing.T) {
 	// Arrange
-	originalLedgerContent := `{"command":"deposit","date":"2025-08-01","amount":1000}
-{"command":"buy","date":"2025-08-03","security":"AAPL","quantity":10,"amount":1500}
+	originalLedgerContent := `
+	{"command":"buy","date":"2025-01-02","security":"MSFT","quantity":10,"amount":1000}
+{"command":"deposit","date":"2025-01-01","currency":"USD","amount":2000}
+{"command":"declare","date":"2025-01-01","ticker":"MSFT","id":"US0378331005.XNAS","currency":"USD"}
 `
-	expectedFormattedContent := `{"command":"deposit","date":"2025-08-01","amount":1000}
-{"command":"buy","date":"2025-08-03","security":"AAPL","quantity":10,"amount":1500}
+	expectedFormattedContent := `{"command":"deposit","date":"2025-01-01","currency":"USD","amount":2000}
+{"command":"declare","date":"2025-01-01","ticker":"MSFT","id":"US0378331005.XNAS","currency":"USD"}
+{"command":"buy","date":"2025-01-02","security":"MSFT","quantity":10,"currency":"USD","amount":1000}
 `
 
 	// Create a temporary input ledger file
@@ -153,7 +160,7 @@ func TestFormatLedgerToStdoutOutput(t *testing.T) {
 	gotOutput, _ := io.ReadAll(r)
 
 	if status != subcommands.ExitSuccess {
-		t.Errorf("Expected ExitSuccess, got %v", status)
+		t.Errorf("Expected ExitSuccess, got %v: %s", status, gotOutput)
 	}
 
 	gotFormattedContent := string(gotOutput)

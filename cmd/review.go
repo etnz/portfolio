@@ -59,7 +59,7 @@ func (c *reviewCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 			fmt.Fprintf(os.Stderr, "Invalid period: %v\n", err)
 			return subcommands.ExitUsageError
 		}
-		r = portfolio.NewRange(endDate, p)
+		r = p.Range(endDate)
 	}
 
 	// Truncate the range if it goes beyond the present day.

@@ -166,7 +166,7 @@ func TestRenderFrontMatter(t *testing.T) {
 		{
 			name:     "basic template",
 			template: "---\ntitle: {{.Report}} Report for {{.Period.Identifier}}\n---",
-			task:     reportTask{Report: "review", Period: portfolio.NewRange(newDate(t, "2025-01-01"), portfolio.Daily)},
+			task:     reportTask{Report: "review", Period: portfolio.Daily.Range(newDate(t, "2025-01-01"))},
 			want:     "---\ntitle: review Report for 2025-01-01\n---",
 			wantErr:  false,
 		},
@@ -179,7 +179,7 @@ func TestRenderFrontMatter(t *testing.T) {
 {{.Period.To.Full}}: The end date in RFC3339 format.
 {{.Period.Name}}: A human-readable name for the period (e.g., "Daily", "Weekly", "Monthly").
 {{.Period.To.Format "January 06"}}: A formatted string of the end date.`,
-			task: reportTask{Report: "review", Period: portfolio.NewRange(newDate(t, "2025-01-01"), portfolio.Weekly)},
+			task: reportTask{Report: "review", Period: portfolio.Weekly.Range(newDate(t, "2025-01-01"))},
 			want: `
 review: The type of report (e.g., "review", "holding").
 2024-12-30: The start date of the report.
@@ -192,14 +192,14 @@ January 25: A formatted string of the end date.`,
 		{
 			name:     "empty template",
 			template: "",
-			task:     reportTask{Report: "review", Period: portfolio.NewRange(newDate(t, "2025-01-01"), portfolio.Daily)},
+			task:     reportTask{Report: "review", Period: portfolio.Daily.Range(newDate(t, "2025-01-01"))},
 			want:     "",
 			wantErr:  false,
 		},
 		{
 			name:     "template with error",
 			template: "{{.NonExistentField}}",
-			task:     reportTask{Report: "review", Period: portfolio.NewRange(newDate(t, "2025-01-01"), portfolio.Daily)},
+			task:     reportTask{Report: "review", Period: portfolio.Daily.Range(newDate(t, "2025-01-01"))},
 			want:     "",
 			wantErr:  true,
 		},

@@ -312,9 +312,12 @@ func iterate(series ...[]Date) iter.Seq[Date] {
 // Range represents a range of dates.
 type Range struct{ From, To Date }
 
-// NewRange return a well known period
-func NewRange(d Date, period Period) Range {
-	return Range{From: d.StartOf(period), To: d.EndOf(period)}
+// NewRange creates a new date range. If 'from' is after 'to', they are swapped.
+func NewRange(from, to Date) Range {
+	if from.After(to) {
+		from, to = to, from
+	}
+	return Range{From: from, To: to}
 }
 
 // Contains return true date is included in the range (boundaries included)
@@ -391,6 +394,11 @@ func (p Period) String() string {
 	default:
 		panic(fmt.Sprintf("unknown period %d", p))
 	}
+}
+
+// Range returns a Range for the given period containing the date d.
+func (p Period) Range(d Date) Range {
+	return Range{From: d.StartOf(p), To: d.EndOf(p)}
 }
 
 const (

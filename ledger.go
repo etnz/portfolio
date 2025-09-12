@@ -84,6 +84,47 @@ func (l *Ledger) Append(txs ...Transaction) {
 	l.stableSort() // Ensure the ledger remains sorted after appending
 }
 
+// AppendOrUpdate adds a transaction to the ledger. If the transaction is a
+// market data update (UpdatePrice or Split) and an entry for the same security
+// on the same day already exists, it replaces the old entry. Otherwise, it
+// appends the new transaction.
+func (l *Ledger) AppendOrUpdate(txs ...Transaction) {
+	for _, tx := range txs {
+		switch newTx := tx.(type) {
+		case UpdatePrice:
+			for i, existingTx := range l.transactions {
+				if oldTx, ok := existingTx.(UpdatePrice); ok {
+					if oldTx.When() == newTx.When() && oldTx.Security == newTx.Security {
+						l.transactions[i] = newTx // Replace existing
+						continue
+					}
+				}
+			}
+		case Split:
+			for i, existingTx := range l.transactions {
+				if oldTx, ok := existingTx.(Split); ok {
+					if oldTx.When() == newTx.When() && oldTx.Security == newTx.Security {
+						l.transactions[i] = newTx // Replace existing
+						continue
+					}
+				}
+			}
+		case Dividend:
+			for i, existingTx := range l.transactions {
+				if oldTx, ok := existingTx.(Dividend); ok {
+					if oldTx.When() == newTx.When() && oldTx.Security == newTx.Security {
+						l.transactions[i] = newTx // Replace existing
+						continue
+					}
+				}
+			}
+		}
+
+		// If no existing transaction was found and replaced, append the new one.
+		l.Append(tx)
+	}
+}
+
 func (l *Ledger) processTx(txs ...Transaction) {
 	for _, tx := range txs {
 		switch v := tx.(type) {
@@ -381,4 +422,55 @@ func (l *Ledger) ByCurrency(currency string) func(Transaction) bool {
 			return false
 		}
 	}
+}
+
+// LastKnownMarketDataDate scans the ledger in reverse and returns the date of the most
+// recent `update-price` or `split` transaction for the given security ticker.
+// The boolean will be true if a date was found, otherwise false.
+func (l *Ledger) LastKnownMarketDataDate(security string) (Date, bool) {
+	// Iterate backwards for efficiency, as we want the most recent date.
+	for i := len(l.transactions) - 1; i >= 0; i-- {
+		tx := l.transactions[i]
+
+		switch v := tx.(type) {
+		case UpdatePrice:
+			if v.Security == security {
+				return v.When(), true
+			}
+		case Split:
+			if v.Security == security {
+				return v.When(), true
+			}
+		}
+	}
+	return Date{}, false
+}
+
+// InceptionDate scans the ledger and returns the date of the very first
+// transaction of any kind for the given security ticker.
+func (l *Ledger) InceptionDate(security string) (Date, bool) {
+	for _, tx := range l.transactions {
+		var ticker string
+		switch v := tx.(type) {
+		case Buy:
+			ticker = v.Security
+		case Sell:
+			ticker = v.Security
+		case Dividend:
+			ticker = v.Security
+		case Declare:
+			ticker = v.Ticker
+		case UpdatePrice:
+			ticker = v.Security
+		case Split:
+			ticker = v.Security
+		default:
+			continue
+		}
+
+		if ticker == security {
+			return tx.When(), true
+		}
+	}
+	return Date{}, false
 }

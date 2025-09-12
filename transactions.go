@@ -33,9 +33,6 @@ type Transaction interface {
 	Equal(Transaction) bool
 }
 
-// baseCmd contains fields common to all transaction types.
-// baseCmd contains fields common to all transaction types. It is typically
-// embedded within more specific transaction structs.
 type baseCmd struct {
 	Command CommandType `json:"command"`        // Command specifies the type of transaction (e.g., "buy", "sell").
 	Date    Date        `json:"date"`           // Date is the date when the transaction took place.
@@ -75,8 +72,6 @@ func (t *baseCmd) Validate() {
 }
 
 // secCmd is a component for security-based transactions (buy, sell, dividend).
-// secCmd is a component for security-based transactions (buy, sell, dividend).
-// It embeds baseCmd and adds a Security field.
 type secCmd struct {
 	baseCmd
 	Security string `json:"security"` // Security is the ticker symbol of the security involved in the transaction.
@@ -320,20 +315,8 @@ func (t *Declare) Validate(ledger *Ledger) error {
 // for a held security.
 type Dividend struct {
 	secCmd
-	Amount Money `json:"amount"` // Amount is the total dividend amount received.
-}
-
-// MarshalJSON implements the json.Marshaler interface for Dividend.
-func (t Dividend) MarshalJSON() ([]byte, error) {
-	var w jsonObjectWriter
-	w.EmbedFrom(t.secCmd)
-	w.EmbedFrom(t.Amount)
-	return w.MarshalJSON()
-}
-
-func (t Dividend) Equal(other Transaction) bool {
-	o, ok := other.(Dividend)
-	return ok && t.secCmd == o.secCmd && t.Amount.Equal(o.Amount)
+	Amount           Money // Amount is the total dividend amount received.
+	DividendPerShare Money // DividendPerShare is the amount paid per share.
 }
 
 // NewDividend creates a new Dividend transaction.
@@ -344,14 +327,45 @@ func NewDividend(day Date, memo, security string, amount Money) Dividend {
 	}
 }
 
+// MarshalJSON implements the json.Marshaler interface for Dividend.
+func (t Dividend) MarshalJSON() ([]byte, error) {
+	var w jsonObjectWriter
+	w.EmbedFrom(t.secCmd)
+	w.Optional("amount", t.Amount)
+	w.Optional("dividendPerShare", t.DividendPerShare.value)
+	return w.MarshalJSON()
+}
+
+func (t Dividend) Equal(other Transaction) bool {
+	o, ok := other.(Dividend)
+	return ok && t.secCmd == o.secCmd && t.Amount.Equal(o.Amount)
+}
+
 // Validate checks the Dividend transaction's fields. It ensures the dividend
 // amount is positive.
-func (t *Dividend) Validate(ledger *Ledger) error {
+func (t *Dividend) Validate(ledger *Ledger, b *Balance) error {
 	if err := t.secCmd.Validate(ledger); err != nil {
 		return err
 	}
 
-	if !t.Amount.IsPositive() {
+	// Quick fix: if amount is missing but dividend per share is provided, calculate it.
+	if t.Amount.IsZero() && t.DividendPerShare.IsPositive() {
+		position := b.Position(t.Security)
+		if position.IsZero() {
+			return fmt.Errorf("cannot calculate total dividend for %s, position is zero on %s", t.Security, t.When())
+		}
+		// TODO: Broker-paid dividends are often net of taxes. The actual amount might be
+		// slightly less than (position * dividend_per_share). This could be modeled
+		// in the future by creating an associated tax withdrawal transaction.
+		t.Amount = t.DividendPerShare.Mul(position)
+	}
+
+	if !t.Amount.IsPositive() && !t.DividendPerShare.IsPositive() {
+		return errors.New("dividend must have a positive amount or dividendPerShare")
+	}
+
+	// Final check on the amount, which should now be populated.
+	if !t.Amount.IsZero() && !t.Amount.IsPositive() {
 		return fmt.Errorf("dividend amount must be positive, got %v", t.Amount)
 	}
 	return nil

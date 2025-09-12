@@ -152,7 +152,7 @@ func generatePeriods(startDate, endDate portfolio.Date) ([]portfolio.Range, erro
 
 	// Daily, Weekly, Monthly, Quarterly, Yearly
 	for _, periodType := range []portfolio.Period{portfolio.Daily, portfolio.Weekly, portfolio.Monthly, portfolio.Quarterly, portfolio.Yearly} {
-		for r := portfolio.NewRange(startDate, periodType); !r.From.After(endDate); r = portfolio.NewRange(r.To.Add(1), periodType) {
+		for r := periodType.Range(startDate); !r.From.After(endDate); r = periodType.Range(r.To.Add(1)) {
 			ranges = append(ranges, r)
 		}
 	}
