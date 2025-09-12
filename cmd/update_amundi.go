@@ -276,9 +276,9 @@ func (c *updateAmundiCmd) query(uri string) ([]byte, error) {
 func parseAmundiSnapshot(market *portfolio.MarketData, data []byte) (err error) {
 	var snapshot struct {
 		Fonds []struct {
-			CodeFonds    string    `json:"codeFonds"`
-			LibelleFonds string    `json:"libelleFonds"`
-			VL           float64   `json:"vl"`
+			CodeFonds    string         `json:"codeFonds"`
+			LibelleFonds string         `json:"libelleFonds"`
+			VL           float64        `json:"vl"`
 			DateVL       portfolio.Date `json:"dateVl"`
 		} `json:"fonds"`
 	}

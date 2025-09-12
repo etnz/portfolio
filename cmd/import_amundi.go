@@ -34,17 +34,17 @@ type AmundiOperation struct {
 
 // AmundiInstruction is a detailed leg of a transaction, like a specific buy or sell.
 type AmundiInstruction struct {
-	Type       string    `json:"type"`                // e.g., "ARB", "RACH_TIT", "SOUS_MTT"
-	Id         string    `json:"idInstruction"`       // e.g.,
-	Statut     string    `json:"statut"`              // e.g: "ANNULE",
-	Indicator  string    `json:"indicateurArbitrage"` // "Source" or "Cible" for ARB
+	Type       string         `json:"type"`                // e.g., "ARB", "RACH_TIT", "SOUS_MTT"
+	Id         string         `json:"idInstruction"`       // e.g.,
+	Statut     string         `json:"statut"`              // e.g: "ANNULE",
+	Indicator  string         `json:"indicateurArbitrage"` // "Source" or "Cible" for ARB
 	DateVL     portfolio.Date `json:"dateVlReel"`
-	Price      float64   `json:"vlReel"`
-	Quantity   float64   `json:"nombreDeParts"`
-	Security   string    `json:"codeFonds"`
-	FundName   string    `json:"nomFonds"`
-	Dispositif string    `json:"libelleDispositifMetier"`
-	Amount     float64   `json:"montantNet"`
+	Price      float64        `json:"vlReel"`
+	Quantity   float64        `json:"nombreDeParts"`
+	Security   string         `json:"codeFonds"`
+	FundName   string         `json:"nomFonds"`
+	Dispositif string         `json:"libelleDispositifMetier"`
+	Amount     float64        `json:"montantNet"`
 }
 
 // AmundiReglement represents a cash settlement, like a withdrawal.

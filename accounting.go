@@ -53,7 +53,7 @@ func (as *AccountingSystem) Validate(tx Transaction) (Transaction, error) {
 		var j *Journal
 		j, err = NewJournal(as.Ledger, as.MarketData, as.ReportingCurrency)
 		if err != nil {
-			return nil, fmt.Errorf("Invalid journal: %w", err)
+			return nil, fmt.Errorf("invalid journal: %w", err)
 		}
 
 		balance, e := NewBalance(j, tx.When(), FIFO) // TODO: Make cost basis method configurable
@@ -78,6 +78,12 @@ func (as *AccountingSystem) Validate(tx Transaction) (Transaction, error) {
 		err = v.Validate(as.Ledger)
 		tx = v
 	case Accrue:
+		err = v.Validate(as.Ledger)
+		tx = v
+	case UpdatePrice:
+		err = v.Validate(as.Ledger)
+		tx = v
+	case Split:
 		err = v.Validate(as.Ledger)
 		tx = v
 	default:

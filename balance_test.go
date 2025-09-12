@@ -126,12 +126,12 @@ func TestBalance_BuysAndSells(t *testing.T) {
 	ledger.Append(
 		NewDeclare(o, "", "AAPL", AAPL, "USD"),
 		NewDeclare(o, "", "GOOG", GOOG, "USD"),
-		NewBuy(NewDate(2025, time.January, 10), "", "AAPL", Q(100), USD(15000)),      // Buy 1
-		NewBuy(NewDate(2025, time.January, 15), "", "GOOG", Q(50), USD(140000)),     // Buy 1
-		NewSell(NewDate(2025, time.February, 1), "", "AAPL", Q(25), USD(4000)),       // Sell 1
-		NewBuy(NewDate(2025, time.February, 10), "", "AAPL", Q(10), USD(1550)),       // Buy 2
-		NewSell(NewDate(2025, time.March, 1), "", "GOOG", Q(50), USD(145000)),      // Sell 1
-		NewSell(NewDate(2025, time.March, 15), "", "AAPL", Q(50), USD(8000)),        // Sell 2
+		NewBuy(NewDate(2025, time.January, 10), "", "AAPL", Q(100), USD(15000)), // Buy 1
+		NewBuy(NewDate(2025, time.January, 15), "", "GOOG", Q(50), USD(140000)), // Buy 1
+		NewSell(NewDate(2025, time.February, 1), "", "AAPL", Q(25), USD(4000)),  // Sell 1
+		NewBuy(NewDate(2025, time.February, 10), "", "AAPL", Q(10), USD(1550)),  // Buy 2
+		NewSell(NewDate(2025, time.March, 1), "", "GOOG", Q(50), USD(145000)),   // Sell 1
+		NewSell(NewDate(2025, time.March, 15), "", "AAPL", Q(50), USD(8000)),    // Sell 2
 	)
 
 	journal, err := as.newJournal()

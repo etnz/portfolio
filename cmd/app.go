@@ -35,6 +35,8 @@ func Register(c *subcommands.Commander) {
 	c.Register(&withdrawCmd{}, "transactions")
 	c.Register(&convertCmd{}, "transactions")
 	c.Register(&accrueCmd{}, "transactions")
+	c.Register(&priceCmd{}, "transactions")
+	c.Register(&splitCmd{}, "transactions")
 
 	c.Register(&formatLedgerCmd{}, "tools")
 

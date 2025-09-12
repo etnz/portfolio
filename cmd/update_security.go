@@ -84,7 +84,7 @@ func (c *updateSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...int
 	}
 
 	if numSet || denSet {
-		split := portfolio.Split{
+		split := portfolio.StockSplit{
 			Date:        day,
 			Numerator:   c.num,
 			Denominator: c.den,

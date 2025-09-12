@@ -7,11 +7,11 @@ import (
 	"log"
 )
 
-// Split represents a stock split event.
-type Split struct {
-	Date        Date `json:"date"`
-	Numerator   int64     `json:"num"`
-	Denominator int64     `json:"den"`
+// StockSplit represents a stock split event.
+type StockSplit struct {
+	Date        Date  `json:"date"`
+	Numerator   int64 `json:"num"`
+	Denominator int64 `json:"den"`
 }
 
 // MarketData holds all the market data, including security definitions and their price histories.
@@ -19,7 +19,7 @@ type MarketData struct {
 	securities map[ID]Security
 	tickers    map[string]ID
 	prices     map[ID]*History[float64]
-	splits     map[ID][]Split
+	splits     map[ID][]StockSplit
 }
 
 // NewMarketData creates an empty MarketData store.
@@ -28,7 +28,7 @@ func NewMarketData() *MarketData {
 		securities: make(map[ID]Security),
 		tickers:    make(map[string]ID),
 		prices:     make(map[ID]*History[float64]),
-		splits:     make(map[ID][]Split),
+		splits:     make(map[ID][]StockSplit),
 	}
 }
 
@@ -51,7 +51,7 @@ func (m *MarketData) Add(s Security) {
 	m.securities[s.ID()] = s
 	m.tickers[s.Ticker()] = s.ID()
 	m.prices[s.ID()] = &History[float64]{}
-	m.splits[s.ID()] = []Split{}
+	m.splits[s.ID()] = []StockSplit{}
 }
 
 // Get retrieves a security by its ID. It returns zero if the security is not found.
@@ -120,17 +120,17 @@ func (m *MarketData) read(id ID, day Date) (float64, bool) {
 }
 
 // AddSplit adds a split to the market data for a given security.
-func (m *MarketData) AddSplit(id ID, split Split) {
+func (m *MarketData) AddSplit(id ID, split StockSplit) {
 	m.splits[id] = append(m.splits[id], split)
 }
 
 // Splits returns all splits for a given security.
-func (m *MarketData) Splits(id ID) []Split {
+func (m *MarketData) Splits(id ID) []StockSplit {
 	return m.splits[id]
 }
 
 // SetSplits sets the splits for a given security, replacing any existing ones.
-func (m *MarketData) SetSplits(id ID, splits []Split) {
+func (m *MarketData) SetSplits(id ID, splits []StockSplit) {
 	m.splits[id] = splits
 }
 
@@ -206,7 +206,7 @@ func (m *MarketData) UpdatePrices(start, end Date) error {
 	return errs
 }
 
-func updateSecuritySplits(sec Security) ([]Split, error) {
+func updateSecuritySplits(sec Security) ([]StockSplit, error) {
 	apiKey := eodhdApiKey()
 	if apiKey == "" {
 		return nil, errors.New("EODHD API key is not set. Use -eodhd-api-key flag or EODHD_API_KEY environment variable")

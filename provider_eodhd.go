@@ -386,7 +386,7 @@ func simplifyDecimalRatio(numDecimal, denDecimal decimal.Decimal) (num, den int6
 }
 
 // eodhdSplits returns the split history for a given EODHD ticker.
-func eodhdSplits(apiKey, ticker string) ([]Split, error) {
+func eodhdSplits(apiKey, ticker string) ([]StockSplit, error) {
 	addr := fmt.Sprintf("https://eodhd.com/api/splits/%s?fmt=json&api_token=%s", ticker, apiKey)
 
 	type apiSplit struct {
@@ -399,7 +399,7 @@ func eodhdSplits(apiKey, ticker string) ([]Split, error) {
 		return nil, err
 	}
 
-	splits := make([]Split, 0, len(content))
+	splits := make([]StockSplit, 0, len(content))
 	for _, s := range content {
 		parts := strings.Split(s.Split, "/")
 		if len(parts) != 2 {
@@ -416,7 +416,7 @@ func eodhdSplits(apiKey, ticker string) ([]Split, error) {
 		}
 
 		num, den := simplifyDecimalRatio(numDecimal, denDecimal)
-		split := Split{
+		split := StockSplit{
 			Date:        s.Date,
 			Numerator:   num,
 			Denominator: den,

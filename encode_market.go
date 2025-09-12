@@ -35,10 +35,10 @@ func (m *MarketData) decodeSecurities(filename string, r io.Reader) error {
 
 	// jsecurity is the object read from the file using json parser.
 	type jsecurity struct {
-		Ticker   string  `json:"ticker"`
-		ID       string  `json:"id"`
-		Currency string  `json:"currency"`
-		Splits   []Split `json:"splits,omitempty"`
+		Ticker   string       `json:"ticker"`
+		ID       string       `json:"id"`
+		Currency string       `json:"currency"`
+		Splits   []StockSplit `json:"splits,omitempty"`
 	}
 
 	// The definition file is a JSONL file, one security per line.
@@ -198,10 +198,10 @@ func DecodeMarketData(marketFile string) (*MarketData, error) {
 func encodeSecurities(w io.Writer, m *MarketData) error {
 	// jsecurity is the object to write to the file using json parser.
 	type jsecurity struct {
-		Ticker   string  `json:"ticker"`
-		ID       string  `json:"id"`
-		Currency string  `json:"currency"`
-		Splits   []Split `json:"splits,omitempty"`
+		Ticker   string       `json:"ticker"`
+		ID       string       `json:"id"`
+		Currency string       `json:"currency"`
+		Splits   []StockSplit `json:"splits,omitempty"`
 	}
 
 	// Collect securities and sort them by ticker for stable output.

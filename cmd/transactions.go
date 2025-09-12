@@ -344,6 +344,99 @@ func (c *accrueCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 	return subcommands.ExitSuccess
 }
 
+// --- Price Command ---
+
+type priceCmd struct {
+	date   string
+	ticker string
+	price  decimal.Decimal
+}
+
+func (*priceCmd) Name() string     { return "price" }
+func (*priceCmd) Synopsis() string { return "records a price for a security on a specific date" }
+func (*priceCmd) Usage() string {
+	return `pcs price -s <ticker> -d <date> -p <price>
+
+Records the price of a security on a given date in the ledger.
+This is an alternative to storing prices in the market.jsonl file.
+`
+}
+
+func (c *priceCmd) SetFlags(f *flag.FlagSet) {
+	f.StringVar(&c.date, "d", portfolio.Today().String(), "date of the price")
+	f.StringVar(&c.ticker, "s", "", "security ticker")
+	f.Var(DecimalVar(&c.price, "0"), "p", "price per share")
+}
+
+func (c *priceCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	if c.ticker == "" {
+		fmt.Fprintln(os.Stderr, "Error: security ticker (-s) is required")
+		return subcommands.ExitUsageError
+	}
+	if c.price.IsZero() {
+		fmt.Fprintln(os.Stderr, "Error: price (-p) is required and cannot be zero")
+		return subcommands.ExitUsageError
+	}
+
+	date, err := portfolio.ParseDate(c.date)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: invalid date: %v\n", err)
+		return subcommands.ExitUsageError
+	}
+
+	tx := portfolio.NewUpdatePrice(date, c.ticker, portfolio.M(c.price, ""))
+	_, status := handleTransaction(tx, f)
+	return status
+}
+
+// --- Split Command ---
+
+type splitCmd struct {
+	date   string
+	ticker string
+	num    int64
+	den    int64
+}
+
+func (*splitCmd) Name() string     { return "split" }
+func (*splitCmd) Synopsis() string { return "records a stock split for a security" }
+func (*splitCmd) Usage() string {
+	return `pcs split -s <ticker> -d <date> -num <numerator> -den <denominator>
+
+Records a stock split for a security in the ledger.
+For a 2-for-1 split, use -num 2 -den 1.
+For a 1-for-5 reverse split, use -num 1 -den 5.
+`
+}
+
+func (c *splitCmd) SetFlags(f *flag.FlagSet) {
+	f.StringVar(&c.date, "d", portfolio.Today().String(), "effective date of the split")
+	f.StringVar(&c.ticker, "s", "", "security ticker")
+	f.Int64Var(&c.num, "num", 0, "numerator of the split ratio (e.g., 2 in a 2-for-1 split)")
+	f.Int64Var(&c.den, "den", 1, "denominator of the split ratio (e.g., 1 in a 2-for-1 split)")
+}
+
+func (c *splitCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	if c.ticker == "" {
+		fmt.Fprintln(os.Stderr, "Error: security ticker (-s) is required")
+		return subcommands.ExitUsageError
+	}
+	if c.num <= 0 {
+		fmt.Fprintln(os.Stderr, "Error: numerator (-num) must be a positive integer")
+		return subcommands.ExitUsageError
+	}
+
+	date, err := portfolio.ParseDate(c.date)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: invalid date: %v\n", err)
+		return subcommands.ExitUsageError
+	}
+
+	tx := portfolio.NewSplit(date, c.ticker, c.num, c.den)
+	_, status := handleTransaction(tx, f)
+	return status
+}
+
 // handleTransaction processes a transaction by validating it against the current
 // accounting system and then encoding it to the ledger file. It also manages
 // the CLI feedback, printing errors or a success message and returning the

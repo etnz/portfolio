@@ -231,6 +231,41 @@ func decodeLedger(r io.Reader, ledger *Ledger) error {
 				Counterparty: temp.Counterparty,
 				Create:       temp.Create,
 			}
+		case CmdUpdatePrice:
+			var temp struct {
+				secCmd
+				amountCmd
+			}
+			if err := json.Unmarshal(lineBytes, &temp); err != nil {
+				return err
+			}
+			decodedTx = UpdatePrice{
+				secCmd: temp.secCmd,
+				Price:  temp.Money(),
+			}
+		case CmdSplit:
+			var temp struct {
+				secCmd
+				Numerator   int64 `json:"num"`
+				Denominator int64 `json:"den"`
+			}
+			if err := json.Unmarshal(lineBytes, &temp); err != nil {
+				return err
+			}
+			// default Numerator and Denominator to 1
+			if temp.Denominator == 0 {
+				// Default to 1 if not present, which is a common case for JSON unmarshaling of optional int fields.
+				temp.Denominator = 1
+			}
+			if temp.Numerator == 0 {
+				temp.Numerator = 1
+			}
+
+			decodedTx = Split{
+				secCmd:      temp.secCmd,
+				Numerator:   temp.Numerator,
+				Denominator: temp.Denominator,
+			}
 		default:
 			err = fmt.Errorf("unknown transaction command: %q", identifier.Command)
 		}

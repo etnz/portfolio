@@ -2,7 +2,6 @@ package portfolio
 
 import (
 	"time"
-
 )
 
 // DailyReport provides a summary of a single day's portfolio changes, including

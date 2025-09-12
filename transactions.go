@@ -13,14 +13,16 @@ func (c CommandType) IsCashFlow() bool { return c == CmdDeposit || c == CmdWithd
 
 // Command types used for identifying transactions.
 const (
-	CmdAccrue   CommandType = "accrue"
-	CmdBuy      CommandType = "buy"
-	CmdSell     CommandType = "sell"
-	CmdDividend CommandType = "dividend"
-	CmdDeposit  CommandType = "deposit"
-	CmdWithdraw CommandType = "withdraw"
-	CmdConvert  CommandType = "convert"
-	CmdDeclare  CommandType = "declare"
+	CmdAccrue      CommandType = "accrue"
+	CmdBuy         CommandType = "buy"
+	CmdSell        CommandType = "sell"
+	CmdDividend    CommandType = "dividend"
+	CmdDeposit     CommandType = "deposit"
+	CmdWithdraw    CommandType = "withdraw"
+	CmdConvert     CommandType = "convert"
+	CmdDeclare     CommandType = "declare"
+	CmdUpdatePrice CommandType = "update-price"
+	CmdSplit       CommandType = "split"
 )
 
 // Transaction defines the common interface for all types of financial transactions
@@ -633,4 +635,96 @@ func (t *Convert) Validate(ledger *Ledger) error {
 	}
 
 	return nil
+}
+
+// --- UpdatePrice Command ---
+
+// UpdatePrice represents a transaction to record the price of a security on a specific date.
+type UpdatePrice struct {
+	secCmd
+	Price Money `json:"price"`
+}
+
+// NewUpdatePrice creates a new UpdatePrice transaction.
+func NewUpdatePrice(date Date, ticker string, price Money) UpdatePrice {
+	return UpdatePrice{
+		secCmd: secCmd{
+			baseCmd:  baseCmd{Command: CmdUpdatePrice, Date: date},
+			Security: ticker,
+		},
+		Price: price,
+	}
+}
+
+// MarshalJSON implements the json.Marshaler interface for UpdatePrice.
+func (t UpdatePrice) MarshalJSON() ([]byte, error) {
+	var w jsonObjectWriter
+	w.EmbedFrom(t.secCmd)
+	w.EmbedFrom(t.Price)
+	return w.MarshalJSON()
+}
+
+func (t UpdatePrice) Equal(other Transaction) bool {
+	o, ok := other.(UpdatePrice)
+	return ok && t.secCmd == o.secCmd && t.Price.Equal(o.Price)
+}
+
+// Validate checks the UpdatePrice transaction's fields.
+func (t *UpdatePrice) Validate(ledger *Ledger) error {
+	if err := t.secCmd.Validate(ledger); err != nil {
+		return err
+	}
+	if !t.Price.IsPositive() {
+		return fmt.Errorf("price must be positive, got %v", t.Price)
+	}
+	return nil
+}
+
+// --- Split Command ---
+
+// Split represents a stock split event for a security.
+type Split struct {
+	secCmd
+	Numerator   int64 `json:"num"`
+	Denominator int64 `json:"den"`
+}
+
+// NewSplit creates a new Split transaction.
+func NewSplit(date Date, ticker string, num, den int64) Split {
+	return Split{
+		secCmd: secCmd{
+			baseCmd:  baseCmd{Command: CmdSplit, Date: date},
+			Security: ticker,
+		},
+		Numerator:   num,
+		Denominator: den,
+	}
+}
+
+func (t Split) Equal(other Transaction) bool {
+	o, ok := other.(Split)
+	return ok && t.secCmd == o.secCmd && t.Numerator == o.Numerator && t.Denominator == o.Denominator
+}
+
+// Validate checks the Split transaction's fields.
+func (t *Split) Validate(ledger *Ledger) error {
+	if err := t.secCmd.Validate(ledger); err != nil {
+		return err
+	}
+	if t.Numerator <= 0 {
+		return fmt.Errorf("split numerator must be positive, got %d", t.Numerator)
+	}
+	if t.Denominator <= 0 {
+		return fmt.Errorf("split denominator must be positive, got %d", t.Denominator)
+	}
+	return nil
+}
+
+// MarshalJSON implements the json.Marshaler interface for Split.
+func (t Split) MarshalJSON() ([]byte, error) {
+	var w jsonObjectWriter
+	w.EmbedFrom(t.secCmd)
+	w.Append("num", t.Numerator)
+	w.Append("den", t.Denominator)
+	return w.MarshalJSON()
 }

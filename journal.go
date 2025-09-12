@@ -143,6 +143,12 @@ func NewJournal(ledger *Ledger, marketData *MarketData, reportingCurrency string
 		cur:    reportingCurrency,
 	}
 
+	// Keep track of which securities have price/split data from the ledger
+	// to avoid using market.jsonl data for them.
+	// key with alway be on.String()+ticker
+	ledgerPriceSource := make(map[string]struct{})
+	ledgerSplitSource := make(map[ID]struct{})
+
 	for _, tx := range ledger.transactions {
 		switch v := tx.(type) {
 		case Buy:
@@ -150,7 +156,7 @@ func NewJournal(ledger *Ledger, marketData *MarketData, reportingCurrency string
 			if sec == nil {
 				return nil, fmt.Errorf("security %q not declared for buy transaction on %s", v.Security, v.When())
 			}
-			
+
 			journal.events = append(journal.events,
 				acquireLot{on: v.When(), security: v.Security, quantity: v.Quantity, cost: v.Amount},
 				debitCash{on: v.When(), amount: v.Amount, external: false},
@@ -223,6 +229,17 @@ func NewJournal(ledger *Ledger, marketData *MarketData, reportingCurrency string
 					debitCounterparty{on: v.When(), account: v.Counterparty, amount: amount.Neg(), external: true},
 				)
 			}
+		case UpdatePrice:
+			journal.events = append(journal.events,
+				updatePrice{on: v.When(), security: v.Security, price: v.Price},
+			)
+			ledgerPriceSource[v.When().String()+v.Security] = struct{}{}
+		case Split:
+			sec := ledger.Security(v.Security)
+			journal.events = append(journal.events,
+				splitShare{on: v.When(), security: v.Security, numerator: v.Numerator, denominator: v.Denominator},
+			)
+			ledgerSplitSource[sec.ID()] = struct{}{}
 		default:
 			return nil, fmt.Errorf("unhandled transaction type: %T", tx)
 		}
@@ -237,6 +254,9 @@ func NewJournal(ledger *Ledger, marketData *MarketData, reportingCurrency string
 	}
 
 	for id, splits := range marketData.splits {
+		if _, fromLedger := ledgerSplitSource[id]; fromLedger {
+			continue
+		}
 		tickers := idToTickers[id]
 		for _, ticker := range tickers {
 			for _, s := range splits {
@@ -252,7 +272,9 @@ func NewJournal(ledger *Ledger, marketData *MarketData, reportingCurrency string
 		tickers := idToTickers[id]
 		for _, ticker := range tickers {
 			for on, price := range history.Values() {
-				// TODO: History should use Money, not float64 anymore
+				if _, fromLedger := ledgerPriceSource[on.String()+ticker]; fromLedger {
+					continue
+				}
 				cur := marketData.securities[id].Currency()
 				p := M(price, cur)
 				journal.events = append(journal.events,

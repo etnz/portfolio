@@ -20,7 +20,7 @@
             "request": "launch",
             "mode": "debug",
             "program": "pcs/main.go",
-            "args": ["daily", "-d=2025-01-03", "-c=EUR"],
+            "args": ["daily", "-d=-1d", "-c=EUR"],
             "cwd": "/tmp/",
         },
         {

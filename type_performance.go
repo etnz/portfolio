@@ -14,8 +14,8 @@ func NewPerformance(start, end Money) Performance {
 }
 func NewPerformanceWithReturn(start, end Money, ret Percent) Performance {
 	return Performance{
-		Start: start,
-		End:   end,
+		Start:  start,
+		End:    end,
 		Return: ret,
 	}
 }
