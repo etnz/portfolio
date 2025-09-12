@@ -1,7 +1,10 @@
 package portfolio
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"net/http"
@@ -10,6 +13,26 @@ import (
 
 	"github.com/PaesslerAG/jsonpath"
 )
+
+// jwget performs an HTTP GET request to the given address and unmarshals the
+// JSON response body into the provided data structure. It uses the provided
+// http.Client for the request.
+func jwget(client *http.Client, addr string, data interface{}) error {
+	resp, err := client.Get(addr)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("cannot http GET %v/%v: %v", resp.Request.URL.Host, resp.Request.URL.Path, resp.Status)
+	}
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, resp.Body)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	return json.Unmarshal(buf.Bytes(), data)
+}
 
 /*
 	{

@@ -1,10 +1,11 @@
-package portfolio
+package eodhd
 
 import (
 	"bufio"
 	"bytes"
 	"crypto/sha1"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -15,9 +16,9 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
+	"github.com/etnz/portfolio"
 	"github.com/shopspring/decimal"
 )
 
@@ -46,7 +47,7 @@ type diskCache struct {
 func (c *diskCache) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	// get from disk
 	// diskcache implements a unique key per day, so the local tmp expires every day.
-	key := fmt.Sprintf("%s %s %s", Today().String(), req.Method, req.URL.String())
+	key := fmt.Sprintf("%s %s %s", portfolio.Today().String(), req.Method, req.URL.String())
 	key = fmt.Sprintf("daily-%x", sha1.Sum([]byte(key)))
 	//key = url.PathEscape(key)
 
@@ -270,50 +271,48 @@ func eodhdSearchByISIN(apiKey string, isin string) (ticker string, err error) {
 	return content[0].Code + "." + content[0].Exchange, nil
 }
 
-var AdjustedPrices = false
-
 // eodhdDailyMSSI returns the daily prices for a given ISIN and MIC.
-func eodhdDailyMSSI(apiKey, isin, mic string, from, to Date) (prices History[float64], err error) {
+func eodhdDailyMSSI(apiKey, isin, mic string, from, to portfolio.Date, prices map[portfolio.Date]float64) (err error) {
 	// find the eodhd ticker for the given isin and mic
 	ticker, err := eodhdSearchByMSSI(apiKey, isin, mic)
 	if err != nil {
-		return prices, fmt.Errorf("eodhd cannot find a ticker for %s.%s: %w", isin, mic, err)
+		return fmt.Errorf("eodhd cannot find a ticker for %s.%s: %w", isin, mic, err)
 	}
-	_, prices, err = eodhdDaily(apiKey, ticker, from, to)
-	return prices, err
+	err = eodhdDaily(apiKey, ticker, from, to, nil, prices)
+	return err
 }
 
 // eodhdDailyCurrencyPair returns the daily prices for a given currency pair.
-func eodhdDailyCurrencyPair(apiKey, fromCurrency, toCurrency string, from, to Date) (prices History[float64], err error) {
+func eodhdDailyCurrencyPair(apiKey, fromCurrency, toCurrency string, from, to portfolio.Date, prices map[portfolio.Date]float64) (err error) {
 	// The Ticker for forex is in the format "fromCurrency+toCurrency.FOREX".
 	ticker := fmt.Sprintf("%s%s.FOREX", fromCurrency, toCurrency)
-	open, _, err := eodhdDaily(apiKey, ticker, from, to)
+	open := make(map[portfolio.Date]float64)
+	err = eodhdDaily(apiKey, ticker, from, to, open, nil)
 	if err != nil {
-		return prices, err
+		return err
 	}
 	// eodhd forex sucks, the so called close value is probably buggy and equal to the open most of the time.
 	// Instead the open of the next day is the closer to the truth, so be it.
-	var close History[float64]
-	for t, v := range open.Values() {
-		close.Append(t.Add(-1), v)
+	for date, value := range open {
+		prices[date.Add(-1)] = value
 	}
-	return close, nil
+	return nil
 }
 
 // eodhdDailyISIN returns the daily prices for a given ISIN and MIC.
-func eodhdDailyISIN(apiKey, isin string, from, to Date) (prices History[float64], err error) {
+func eodhdDailyISIN(apiKey, isin string, from, to portfolio.Date, prices map[portfolio.Date]float64) (err error) {
 	// find the eodhd ticker for the given isin and mic
 	ticker, err := eodhdSearchByISIN(apiKey, isin)
 	if err != nil {
-		return prices, fmt.Errorf("eodhd cannot find a ticker for %s: %w", isin, err)
+		return fmt.Errorf("eodhd cannot find a ticker for %s: %w", isin, err)
 	}
-	_, prices, err = eodhdDaily(apiKey, ticker, from, to)
-	return prices, err
+	err = eodhdDaily(apiKey, ticker, from, to, nil, prices)
+	return err
 }
 
 // eodhdDaily returns the daily open and adjusted close prices for a given EODHD ticker.
 // The EODHD ticker format is typically "SYMBOL.EXCHANGECODE".
-func eodhdDaily(apiKey, ticker string, from, to Date) (open, close History[float64], err error) {
+func eodhdDaily(apiKey, ticker string, from, to portfolio.Date, open, close map[portfolio.Date]float64) (err error) {
 	// https://eodhd.com/api/eod/NVD.F?api_token=67adc13417e148.00145034&fmt=json
 	// [
 	//
@@ -335,26 +334,26 @@ func eodhdDaily(apiKey, ticker string, from, to Date) (open, close History[float
 
 	addr := fmt.Sprintf("https://eodhd.com/api/eod/%s?fmt=json&api_token=%s&from=%s&to=%s", ticker, apiKey, from, to)
 	type Info struct {
-		Date          Date    `json:"date"`
-		Close         float64 `json:"close"`
-		Open          float64 `json:"open"`
-		AdjustedClose float64 `json:"adjusted_close"`
+		Date          portfolio.Date `json:"date"`
+		Close         float64        `json:"close"`
+		Open          float64        `json:"open"`
+		AdjustedClose float64        `json:"adjusted_close"`
 	}
 
 	// that's the payload
 	content := make([]Info, 0)
 	if err := jwget(newDailyCachingClient(), addr, &content); err != nil {
 		//log.Printf("failed to jwget %s: %v", addr, err)
-		return open, close, err
+		return err
 	}
 
 	for _, info := range content {
-		if AdjustedPrices {
-			close.Append(info.Date, info.AdjustedClose)
-		} else {
-			close.Append(info.Date, info.Close)
+		if close != nil {
+			close[info.Date] = info.AdjustedClose
 		}
-		open.Append(info.Date, info.Open)
+		if open != nil {
+			open[info.Date] = info.Open
+		}
 	}
 	return
 }
@@ -386,61 +385,55 @@ func simplifyDecimalRatio(numDecimal, denDecimal decimal.Decimal) (num, den int6
 }
 
 // eodhdSplits returns the split history for a given EODHD ticker.
-func eodhdSplits(apiKey, ticker string) ([]StockSplit, error) {
+func eodhdSplits(apiKey, ticker string, splits map[portfolio.Date]portfolio.SplitInfo) error {
 	addr := fmt.Sprintf("https://eodhd.com/api/splits/%s?fmt=json&api_token=%s", ticker, apiKey)
 
 	type apiSplit struct {
-		Date  Date   `json:"date"`
-		Split string `json:"split"`
+		Date  portfolio.Date `json:"date"`
+		Split string         `json:"split"`
 	}
 
 	content := make([]apiSplit, 0)
 	if err := jwget(newDailyCachingClient(), addr, &content); err != nil {
-		return nil, err
+		return err
 	}
 
-	splits := make([]StockSplit, 0, len(content))
 	for _, s := range content {
 		parts := strings.Split(s.Split, "/")
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid split format from API: %q", s.Split)
+			return fmt.Errorf("invalid split format from API: %q", s.Split)
 		}
 
 		numDecimal, err := decimal.NewFromString(parts[0])
 		if err != nil {
-			return nil, fmt.Errorf("invalid numerator in split %q: %w", s.Split, err)
+			return fmt.Errorf("invalid numerator in split %q: %w", s.Split, err)
 		}
 		denDecimal, err := decimal.NewFromString(parts[1])
 		if err != nil {
-			return nil, fmt.Errorf("invalid denominator in split %q: %w", s.Split, err)
+			return fmt.Errorf("invalid denominator in split %q: %w", s.Split, err)
 		}
 
 		num, den := simplifyDecimalRatio(numDecimal, denDecimal)
-		split := StockSplit{
-			Date:        s.Date,
+		splits[s.Date] = portfolio.SplitInfo{
 			Numerator:   num,
 			Denominator: den,
 		}
-		splits = append(splits, split)
 	}
-	sort.SliceStable(splits, func(i, j int) bool {
-		return splits[i].Date.Before(splits[j].Date)
-	})
-	return splits, nil
+	return nil
 }
 
 // SearchResult matches the structure of a single item in the EODHD search API response.
 type SearchResult struct {
-	Code              string  `json:"Code"`
-	Exchange          string  `json:"Exchange"`
-	Name              string  `json:"Name"`
-	Type              string  `json:"Type"`
-	Country           string  `json:"Country"`
-	Currency          string  `json:"Currency"`
-	ISIN              string  `json:"ISIN"`
-	PreviousClose     float64 `json:"previousClose"`
-	PreviousCloseDate Date    `json:"previousCloseDate"`
-	MIC               string  `json:"-"` // Populated by Search, not from API directly.
+	Code              string         `json:"Code"`
+	Exchange          string         `json:"Exchange"`
+	Name              string         `json:"Name"`
+	Type              string         `json:"Type"`
+	Country           string         `json:"Country"`
+	Currency          string         `json:"Currency"`
+	ISIN              string         `json:"ISIN"`
+	PreviousClose     float64        `json:"previousClose"`
+	PreviousCloseDate portfolio.Date `json:"previousCloseDate"`
+	MIC               string         `json:"-"` // Populated by Search, not from API directly.
 }
 
 // Search searches for securities via EOD Historical Data API.
@@ -473,4 +466,126 @@ func Search(searchTerm string) ([]SearchResult, error) {
 		}
 	}
 	return newResults, nil
+}
+
+func Fetch(requests map[portfolio.ID]portfolio.Range) (map[portfolio.ID]portfolio.ProviderResponse, error) {
+	f := fetcher{request: requests, response: make(map[portfolio.ID]portfolio.ProviderResponse)}
+	return f.Fetch()
+}
+
+type fetcher struct {
+	request  map[portfolio.ID]portfolio.Range
+	response map[portfolio.ID]portfolio.ProviderResponse
+	// Cache for security details to avoid redundant API calls.
+	securities map[portfolio.ID]portfolio.Security
+}
+
+func (f *fetcher) Fetch() (map[portfolio.ID]portfolio.ProviderResponse, error) {
+	apiKey := eodhdApiKey()
+	if apiKey == "" {
+		return nil, errors.New("EODHD API key is not set. Use -eodhd-api-key flag or EODHD_API_KEY environment variable")
+	}
+
+	var errs error
+
+	for id, reqRange := range f.request {
+		resp := portfolio.ProviderResponse{
+			Prices:    make(map[portfolio.Date]float64),
+			Splits:    make(map[portfolio.Date]portfolio.SplitInfo),
+			Dividends: make(map[portfolio.Date]portfolio.DividendInfo),
+		}
+
+		// Fetch prices
+		if err := f.updateSecurityPrices(id, resp.Prices, reqRange.From, reqRange.To); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("failed to fetch prices for %s: %w", id, err))
+		}
+
+		// Fetch splits
+		err := f.updateSecuritySplits(id, resp.Splits)
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("failed to fetch splits for %s: %w", id, err))
+		}
+
+		// TODO: Fetch dividends (requires EODHD API support and integration)
+
+		f.response[id] = resp
+	}
+
+	return f.response, errs
+
+}
+
+// updateSecurityPrices attempts to fetch and update prices for a single security.
+func (*fetcher) updateSecurityPrices(id portfolio.ID, prices map[portfolio.Date]float64, from, to portfolio.Date) error {
+	apiKey := eodhdApiKey()
+	if apiKey == "" {
+		return errors.New("EODHD API key is not set. Use -eodhd-api-key flag or EODHD_API_KEY environment variable")
+	}
+
+	var err error
+
+	// Determine security type and fetch prices accordingly.
+	if isin, mic, mssiErr := id.MSSI(); mssiErr == nil {
+		// This is an MSSI security.
+		err = eodhdDailyMSSI(apiKey, isin, mic, from, to, prices)
+		if err != nil {
+			return fmt.Errorf("failed to get prices for MSSI %s: %w", id, err)
+		}
+	} else if base, quote, cpErr := id.CurrencyPair(); cpErr == nil {
+		// This is a CurrencyPair.
+		err = eodhdDailyCurrencyPair(apiKey, base, quote, from, to, prices)
+		if err != nil {
+			return fmt.Errorf("failed to get prices for CurrencyPair %s: %w", id, err)
+		}
+	} else if isin, fundErr := id.ISIN(); fundErr == nil {
+		// This is a Fund.
+		err = eodhdDailyISIN(apiKey, isin, from, to, prices)
+		if err != nil {
+			return fmt.Errorf("failed to get prices for ISIN %s: %w", id, err)
+		}
+
+	} else {
+		// This is a private or unsupported security type for updates.
+		return nil // Not an error, just nothing to do.
+	}
+
+	if len(prices) == 0 {
+		log.Printf("no new prices found for security %q between %s and %s", id, from, to)
+		return nil
+	}
+	return nil
+}
+
+func (*fetcher) updateSecuritySplits(sec portfolio.ID, splits map[portfolio.Date]portfolio.SplitInfo) error {
+	apiKey := eodhdApiKey()
+	if apiKey == "" {
+		return errors.New("EODHD API key is not set. Use -eodhd-api-key flag or EODHD_API_KEY environment variable")
+	}
+
+	var ticker string
+	var err error
+
+	// Determine security type and fetch ticker accordingly.
+	if isin, mic, mssiErr := sec.MSSI(); mssiErr == nil {
+		// This is an MSSI security.
+		ticker, err = eodhdSearchByMSSI(apiKey, isin, mic)
+		if err != nil {
+			return fmt.Errorf("failed to get ticker for MSSI %s: %w", sec, err)
+		}
+	} else if isin, fundErr := sec.ISIN(); fundErr == nil {
+		// This is a Fund.
+		ticker, err = eodhdSearchByISIN(apiKey, isin)
+		if err != nil {
+			return fmt.Errorf("failed to get ticker for ISIN %s: %w", sec, err)
+		}
+	} else {
+		// This is a private or unsupported security type for updates.
+		return nil // Not an error, just nothing to do.
+	}
+
+	if ticker == "" {
+		return nil // No ticker found, nothing to do.
+	}
+
+	return eodhdSplits(apiKey, ticker, splits)
 }

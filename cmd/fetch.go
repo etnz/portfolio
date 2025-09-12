@@ -8,6 +8,7 @@ import (
 
 	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/amundi"
+	"github.com/etnz/portfolio/eodhd"
 	"github.com/google/subcommands"
 )
 
@@ -27,6 +28,12 @@ At least one provider must be specified.
 
 Supported providers:
   - amundi: Fetches data for Amundi funds. Requires 'pcs amundi-login' first.
+  - eodhd:  Fetches data from EOD Historical Data. Requires an API key
+            set via the --eodhd-api-key flag or the EODHD_API_KEY
+            environment variable.
+
+Note: If a provider is not specified, 'eodhd' will be used by default
+if an API key is available.
 `
 }
 
@@ -87,6 +94,12 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 
 	allResponses := make(map[portfolio.ID]portfolio.ProviderResponse)
 
+	if len(providers) == 0 {
+		fmt.Fprintln(os.Stderr, "Error: at least one provider must be specified, and no default provider could be set.")
+		f.Usage()
+		return subcommands.ExitUsageError
+	}
+
 	for _, provider := range providers {
 		switch provider {
 		case "amundi":
@@ -97,6 +110,15 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 			}
 			// In the future, we would merge responses carefully.
 			for id, resp := range amundiResponses {
+				allResponses[id] = resp
+			}
+		case "eodhd":
+			eodhdResponses, err := eodhd.Fetch(requests)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error fetching from EODHD: %v\n", err)
+				// Don't exit, other providers might succeed.
+			}
+			for id, resp := range eodhdResponses {
 				allResponses[id] = resp
 			}
 		default:

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/etnz/portfolio"
+	"github.com/etnz/portfolio/eodhd"
 	"github.com/google/subcommands"
 )
 
@@ -38,7 +39,7 @@ func (c *searchSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...int
 	}
 	searchTerm := strings.Join(f.Args(), " ")
 
-	results, err := portfolio.Search(searchTerm)
+	results, err := eodhd.Search(searchTerm)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error searching securities: %v\n", err)
 		return subcommands.ExitFailure
