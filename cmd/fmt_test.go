@@ -28,8 +28,8 @@ func createTempLedger(t *testing.T, content string) string {
 	return tmpfile.Name()
 }
 
-// TestFormatLedgerDefaultOutput tests the default behavior (writes to default ledger file)
-func TestFormatLedgerDefaultOutput(t *testing.T) {
+// TestFmtDefaultOutput tests the default behavior (writes to default ledger file)
+func TestFmtDefaultOutput(t *testing.T) {
 	// Arrange
 	originalLedgerContent := `
 	{"command":"buy","date":"2025-01-02","security":"MSFT","quantity":10,"amount":1000}
@@ -43,7 +43,7 @@ func TestFormatLedgerDefaultOutput(t *testing.T) {
 	// Create a temporary default ledger file
 	tempLedgerFile := createTempLedger(t, originalLedgerContent)
 
-	cmd := &formatLedgerCmd{}
+	cmd := &fmtCmd{}
 	f := flag.NewFlagSet("test", flag.ContinueOnError)
 	cmd.SetFlags(f)
 
@@ -71,8 +71,8 @@ func TestFormatLedgerDefaultOutput(t *testing.T) {
 	}
 }
 
-// TestFormatLedgerToFileOutput tests writing to a specified output file
-func TestFormatLedgerToFileOutput(t *testing.T) {
+// TestFmtToFileOutput tests writing to a specified output file
+func TestFmtToFileOutput(t *testing.T) {
 	// Arrange
 	originalLedgerContent := `
 	{"command":"buy","date":"2025-01-02","security":"MSFT","quantity":10,"amount":1000}
@@ -89,7 +89,7 @@ func TestFormatLedgerToFileOutput(t *testing.T) {
 	// Create a temporary output file path
 	tempOutputFile := filepath.Join(t.TempDir(), "test_output.jsonl")
 
-	cmd := &formatLedgerCmd{}
+	cmd := &fmtCmd{}
 	f := flag.NewFlagSet("test", flag.ContinueOnError)
 	cmd.SetFlags(f)
 	f.Set("o", tempOutputFile) // Set the output file flag
@@ -118,8 +118,8 @@ func TestFormatLedgerToFileOutput(t *testing.T) {
 	}
 }
 
-// TestFormatLedgerToStdoutOutput tests writing to stdout
-func TestFormatLedgerToStdoutOutput(t *testing.T) {
+// TestFmtToStdoutOutput tests writing to stdout
+func TestFmtToStdoutOutput(t *testing.T) {
 	// Arrange
 	originalLedgerContent := `
 	{"command":"buy","date":"2025-01-02","security":"MSFT","quantity":10,"amount":1000}
@@ -142,7 +142,7 @@ func TestFormatLedgerToStdoutOutput(t *testing.T) {
 		os.Stdout = oldStdout
 	}()
 
-	cmd := &formatLedgerCmd{}
+	cmd := &fmtCmd{}
 	f := flag.NewFlagSet("test", flag.ContinueOnError)
 	cmd.SetFlags(f)
 	f.Set("o", "-") // Set the output to stdout

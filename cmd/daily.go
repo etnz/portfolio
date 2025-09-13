@@ -58,7 +58,7 @@ func (c *dailyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 			err := ledger.UpdateIntraday()
 			if err != nil {
 				// This is not a fatal error, we can continue with stale prices.
-				fmt.Fprintf(os.Stderr, "Warning: could not update some intraday prices: %v\n", err)
+				//fmt.Fprintf(os.Stderr, "Warning: could not update some intraday prices: %v\n", err)
 			}
 		}
 

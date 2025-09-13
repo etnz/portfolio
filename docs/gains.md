@@ -25,7 +25,7 @@ pcs declare -d 2025-01-02 -s MSFT -id US0378331005.XNAS -c USD
 pcs declare -d 2025-01-02 -s EURUSD -id EURUSD -c EUR
 pcs buy -d 2025-01-02 -s MSFT -q 10 -a 4000
 # Manually updating market data to explicitly show price changes.
-# In a real-world daily routine, `pcs fetch-security` would automate this.
+# In a real-world daily routine, `pcs fetch eodhd` would automate this.
 pcs price -s MSFT -d 2025-02-28 -p 400
 pcs price -s MSFT -d 2025-03-05 -p 420
 pcs price -s MSFT -d 2025-03-31 -p 450
@@ -65,8 +65,8 @@ pcs deposit -d 2025-01-01 -c USD -a 2000
 pcs declare -d 2025-01-01 -s GOOG -id US02079K3059.XNAS -c USD
 pcs declare -d 2025-01-01 -s EURUSD -id EURUSD -c EUR
 pcs buy -d 2025-01-02 -s GOOG -q 10 -a 1000
-# Manually updating market data to explicitly show price changes.
-# In a real-world daily routine, `pcs fetch-security` would automate this.
+# Manually updating market data to explicitly show price changes. 
+# In a real-world daily routine, `pcs fetch eodhd` would automate this.
 pcs price -d 2025-02-28 -s GOOG -p 120
 pcs price -d 2025-03-15 -s GOOG -p 110
 pcs price -d 2025-03-31 -s GOOG -p 110

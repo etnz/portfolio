@@ -30,7 +30,7 @@ pcs declare -d 2025-01-01 -s MSFT -id US0378331005.XNAS -c USD
 pcs declare -d 2025-01-02 -s EURUSD -id EURUSD -c USD
 pcs buy -d 2025-01-02 -s MSFT -q 10 -a 4000
 # Manually updating market data to explicitly show price changes.
-# In a real-world daily routine, `pcs fetch-security` would automate this.
+# In a real-world daily routine, `pcs fetch eodhd` would automate this.
 pcs price -s MSFT -d 2025-03-05 -p 420
 pcs price -s EURUSD -d 2025-03-05 -p 1.1
 ```

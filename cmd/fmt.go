@@ -14,16 +14,16 @@ import (
 	"github.com/google/subcommands"
 )
 
-type formatLedgerCmd struct {
+type fmtCmd struct {
 	outputFile string
 }
 
-func (*formatLedgerCmd) Name() string { return "format-ledger" }
-func (*formatLedgerCmd) Synopsis() string {
+func (*fmtCmd) Name() string { return "fmt" }
+func (*fmtCmd) Synopsis() string {
 	return "validates and formats the ledger file into a canonical form"
 }
-func (*formatLedgerCmd) Usage() string {
-	return `pcs format-ledger [-o <file_path>]
+func (*fmtCmd) Usage() string {
+	return `pcs fmt [-o <file_path>]
 
   Validates and formats the ledger file. This command reads all transactions,
   validates them, applies available quick-fixes (like resolving "sell all"),
@@ -32,21 +32,21 @@ func (*formatLedgerCmd) Usage() string {
 
 Usage Examples:
 # Writes to the default ledger file.
-$ pcs format-ledger
+$ pcs fmt
 
 # Writes the output to /tmp/my-custom-ledger.txt.
-$ pcs format-ledger -o /tmp/my-custom-ledger.txt
+$ pcs fmt -o /tmp/my-custom-ledger.txt
 
 # Writes output to stdout, which is then piped to the 'less' command.
-$ pcs format-ledger -o - | less
+$ pcs fmt -o - | less
 `
 }
 
-func (p *formatLedgerCmd) SetFlags(f *flag.FlagSet) {
+func (p *fmtCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.outputFile, "o", "", "Output file path. Use '-' for stdout.")
 }
 
-func (p *formatLedgerCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (p *fmtCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	log.Printf("input file=%s", *ledgerFile)
 
 	// We need to decode with validation the
