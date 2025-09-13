@@ -214,17 +214,24 @@ func (l *Ledger) Append(txs ...Transaction) {
 // appends the new transaction.
 func (l *Ledger) AppendOrUpdate(txs ...Transaction) {
 	for _, tx := range txs {
+		var replaced bool
 		switch newTx := tx.(type) {
 		case UpdatePrice:
 			for i, existingTx := range l.transactions {
-				if oldTx, ok := existingTx.(UpdatePrice); ok &&
-					oldTx.When() == newTx.When() &&
-					oldTx.Security == newTx.Security &&
-					!oldTx.Price.Equal(newTx.Price) {
-					// put it in a returned slice so that the cmd can print it
-					log.Printf("%v: update %v existing Price %s with %s", oldTx.Date, oldTx.Security, oldTx.Price, newTx.Price)
-					l.transactions[i] = newTx // Replace existing
-					continue
+				if oldTx, ok := existingTx.(UpdatePrice); ok && oldTx.When() == newTx.When() {
+					// An UpdatePrice for this day already exists. Merge the prices.
+					if oldTx.Prices == nil {
+						oldTx.Prices = make(map[string]decimal.Decimal)
+					}
+					for ticker, price := range newTx.Prices {
+						if old, existed := oldTx.Prices[ticker]; !existed || !old.Equal(price) {
+							log.Printf("%v: update %v price from %s with %s", newTx.Date, ticker, old, price)
+							oldTx.Prices[ticker] = price
+						}
+					}
+					l.transactions[i] = oldTx // Update in place.
+					replaced = true
+					break // Found the right day, no need to check further.
 				}
 			}
 		case Split:
@@ -235,7 +242,8 @@ func (l *Ledger) AppendOrUpdate(txs ...Transaction) {
 					(oldTx.Numerator != newTx.Numerator || oldTx.Denominator != newTx.Denominator) {
 					log.Printf("%v: update %v split %v/%v with %v/%v", oldTx.Date, oldTx.Security, oldTx.Numerator, oldTx.Denominator, newTx.Numerator, newTx.Denominator)
 					l.transactions[i] = newTx // Replace existing
-					continue
+					replaced = true
+					break
 				}
 			}
 		case Dividend:
@@ -244,16 +252,18 @@ func (l *Ledger) AppendOrUpdate(txs ...Transaction) {
 					if oldTx.When() == newTx.When() && oldTx.Security == newTx.Security {
 						log.Printf("%v: update %v dividend per share %v with %v", oldTx.Date, oldTx.Security, oldTx.DividendPerShare, newTx.DividendPerShare)
 						l.transactions[i] = newTx // Replace existing
-						continue
+						replaced = true
+						break
 					}
 				}
 			}
 		}
 
-		// If no existing transaction was found and replaced, append the new one.
-		l.Append(tx)
-		log.Printf("%v: append %q %v", tx.When(), tx.What(), tx)
-
+		if !replaced {
+			// If no existing transaction was found and replaced, append the new one.
+			l.Append(tx)
+			log.Printf("%v: append %q %v", tx.When(), tx.What(), tx)
+		}
 	}
 }
 
@@ -566,13 +576,15 @@ func (l *Ledger) LastKnownMarketDataDate(security string) (Date, bool) {
 
 		switch v := tx.(type) {
 		case UpdatePrice:
-			if v.Security == security {
-				return v.When(), true
+			if _, ok := v.Prices[security]; ok {
+				return v.Date, true
 			}
 		case Split:
 			if v.Security == security {
 				return v.When(), true
 			}
+		default:
+			// to avoid lint warning
 		}
 	}
 	return Date{}, false
@@ -590,10 +602,16 @@ func (l *Ledger) InceptionDate(security string) (Date, bool) {
 			ticker = v.Security
 		case Dividend:
 			ticker = v.Security
-		case Declare:
+		case Declare: // ignore declare the date is meaningless.
 			ticker = v.Ticker
 		case UpdatePrice:
-			ticker = v.Security
+			// An UpdatePrice can have multiple tickers, so we need to check them all.
+			for t := range v.Prices {
+				if t == security {
+					return tx.When(), true
+				}
+			}
+			continue // Skip to next transaction
 		case Split:
 			ticker = v.Security
 		default:

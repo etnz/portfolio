@@ -27,7 +27,7 @@ pcs deposit -d 2025-01-01 -c EUR -a 10000
 pcs deposit -d 2025-01-01 -c USD -a 5000
 # Add stock to the ledger and make the first buy transaction.
 pcs declare -d 2025-01-01 -s MSFT -id US0378331005.XNAS -c USD
-pcs declare -d 2025-01-02 -s EURUSD -id EURUSD -c EUR
+pcs declare -d 2025-01-02 -s EURUSD -id EURUSD -c USD
 pcs buy -d 2025-01-02 -s MSFT -q 10 -a 4000
 # Manually updating market data to explicitly show price changes.
 # In a real-world daily routine, `pcs fetch-security` would automate this.

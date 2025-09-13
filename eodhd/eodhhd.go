@@ -310,7 +310,7 @@ func eodhdDailyISIN(apiKey, isin string, from, to portfolio.Date, prices map[por
 	return err
 }
 
-// eodhdDaily returns the daily open and adjusted close prices for a given EODHD ticker.
+// eodhdDaily returns the daily open and close prices for a given EODHD ticker.
 // The EODHD ticker format is typically "SYMBOL.EXCHANGECODE".
 func eodhdDaily(apiKey, ticker string, from, to portfolio.Date, open, close map[portfolio.Date]float64) (err error) {
 	// https://eodhd.com/api/eod/NVD.F?api_token=67adc13417e148.00145034&fmt=json
@@ -349,7 +349,7 @@ func eodhdDaily(apiKey, ticker string, from, to portfolio.Date, open, close map[
 
 	for _, info := range content {
 		if close != nil {
-			close[info.Date] = info.AdjustedClose
+			close[info.Date] = info.Close
 		}
 		if open != nil {
 			open[info.Date] = info.Open

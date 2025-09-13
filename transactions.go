@@ -3,7 +3,11 @@ package portfolio
 import (
 	"errors"
 	"fmt"
+	"iter"
+	"maps"
 	"slices"
+
+	"github.com/shopspring/decimal"
 )
 
 // CommandType is a typed string for identifying transaction commands.
@@ -653,43 +657,90 @@ func (t *Convert) Validate(ledger *Ledger) error {
 
 // --- UpdatePrice Command ---
 
-// UpdatePrice represents a transaction to record the price of a security on a specific date.
+// UpdatePrice represents a transaction to record the prices of multiple securities on a specific date.
 type UpdatePrice struct {
-	secCmd
-	Price Money `json:"price"`
+	baseCmd
+	Prices map[string]decimal.Decimal
 }
 
-// NewUpdatePrice creates a new UpdatePrice transaction.
+// NewUpdatePrice creates a new UpdatePrice transaction for a single security.
+// This is kept for backward compatibility and ease of transition.
 func NewUpdatePrice(date Date, ticker string, price Money) UpdatePrice {
 	return UpdatePrice{
-		secCmd: secCmd{
-			baseCmd:  baseCmd{Command: CmdUpdatePrice, Date: date},
-			Security: ticker,
-		},
-		Price: price,
+		baseCmd: baseCmd{Command: CmdUpdatePrice, Date: date},
+		Prices:  map[string]decimal.Decimal{ticker: price.value},
+	}
+}
+
+// NewUpdatePrices creates a new UpdatePrice transaction for multiple securities.
+func NewUpdatePrices(date Date, prices map[string]decimal.Decimal) UpdatePrice {
+	return UpdatePrice{
+		baseCmd: baseCmd{Command: CmdUpdatePrice, Date: date},
+		Prices:  prices,
 	}
 }
 
 // MarshalJSON implements the json.Marshaler interface for UpdatePrice.
 func (t UpdatePrice) MarshalJSON() ([]byte, error) {
 	var w jsonObjectWriter
-	w.EmbedFrom(t.secCmd)
-	w.EmbedFrom(t.Price)
+	w.EmbedFrom(t.baseCmd)
+
+	// Custom marshaling for the 'prices' map to ensure stable key order.
+	var pricesObject jsonObjectWriter
+	for ticker, price := range t.PricesIter() {
+		pricesObject.Append(ticker, price)
+	}
+	pricesBytes, err := pricesObject.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	// Manually append the 'prices' object to the main writer.
+	w.WriteString(`"prices":`)
+	w.Write(pricesBytes)
+	w.WriteString(",")
+
 	return w.MarshalJSON()
+}
+
+// PricesIter returns an iterator that yields ticker and price pairs in a stable, sorted order.
+func (t UpdatePrice) PricesIter() iter.Seq2[string, decimal.Decimal] {
+	keys := slices.Collect(maps.Keys(t.Prices))
+	slices.Sort(keys)
+	// return the iterator in keys order
+	return func(yield func(string, decimal.Decimal) bool) {
+		for _, key := range keys {
+			if !yield(key, t.Prices[key]) {
+				return
+			}
+		}
+	}
+
 }
 
 func (t UpdatePrice) Equal(other Transaction) bool {
 	o, ok := other.(UpdatePrice)
-	return ok && t.secCmd == o.secCmd && t.Price.Equal(o.Price)
+	if !ok || t.baseCmd != o.baseCmd || len(t.Prices) != len(o.Prices) {
+		return false
+	}
+	for k, v := range t.Prices {
+		if ov, ok := o.Prices[k]; !ok || !v.Equal(ov) {
+			return false
+		}
+	}
+	return true
 }
 
 // Validate checks the UpdatePrice transaction's fields.
 func (t *UpdatePrice) Validate(ledger *Ledger) error {
-	if err := t.secCmd.Validate(ledger); err != nil {
-		return err
-	}
-	if !t.Price.IsPositive() {
-		return fmt.Errorf("price must be positive, got %v", t.Price)
+	t.baseCmd.Validate()
+	for ticker, price := range t.Prices {
+		if ledger.Security(ticker) == nil {
+			return fmt.Errorf("security %q not declared in ledger", ticker)
+		}
+		if !price.IsPositive() {
+			return fmt.Errorf("price for %s must be positive, got %v", ticker, price)
+		}
 	}
 	return nil
 }

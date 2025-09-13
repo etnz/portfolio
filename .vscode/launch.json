@@ -65,7 +65,7 @@
             "request": "launch",
             "mode": "debug",
             "program": "pcs/main.go",
-            "args": [ "holding"],
+            "args": [ "holding", "-d=2025-03-05", "-c=USD"],
             "cwd": "/tmp/",
         },
         {

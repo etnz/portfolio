@@ -2,6 +2,8 @@ package portfolio
 
 import (
 	"fmt"
+
+	"github.com/shopspring/decimal"
 )
 
 // event represents a single, atomic operation in the portfolio's history.
@@ -205,6 +207,10 @@ func newJournal(ledger *Ledger, reportingCurrency string) (*Journal, error) {
 				creditCash{on: v.When(), amount: v.ToAmount},
 			)
 		case Declare:
+			if _, _, err := v.ID.CurrencyPair(); err == nil {
+				continue // do not declare currency as securities
+			}
+
 			journal.events = append(journal.events,
 				declareSecurity{on: v.When(), ticker: v.Ticker, id: v.ID, currency: v.Currency},
 			)
@@ -223,32 +229,36 @@ func newJournal(ledger *Ledger, reportingCurrency string) (*Journal, error) {
 				)
 			}
 		case UpdatePrice:
-			// either update forex or price
-			sec := ledger.securities[v.Security]
-			if base, quote, isCur := sec.id.CurrencyPair(); isCur == nil {
-				// updateForex into the target cur
+			for ticker, priceDecimal := range v.PricesIter() {
+				sec := ledger.Security(ticker)
+				if sec == nil {
+					// This should have been caught by validation, but we check again.
+					return nil, fmt.Errorf("security %q from update-price not declared", ticker)
+				}
+				price := M(priceDecimal, sec.Currency())
 
-				if quote == reportingCurrency {
-					// This is directly the right pair
-					v.Price.cur = quote
-					journal.events = append(journal.events,
-						updateForex{on: v.When(), currency: base, rate: v.Price},
-					)
+				// Handle forex updates
+				if base, quote, err := sec.ID().CurrencyPair(); err == nil {
+					if quote == reportingCurrency {
+						journal.events = append(journal.events,
+							updateForex{on: v.When(), currency: base, rate: price},
+						)
+					}
+					if base == reportingCurrency {
+						p := M(decimal.NewFromInt(1).Div(price.value), base)
+						p.value = p.value.Round(5) // is enought for an approximate price anyway.
+						journal.events = append(journal.events,
+							updateForex{on: v.When(), currency: quote, rate: p},
+						)
+					}
+					continue
 				}
-				if base == reportingCurrency {
-					// This is the inverse pair
-					p := M(1/v.Price.AsFloat(), base)
-					p.value = p.value.Round(5) // is enought for an approximate price anyway.
-					journal.events = append(journal.events,
-						updateForex{on: v.When(), currency: quote, rate: p},
-					)
-				}
+
+				// Handle regular security price updates
+				journal.events = append(journal.events,
+					updatePrice{on: v.When(), security: ticker, price: price},
+				)
 			}
-			// Update Sec
-			v.Price.cur = ledger.securities[v.Security].Currency()
-			journal.events = append(journal.events,
-				updatePrice{on: v.When(), security: v.Security, price: v.Price},
-			)
 
 		case Split:
 			journal.events = append(journal.events,

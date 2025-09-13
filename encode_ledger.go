@@ -239,15 +239,15 @@ func decodeLedger(r io.Reader, ledger *Ledger) error {
 			}
 		case CmdUpdatePrice:
 			var temp struct {
-				secCmd
-				amountCmd
+				baseCmd
+				Prices map[string]decimal.Decimal `json:"prices"`
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
 				return err
 			}
 			decodedTx = UpdatePrice{
-				secCmd: temp.secCmd,
-				Price:  temp.Money(),
+				baseCmd: temp.baseCmd,
+				Prices:  temp.Prices,
 			}
 		case CmdSplit:
 			var temp struct {

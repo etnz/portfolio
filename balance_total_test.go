@@ -8,10 +8,11 @@ import (
 func TestBalance_TotalPortfolioValue(t *testing.T) {
 	ledger := NewLedger()
 	o := NewDate(2025, time.January, 1)
-	apple := NewSecurity(AAPL, "AAPL", "USD")
-	google := NewSecurity(GOOG, "GOOG", "USD")
 	ledger.Append(
-		NewDeclare(o, "", apple.Ticker(), apple.ID(), apple.Currency()), NewDeclare(o, "", google.Ticker(), google.ID(), google.Currency()), NewAccrue(o, "interest", "bux", EUR(10.0)),
+		NewDeclare(o, "", "AAPL", AAPL, "USD"),
+		NewDeclare(o, "", "USDEUR", "USDEUR", "EUR"),
+		NewDeclare(o, "", "GOOG", GOOG, "USD"),
+		NewAccrue(o, "interest", "bux", EUR(10.0)),
 		NewDeposit(NewDate(2025, time.January, 5), "", EUR(10.0), "bux"),
 		NewDeposit(NewDate(2025, time.January, 5), "", EUR(10000), ""),
 		NewDeposit(NewDate(2025, time.January, 10), "", USD(50000), ""),

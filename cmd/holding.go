@@ -45,18 +45,18 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		c.update = true
 	}
 
-	if c.update {
-		// err := market.UpdateIntraday()
-		// if err != nil {
-		// 	fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
-		// 	return subcommands.ExitFailure
-		// }
-	}
-
 	ledger, err := DecodeLedger()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error decoding ledger: %v\n", err)
 		return subcommands.ExitFailure
+	}
+
+	if c.update {
+		err := ledger.UpdateIntraday()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
+			return subcommands.ExitFailure
+		}
 	}
 
 	report, err := portfolio.NewHoldingReport(ledger, on, c.currency)
