@@ -2,10 +2,12 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 
+	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/renderer"
 	"github.com/google/subcommands"
 )
@@ -33,15 +35,20 @@ func (c *historyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitUsageError
 	}
 
-	as, err := DecodeAccountingSystem()
+	ledger, err := DecodeLedger()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating accounting system: %v\n", err)
+		if errors.Is(err, os.ErrNotExist) {
+			fmt.Fprintln(os.Stderr, "Ledger file not found. Nothing to report.")
+			return subcommands.ExitSuccess
+		}
+		fmt.Fprintf(os.Stderr, "Error decoding ledger: %v\n", err)
 		return subcommands.ExitFailure
 	}
 
-	report, err := as.NewHistory(c.security, c.currency)
+	// The reporting currency for history is based on the asset's own currency.
+	report, err := portfolio.NewHistory(ledger, c.security, c.currency, *defaultCurrency)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error calculating history: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error generating history report: %v\n", err)
 		return subcommands.ExitFailure
 	}
 

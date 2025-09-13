@@ -18,17 +18,17 @@ The design of `pcs` is guided by a set of core principles that inform all develo
 This section defines the key conceptual entities that form the domain language of the portfolio.
 
 * **Ledger (`ledger.go`, `transactions.go`):** The immutable, chronological record of all user-initiated actions (buys, sells, deposits). It represents the user's input and financial history.
-* **Market Data (`market.go`):** A database of security information and their historical prices. It represents data from the external financial world.
-* **Security ID (`security.go`):** The crucial, unambiguous link between the **Ledger** and **Market Data**. It decouples the user's personal, short-hand tickers from the global, canonical identifiers of financial assets.
+* **Market Data (within `ledger.go`):** Security information (definitions, prices, splits) is now stored directly within the ledger as special transaction types (`declare`, `update-price`, `split`). This makes the ledger the single source of truth for all portfolio-related data, both personal and market-based.
+* **Security ID (`type_id.go`):** The crucial, unambiguous link that decouples the user's personal, short-hand tickers from the global, canonical identifiers of financial assets.
 * **Counterparty Account:** A new core concept representing the financial balance with a specific external entity (e.g., "Landlord", "John Doe", "ClientX").
-* **Accounting System (`accounting.go`):** The stateless "brain" of the application. It is a pure function that takes the **Ledger** and **Market Data** as input and produces insights (e.g., holdings, gains, performance summaries) as output.
+* **Reporting Functions (e.g., `reports_holding.go`):** Stateless "brains" of the application. They are pure functions that take the **Ledger** as input and produce insights (e.g., holdings, gains, performance summaries) as output.
 
 ---
 ## 3. Components (The Code Modules)
 
 This section describes the main Go packages and their distinct responsibilities.
 
-* **`portfolio` (Core Logic):** This is the main library package containing the implementation of the Core Ontology (`ledger.go`, `market.go`, `security.go`) and the business logic (`accounting.go`). This package is completely decoupled from the user interface and data persistence layers.
+* **`portfolio` (Core Logic):** This is the main library package containing the implementation of the Core Ontology (`ledger.go`, `transactions.go`, `type_id.go`) and the business logic (reporting functions). This package is completely decoupled from the user interface and data persistence layers.
 * **`cmd` (User Interface):** This package implements the command-line interface. Each command is a thin wrapper that is responsible for parsing flags, validating user input, and calling the appropriate logic in the `portfolio` package to perform actions or calculations. It also contains the logic for discovering and executing external extension commands.
 * **Persistence (within `portfolio` package):** This component is responsible for all I/O operations. It handles the encoding and decoding of the Ledger and Market Data to and from the `.jsonl` file format. It ensures data is read and written in a canonical, backward-compatible way. Import/export logic for specific formats (e.g., Amundi) is handled by dedicated commands in the `cmd` package.
 * **External Data Sources (within `portfolio` package):** These components (e.g., `eodhd.go`) are responsible for fetching data from third-party APIs. They are the only parts of the application that are permitted to make network requests.
@@ -38,8 +38,7 @@ This section describes the main Go packages and their distinct responsibilities.
 
 This section describes the physical layout and format of the data stored on disk.
 
-* **`transactions.jsonl`:** Stores the **Ledger**. It is an append-only file where each line is a single JSON object representing a transaction. For canonical representation, the file is sorted by date.
-* **`market.jsonl`:** Stores the **Market Data**, including security definitions and their complete price and split histories. Each line represents a distinct piece of market data.
+* **`transactions.jsonl`:** Stores the **Ledger**. It is an append-only file where each line is a single JSON object representing a transaction (including personal transactions like buys/sells and market data like prices/splits). For canonical representation, the file is sorted by date.
 
 ---
 ## 5. Documentation and Artifacts

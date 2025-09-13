@@ -489,6 +489,15 @@ func (c *declareCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 }
 
+// GenerateCommand generates the 'pcs add-security' command string with the given parameters.
+// This function is primarily used by the 'search-security' command to construct the
+// command needed to add a selected security. It's crucial to keep the flags and
+// their names in sync with the 'add-security' command's SetFlags method.
+func (c *declareCmd) GenerateCommand(ticker, id, currency string) string {
+	// TODO: use const for flag names.
+	return fmt.Sprintf("pcs declare -%s='%s' -%s='%s' -%s='%s'", "s", ticker, "id", id, "c", currency)
+}
+
 func (c *declareCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if c.ticker == "" || c.id == "" || c.currency == "" {
 		fmt.Fprintln(os.Stderr, "Error: -s, -id, and -c flags are all required.")

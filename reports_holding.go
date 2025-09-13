@@ -44,20 +44,22 @@ type CounterpartyHolding struct {
 	Value    Money // In reporting currency
 }
 
-// TODO convert from a method of accountingsystem to a constructor of Holding Report
-
 // NewHoldingReport calculates and returns a detailed holdings report for a given date.
-func (as *AccountingSystem) NewHoldingReport(on Date) (*HoldingReport, error) {
+func NewHoldingReport(ledger *Ledger, on Date, reportingCurrency string) (*HoldingReport, error) {
 	report := &HoldingReport{
 		Date:              on,
 		Time:              time.Now(), // Generation time
-		ReportingCurrency: as.ReportingCurrency,
+		ReportingCurrency: reportingCurrency,
 		Securities:        []SecurityHolding{},
 		Cash:              []CashHolding{},
 		Counterparties:    []CounterpartyHolding{},
 	}
 
-	balance, err := as.Balance(on)
+	journal, err := newJournal(ledger, reportingCurrency)
+	if err != nil {
+		return nil, err
+	}
+	balance, err := NewBalance(journal, on, FIFO)
 	if err != nil {
 		return nil, err
 	}

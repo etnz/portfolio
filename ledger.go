@@ -1,8 +1,10 @@
 package portfolio
 
 import (
+	"errors"
 	"fmt"
 	"iter"
+	"log"
 	"maps"
 	"slices"
 	"sort"
@@ -75,6 +77,128 @@ func (l *Ledger) Security(ticker string) *Security {
 	return &sec
 }
 
+// Validate checks a transaction for correctness and applies quick fixes where
+// applicable (e.g., resolving "sell all"). It returns the validated (and
+// potentially modified) transaction or an error detailing any validation failures.
+func (l *Ledger) Validate(tx Transaction, reportingCurrency string) (Transaction, error) {
+	// For validations that need the state of the portfolio, we compute the balance
+	// on the transaction date.
+	var err error
+	switch v := tx.(type) {
+	case Buy:
+		err = v.Validate(l)
+		tx = v
+	case Sell:
+		// todo: recomputing the whole journal everytime is expensive.
+		var j *Journal
+		j, err = newJournal(l, reportingCurrency)
+		if err != nil {
+			return nil, fmt.Errorf("invalid journal: %w", err)
+		}
+
+		balance, e := NewBalance(j, tx.When(), FIFO) // TODO: Make cost basis method configurable
+		if e != nil {
+			return nil, fmt.Errorf("could not create balance from journal: %w", e)
+		}
+		err = v.Validate(l, balance)
+		tx = v
+	case Dividend:
+		var j *Journal
+		j, err = newJournal(l, reportingCurrency)
+		if err != nil {
+			return nil, fmt.Errorf("invalid journal: %w", err)
+		}
+		balance, e := NewBalance(j, tx.When(), FIFO) // TODO: Make cost basis method configurable
+		if e != nil {
+			return nil, fmt.Errorf("could not create balance from journal: %w", e)
+		}
+		err = v.Validate(l, balance)
+		tx = v
+	case Deposit:
+		err = v.Validate(l)
+		tx = v
+	case Withdraw:
+		err = v.Validate(l)
+		tx = v
+	case Convert:
+		err = v.Validate(l)
+		tx = v
+	case Declare:
+		err = v.Validate(l)
+		tx = v
+	case Accrue:
+		err = v.Validate(l)
+		tx = v
+	case UpdatePrice:
+		err = v.Validate(l)
+		tx = v
+	case Split:
+		err = v.Validate(l)
+		tx = v
+	default:
+		return tx, fmt.Errorf("unsupported transaction type for validation: %T %v", tx, tx)
+	}
+	if err != nil {
+		return tx, fmt.Errorf("invalid %s transaction on %v: %w", tx.What(), tx.When(), err)
+	}
+	return tx, nil
+}
+
+// UpdateIntraday fetches the latest intraday prices for all securities in the ledger
+// from the tradegate provider and updates the ledger with them.
+func (l *Ledger) UpdateIntraday() error {
+	var newTxs []Transaction
+	var errs error
+
+	// Update the EURUSD ticker
+	val, err := tradegateLatestEURperUSD()
+	if err != nil {
+		errs = errors.Join(errs, fmt.Errorf("could not fetch EUR/USD rate: %w", err))
+	} else {
+		// Tradegate gives EUR per USD, we want USD per EUR for conversion.
+		// We create a fake ticker to store this.
+		// TODO: This is a hack. Forex rates should be handled more elegantly.
+		newTxs = append(newTxs, NewUpdatePrice(Today(), "USDEUR", M(1/val, "EUR")))
+	}
+
+	// then update stocks
+	for sec := range l.AllSecurities() {
+		var latest float64
+		var err error
+
+		id := sec.ID()
+		if isin, _, mssiErr := id.MSSI(); mssiErr == nil {
+			latest, err = tradegateLatest(sec.Ticker(), isin)
+		} else if isin, fundErr := id.ISIN(); fundErr == nil {
+			latest, err = tradegateLatest(sec.Ticker(), isin)
+		} else {
+			// Not a public stock/fund, skip.
+			continue
+		}
+
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("could not get intraday for %s: %w", sec.Ticker(), err))
+			continue
+		}
+
+		var price Money
+		switch sec.Currency() {
+		case "USD":
+			if val != 0 {
+				price = M(latest*val, "USD")
+			}
+		case "EUR":
+			price = M(latest, "EUR")
+		}
+
+		if !price.IsZero() {
+			newTxs = append(newTxs, NewUpdatePrice(Today(), sec.Ticker(), price))
+		}
+	}
+	l.AppendOrUpdate(newTxs...)
+	return errs
+}
+
 // Append appends transactions to this ledger and maintains the chronological order of transactions.
 func (l *Ledger) Append(txs ...Transaction) {
 	l.transactions = append(l.transactions, txs...)
@@ -93,26 +217,32 @@ func (l *Ledger) AppendOrUpdate(txs ...Transaction) {
 		switch newTx := tx.(type) {
 		case UpdatePrice:
 			for i, existingTx := range l.transactions {
-				if oldTx, ok := existingTx.(UpdatePrice); ok {
-					if oldTx.When() == newTx.When() && oldTx.Security == newTx.Security {
-						l.transactions[i] = newTx // Replace existing
-						continue
-					}
+				if oldTx, ok := existingTx.(UpdatePrice); ok &&
+					oldTx.When() == newTx.When() &&
+					oldTx.Security == newTx.Security &&
+					!oldTx.Price.Equal(newTx.Price) {
+					// put it in a returned slice so that the cmd can print it
+					log.Printf("%v: update %v existing Price %s with %s", oldTx.Date, oldTx.Security, oldTx.Price, newTx.Price)
+					l.transactions[i] = newTx // Replace existing
+					continue
 				}
 			}
 		case Split:
 			for i, existingTx := range l.transactions {
-				if oldTx, ok := existingTx.(Split); ok {
-					if oldTx.When() == newTx.When() && oldTx.Security == newTx.Security {
-						l.transactions[i] = newTx // Replace existing
-						continue
-					}
+				if oldTx, ok := existingTx.(Split); ok &&
+					oldTx.When() == newTx.When() &&
+					oldTx.Security == newTx.Security &&
+					(oldTx.Numerator != newTx.Numerator || oldTx.Denominator != newTx.Denominator) {
+					log.Printf("%v: update %v split %v/%v with %v/%v", oldTx.Date, oldTx.Security, oldTx.Numerator, oldTx.Denominator, newTx.Numerator, newTx.Denominator)
+					l.transactions[i] = newTx // Replace existing
+					continue
 				}
 			}
 		case Dividend:
 			for i, existingTx := range l.transactions {
 				if oldTx, ok := existingTx.(Dividend); ok {
 					if oldTx.When() == newTx.When() && oldTx.Security == newTx.Security {
+						log.Printf("%v: update %v dividend per share %v with %v", oldTx.Date, oldTx.Security, oldTx.DividendPerShare, newTx.DividendPerShare)
 						l.transactions[i] = newTx // Replace existing
 						continue
 					}
@@ -122,6 +252,8 @@ func (l *Ledger) AppendOrUpdate(txs ...Transaction) {
 
 		// If no existing transaction was found and replaced, append the new one.
 		l.Append(tx)
+		log.Printf("%v: append %q %v", tx.When(), tx.What(), tx)
+
 	}
 }
 

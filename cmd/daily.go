@@ -48,33 +48,21 @@ func (c *dailyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 	}
 
 	for {
-		market, err := DecodeMarketData()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading securities: %v\n", err)
-			return subcommands.ExitFailure
-		}
-
 		ledger, err := DecodeLedger()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading ledger: %v\n", err)
 			return subcommands.ExitFailure
 		}
 
-		as, err := portfolio.NewAccountingSystem(ledger, market, c.currency)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating accounting system: %v\n", err)
-			return subcommands.ExitFailure
-		}
-
 		if c.update {
-			err := market.UpdateIntraday()
+			err := ledger.UpdateIntraday()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
-				return subcommands.ExitFailure
+				// This is not a fatal error, we can continue with stale prices.
+				fmt.Fprintf(os.Stderr, "Warning: could not update some intraday prices: %v\n", err)
 			}
 		}
 
-		report, err := as.NewDailyReport(on)
+		report, err := portfolio.NewDailyReport(ledger, on, c.currency)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error calculating daily report: %v\n", err)
 			return subcommands.ExitFailure

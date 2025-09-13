@@ -49,13 +49,6 @@ func (p *formatLedgerCmd) SetFlags(f *flag.FlagSet) {
 func (p *formatLedgerCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	log.Printf("input file=%s", *ledgerFile)
 
-	// market data is required to Validate the Ledger
-	market, err := DecodeMarketData()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error decoding market data: %v\n", err)
-		return subcommands.ExitFailure
-	}
-
 	// We need to decode with validation the
 	file, err := os.Open(*ledgerFile)
 	if err != nil {
@@ -66,7 +59,7 @@ func (p *formatLedgerCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...inter
 		fmt.Fprintf(os.Stderr, "could not open ledger file %q: %v", *ledgerFile, err)
 		return subcommands.ExitFailure
 	}
-	ledger, err := portfolio.DecodeValidateLedger(file, market)
+	ledger, err := portfolio.DecodeValidateLedger(file)
 	file.Close()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error decoding ledger: %v\n", err)

@@ -61,17 +61,21 @@ type CoutnerpartyAccountReview struct {
 }
 
 // NewReviewReport returns a report with all transactions in a given period.
-func (as *AccountingSystem) NewReviewReport(period Range) (*ReviewReport, error) {
+func NewReviewReport(ledger *Ledger, reportingCurrency string, period Range) (*ReviewReport, error) {
+	journal, err := newJournal(ledger, reportingCurrency)
+	if err != nil {
+		return nil, err
+	}
 
 	// Compute the balance on the last days and on the day before the first to compute several
 	// different metrics from there.
-	endBalance, err := as.Balance(period.To)
+	endBalance, err := NewBalance(journal, period.To, AverageCost)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute end balance on %s: %w", period.To, err)
 	}
 
 	// compute the balance the day before the first day of the period.
-	startBalance, err := as.Balance(period.From.Add(-1))
+	startBalance, err := NewBalance(journal, period.From.Add(-1), AverageCost)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +122,7 @@ func (as *AccountingSystem) NewReviewReport(period Range) (*ReviewReport, error)
 
 	// Create the transaction in this range.
 	transactions := make([]Transaction, 0, 1000)
-	for _, tx := range as.Ledger.transactions {
+	for _, tx := range ledger.transactions {
 		if period.Contains(tx.When()) {
 			transactions = append(transactions, tx)
 		}
@@ -176,8 +180,8 @@ func (as *AccountingSystem) NewReviewReport(period Range) (*ReviewReport, error)
 	totalTWR := Percent((endBalance.linkedTWR/startBalance.linkedTWR - 1) * 100)
 	// Calculate top metrics.
 	report := &ReviewReport{
-		Range:             period,
-		ReportingCurrency: as.ReportingCurrency,
+		Range:             period, // TODO: check if this is correct
+		ReportingCurrency: reportingCurrency,
 		PortfolioValue:    NewPerformanceWithReturn(startBalance.TotalPortfolioValue(), endBalance.TotalPortfolioValue(), totalTWR),
 		Cash:              NewPerformance(startBalance.TotalCash(), endBalance.TotalCash()),
 		Counterparty:      NewPerformance(startBalance.TotalCounterparty(), endBalance.TotalCounterparty()),

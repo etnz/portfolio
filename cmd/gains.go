@@ -75,30 +75,16 @@ func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		period = p.Range(endDate)
 	}
 
-	// Decode market data and ledger
-
-	market, err := DecodeMarketData()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading securities: %v\n", err)
-		return subcommands.ExitFailure
-	}
-
+	// TODO: re-implement update logic with `fetch`
 	if c.update {
-		err := market.UpdateIntraday()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
-			return subcommands.ExitFailure
-		}
+		// err := market.UpdateIntraday()
+		// if err != nil {
+		// 	fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
+		// 	return subcommands.ExitFailure
+		// }
 	}
 
 	ledger, err := DecodeLedger()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading ledger: %v\n", err)
-		return subcommands.ExitFailure
-	}
-
-	// Create accounting system
-	as, err := portfolio.NewAccountingSystem(ledger, market, c.currency)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating accounting system: %v\n", err)
 		return subcommands.ExitFailure
@@ -112,7 +98,7 @@ func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 	}
 
 	// Calculate gains
-	report, err := as.NewGainsReport(period, method)
+	report, err := portfolio.NewGainsReport(ledger, c.currency, period, method)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error calculating gains: %v\n", err)
 		return subcommands.ExitFailure

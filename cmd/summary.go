@@ -44,21 +44,21 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		c.update = true
 	}
 
-	as, err := DecodeAccountingSystem()
+	ledger, err := DecodeLedger()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating accounting system: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error decoding ledger: %v\n", err)
 		return subcommands.ExitFailure
 	}
 
 	if c.update {
-		err := as.MarketData.UpdateIntraday()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
-			return subcommands.ExitFailure
-		}
+		// err := as.MarketData.UpdateIntraday()
+		// if err != nil {
+		// 	fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
+		// 	return subcommands.ExitFailure
+		// }
 	}
 
-	summary, err := as.NewSummary(on)
+	summary, err := portfolio.NewSummary(ledger, on, c.currency)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error calculating portfolio summary: %v\n", err)
 		return subcommands.ExitFailure

@@ -20,8 +20,7 @@ type HistoryEntry struct {
 }
 
 // NewHistory computes the history of a security or currency.
-func (as *AccountingSystem) NewHistory(security, currency string) (*HistoryReport, error) {
-	// TODO: this is not a report, so it should not be here
+func NewHistory(ledger *Ledger, security, currency, reportingCurrency string) (*HistoryReport, error) {
 	report := &HistoryReport{
 		Security: security,
 		Currency: currency,
@@ -32,13 +31,13 @@ func (as *AccountingSystem) NewHistory(security, currency string) (*HistoryRepor
 	if security != "" {
 		predicate = BySecurity(security)
 	} else {
-		predicate = as.Ledger.ByCurrency(currency)
+		predicate = ledger.ByCurrency(currency)
 	}
 
 	// Build a list of all days where there was a significant transaction.
-	days := make([]Date, 0, len(as.Ledger.transactions))
+	days := make([]Date, 0, 100) // Pre-allocate
 	previous := Date{}
-	for _, tx := range as.Ledger.Transactions(predicate) {
+	for _, tx := range ledger.Transactions(predicate) {
 		on := tx.When()
 		if on == previous {
 			continue // already done for that day
@@ -47,8 +46,13 @@ func (as *AccountingSystem) NewHistory(security, currency string) (*HistoryRepor
 		days = append(days, on)
 	}
 
+	journal, err := newJournal(ledger, reportingCurrency)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, on := range days {
-		balance, err := as.Balance(on)
+		balance, err := NewBalance(journal, on, FIFO)
 		if err != nil {
 			return nil, fmt.Errorf("could not get balance for %s: %w", on, err)
 		}

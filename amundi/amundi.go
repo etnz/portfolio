@@ -63,11 +63,25 @@ type fetcher struct {
 	response map[portfolio.ID]portfolio.ProviderResponse
 }
 
-// TODO take the oldest
-func (f fetcher) Start() portfolio.Date { return portfolio.NewDate(2025, 1, 1) }
+func (f fetcher) Start() portfolio.Date {
+	oldest := portfolio.Today() // today is the oldest possible.
+	for _, r := range f.request {
+		if r.From.Before(oldest) {
+			oldest = r.From
+		}
+	}
+	return oldest
+}
 
-// TODO take the oldest
-func (f fetcher) End() portfolio.Date { return portfolio.Today() }
+func (f fetcher) End() portfolio.Date {
+	var newest portfolio.Date
+	for _, r := range f.request {
+		if r.To.After(newest) {
+			newest = r.To
+		}
+	}
+	return newest
+}
 
 // appendMarketPoint add the (ticker, day, price) found from amundi portal.
 func (f *fetcher) appendMarketPoint(codeFonds string, day portfolio.Date, price float64) error {
@@ -97,6 +111,10 @@ func (f *fetcher) Fetch() error { // 	query amundi to retrieve portfolios (will 
 		return err
 	}
 	start, end := f.Start(), f.End()
+	if start.IsZero() || end.IsZero() || start.After(end) {
+		// No valid date range to fetch.
+		return nil
+	}
 
 	// Using header access the amundi portal and scan the list of "dispositifs" and update the vl found there.
 	disps, err := parseAmundiDispositifs(data)

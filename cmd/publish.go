@@ -60,13 +60,13 @@ func (c *publishCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitFailure
 	}
 
-	as, err := DecodeAccountingSystem()
+	ledger, err := DecodeLedger()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to create accounting system: %v\n", err)
+		fmt.Fprintf(os.Stderr, "failed to decode ledger: %v\n", err)
 		return subcommands.ExitFailure
 	}
 
-	startDate := as.Ledger.OldestTransactionDate()
+	startDate := ledger.OldestTransactionDate()
 	if startDate.IsZero() {
 		fmt.Println("Ledger is empty, nothing to publish.")
 		return subcommands.ExitSuccess
@@ -99,14 +99,14 @@ func (c *publishCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 
 		switch task.Report {
 		case "review":
-			reviewReport, err := as.NewReviewReport(task.Period)
+			reviewReport, err := portfolio.NewReviewReport(ledger, *defaultCurrency, task.Period)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "failed to generate review report for %s: %v\n", task.Period, err)
 				continue
 			}
 			md = renderer.ReviewMarkdown(reviewReport)
 		case "holding":
-			holdingReport, err := as.NewHoldingReport(task.Period.To)
+			holdingReport, err := portfolio.NewHoldingReport(ledger, task.Period.To, *defaultCurrency)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "failed to generate holding report for %s: %v\n", task.Period.To, err)
 				continue

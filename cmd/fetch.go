@@ -46,7 +46,7 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		return subcommands.ExitFailure
 	}
 
-	// 1. Build fetch requests based on ledger analysis
+	// Build fetch requests based on ledger analysis.
 	requests := make(map[portfolio.ID]portfolio.Range)
 	securities := make(map[portfolio.ID][]portfolio.Security)
 	for security := range ledger.AllSecurities() {
@@ -84,7 +84,7 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		return subcommands.ExitSuccess
 	}
 
-	// 2. Call the provider(s)
+	// Call the provider(s).
 	providers := f.Args()
 	if len(providers) == 0 {
 		fmt.Fprintln(os.Stderr, "Error: at least one provider must be specified.")
@@ -126,7 +126,7 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		}
 	}
 
-	// 3. Append new data to the ledger
+	// Append new data to the ledger.
 	var newTxs []portfolio.Transaction
 	for id, resp := range allResponses {
 		// Do not trust the provider. Only process data for securities that were

@@ -7,33 +7,22 @@ import (
 
 func TestBalance_TotalPortfolioValue(t *testing.T) {
 	ledger := NewLedger()
-	market := NewMarketData()
-	as, err := NewAccountingSystem(ledger, market, "USD")
-	if err != nil {
-		t.Fatalf("NewAccountingSystem() error = %v", err)
-	}
 	o := NewDate(2025, time.January, 1)
 	apple := NewSecurity(AAPL, "AAPL", "USD")
 	google := NewSecurity(GOOG, "GOOG", "USD")
-	eurusd := NewSecurity(USDEUR, "USDEUR", "EUR")
 	ledger.Append(
 		NewDeclare(o, "", apple.Ticker(), apple.ID(), apple.Currency()), NewDeclare(o, "", google.Ticker(), google.ID(), google.Currency()), NewAccrue(o, "interest", "bux", EUR(10.0)),
 		NewDeposit(NewDate(2025, time.January, 5), "", EUR(10.0), "bux"),
 		NewDeposit(NewDate(2025, time.January, 5), "", EUR(10000), ""),
 		NewDeposit(NewDate(2025, time.January, 10), "", USD(50000), ""),
 		NewBuy(NewDate(2025, time.January, 10), "", "AAPL", Q(100), USD(15000.0)),
+		NewUpdatePrice(NewDate(2025, time.January, 10), "AAPL", USD(160.0)),
 		NewBuy(NewDate(2025, time.January, 15), "", "GOOG", Q(50), USD(14000.0)),
+		NewUpdatePrice(NewDate(2025, time.January, 15), "GOOG", USD(170.0)),
+		NewUpdatePrice(NewDate(2025, time.January, 15), "USDEUR", EUR(1.2)),
 	)
-	market.Add(apple)
-	market.Add(google)
-	market.Add(eurusd)
-	market.Append(apple.ID(), NewDate(2025, time.January, 10), 160.0)
-	market.Append(google.ID(), NewDate(2025, time.January, 15), 170.0)
-	market.Append(eurusd.ID(), NewDate(2025, time.January, 1), 1.1)
-	market.Append(eurusd.ID(), NewDate(2025, time.January, 5), 1.15)
-	market.Append(eurusd.ID(), NewDate(2025, time.January, 15), 1.2)
 
-	journal, err := as.newJournal()
+	journal, err := newJournal(ledger, "USD")
 	if err != nil {
 		t.Fatalf("NewJournal() error = %v", err)
 	}

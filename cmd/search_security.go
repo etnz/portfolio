@@ -13,11 +13,11 @@ import (
 )
 
 type searchSecurityCmd struct {
-	addSecurityCmd *addSecurityCmd
-	showErrors     bool
+	Cmd        *declareCmd
+	showErrors bool
 }
 
-func (*searchSecurityCmd) Name() string     { return "search-security" }
+func (*searchSecurityCmd) Name() string     { return "search" }
 func (*searchSecurityCmd) Synopsis() string { return "search for securities using EODHD API" }
 func (*searchSecurityCmd) Usage() string {
 	return `pcs search-security <search term>
@@ -67,7 +67,7 @@ func (c *searchSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...int
 		}
 
 		suggestedTicker := item.Code
-		commandToCopy := c.addSecurityCmd.GenerateAddCommand(suggestedTicker, securityID.String(), item.Currency)
+		commandToCopy := c.Cmd.GenerateCommand(suggestedTicker, securityID.String(), item.Currency)
 
 		fmt.Printf("    $ %s\n\n", commandToCopy)
 	}

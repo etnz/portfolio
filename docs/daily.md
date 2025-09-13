@@ -20,21 +20,20 @@ The `pcs daily` report provides a snapshot of your portfolio's performance on a 
 This scenario sets up a basic dual-currency investment portfolio by funding it with cash in EUR and USD, and then making an initial purchase of Microsoft (MSFT) shares. This prepares the portfolio to demonstrate how `pcs` tracks daily gains and losses.
 
 ```bash setup
-# Set up the market data.
-pcs add-security -s EURUSD -id EURUSD -c USD
-pcs add-security -s MSFT -id US0378331005.XNAS -c USD
 # Fund the portfolio with EUR and USD.
 pcs deposit -d 2025-01-01 -c EUR -a 10000
 pcs deposit -d 2025-01-01 -c USD -a 2000
 # Add stock to the ledger and make the first buy transaction.
 pcs declare -d 2025-01-01 -s MSFT -id US0378331005.XNAS -c USD
+# Add a currency pair to track forex changes.
+pcs declare -d 2025-01-01 -s USDEUR  -id USDEUR -c EUR
 pcs buy     -d 2025-01-02 -s MSFT -q 10 -a 1000
 # Manually updating market data to explicitly show price changes.
-# In a real-world daily routine, `pcs fetch-security` would automate this.
-pcs update-security -id US0378331005.XNAS -d 2025-01-02 -p 100
-pcs update-security -id US0378331005.XNAS -d 2025-01-03 -p 105
-pcs update-security -id EURUSD -d 2025-01-02 -p 1.1
-pcs update-security -id EURUSD -d 2025-01-03 -p 1.1
+# In a real-world daily routine, `pcs fetch <provider>` would automate it.
+pcs price -s MSFT -d 2025-01-02 -p 100
+pcs price -s MSFT -d 2025-01-03 -p 105
+pcs price -s USDEUR -d 2025-01-02 -p .91
+pcs price -s USDEUR -d 2025-01-03 -p .91
 ```
 
 On the next day, the portfolio is showing some gains.
@@ -49,22 +48,27 @@ pcs daily -d 2025-01-03 -c EUR
   
   Report for 2025-01-03
   
-   **Value**            | **€11,863.63** 
+   **Value**            | **€11,865.50** 
   ----------------------|----------------
-   Value at Prev. Close |     €11,818.18 
+   Value at Prev. Close |     €11,820.00 
   
   ## Breakdown of Change
   
-   **Total Day's Gain** | **+€45.45** 
+   **Total Day's Gain** | **+€45.50** 
   ----------------------|-------------
-   Unrealized Market    |     +€45.45 
+   Unrealized Market    |     +€45.50 
   
   ## Active Assets
   
    Ticker    | Gain / Loss |     Change 
   -----------|-------------|------------
-   MSFT      |      €45.45 |     +5.00% 
-   **Total** | **+€45.45** | **+0.38%**
+   MSFT      |      €45.50 |     +5.00% 
+   **Total** | **+€45.50** | **+0.38%** 
+  
+  ## Intraday's Transactions
+  
+  1. update-price
+  2. update-price
 ```
 
 ### Cash Flow Impact on Daily Gains
@@ -72,21 +76,19 @@ pcs daily -d 2025-01-03 -c EUR
 This scenario illustrates how a significant cash inflow can lead to an overall positive portfolio value change, even when market performance for securities is negative. It highlights the distinction between market gains/losses and the impact of cash movements on total portfolio value.
 
 ```bash setup
-# Set up the market data.
-pcs add-security -s EURUSD -id EURUSD -c USD
-pcs add-security -s MSFT -id US0378331005.XNAS -c USD
 # Fund the portfolio with EUR and USD.
 pcs deposit -d 2025-01-01 -c EUR -a 10000
 pcs deposit -d 2025-01-01 -c USD -a 2000
 # Add stock to the ledger and make the first buy transaction.
 pcs declare -d 2025-01-01 -s MSFT -id US0378331005.XNAS -c USD
+pcs declare -d 2025-01-01 -s EURUSD -id EURUSD -c EUR
 pcs buy     -d 2025-01-02 -s MSFT -q 10 -a 1000
 # Manually updating market data to explicitly show price changes.
-# In a real-world daily routine, `pcs fetch-security` would automate this.
-pcs update-security -id US0378331005.XNAS -d 2025-01-02 -p 100
-pcs update-security -id US0378331005.XNAS -d 2025-01-03 -p 95
-pcs update-security -id EURUSD -d 2025-01-02 -p 1.1
-pcs update-security -id EURUSD -d 2025-01-03 -p 1.1
+# In a real-world daily routine, `pcs fetch <provider>` would automate it.
+pcs price -s MSFT -d 2025-01-02 -p 100
+pcs price -s MSFT -d 2025-01-03 -p 95
+pcs price -s EURUSD -d 2025-01-02 -p 1.1
+pcs price -s EURUSD -d 2025-01-03 -p 1.1
 # An additional deposit is made to demonstrate its effect.
 pcs deposit -d 2025-01-03 -c EUR -a 500
 ```
@@ -123,5 +125,7 @@ pcs daily -d 2025-01-03 -c EUR
   
   ## Intraday's Transactions
   
-  1. Deposited €500.00
- ```
+  1. update-price
+  2. update-price
+  3. Deposited €500.00
+```

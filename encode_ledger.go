@@ -58,7 +58,7 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 
 // DecodeValidateLedger decode the ledger and validate every transactions.
 // if market is nil, skip all validations.
-func DecodeValidateLedger(r io.Reader, market *MarketData) (*Ledger, error) {
+func DecodeValidateLedger(r io.Reader) (*Ledger, error) {
 	// Same as DecodeLedger except that it will perform a stricter validation.
 	ledger := NewLedger()
 	if err := decodeLedger(r, ledger); err != nil {
@@ -70,12 +70,11 @@ func DecodeValidateLedger(r io.Reader, market *MarketData) (*Ledger, error) {
 	// move all transactions out and insert them one by one with strict validation from
 	// the accounting system.
 	// For validation, a reporting currency is not needed. We pass an empty string.
-	as, _ := NewAccountingSystem(ledger, market, "")
 	txs := ledger.transactions
 	ledger.transactions = make([]Transaction, 0, len(txs))
 	for _, tx := range txs {
 		log.Println("validating", tx)
-		t, err := as.Validate(tx)
+		t, err := ledger.Validate(tx, "")
 		if err != nil {
 			return nil, err
 		}

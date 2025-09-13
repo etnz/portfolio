@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	EnvMarketFile      = "PCS_MARKET_FILE"
 	EnvLedgerFile      = "PCS_LEDGER_FILE"
 	EnvDefaultCurrency = "PCS_DEFAULT_CURRENCY"
 	EnvVerbose         = "PCS_VERBOSE"
@@ -38,7 +37,6 @@ func RunExtension(subcommand string, args []string) (bool, int) {
 
 	// Pass global flags as environment variables
 	cmd.Env = os.Environ() // Start with existing environment variables
-	cmd.Env = append(cmd.Env, EnvMarketFile+"="+*marketFile)
 	cmd.Env = append(cmd.Env, EnvLedgerFile+"="+*ledgerFile)
 	cmd.Env = append(cmd.Env, EnvDefaultCurrency+"="+*defaultCurrency)
 	cmd.Env = append(cmd.Env, EnvVerbose+"="+strconv.FormatBool(*Verbose))

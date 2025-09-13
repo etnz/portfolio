@@ -18,42 +18,47 @@ type Summary struct {
 
 // NewSummary calculates and returns a comprehensive summary of the portfolio's
 // state and performance on a given date.
-func (as *AccountingSystem) NewSummary(on Date) (*Summary, error) {
-	if as.ReportingCurrency == "" {
+func NewSummary(ledger *Ledger, on Date, reportingCurrency string) (*Summary, error) {
+	if reportingCurrency == "" {
 		return nil, fmt.Errorf("reporting currency is not set in accounting system")
 	}
 
 	summary := &Summary{
 		Date:              on,
-		ReportingCurrency: as.ReportingCurrency,
+		ReportingCurrency: reportingCurrency,
 	}
 
-	endBalance, err := as.Balance(on)
+	journal, err := newJournal(ledger, reportingCurrency)
 	if err != nil {
 		return nil, err
 	}
 
-	yesterdayBalance, err := as.Balance(on.Add(-1))
+	endBalance, err := NewBalance(journal, on, AverageCost)
 	if err != nil {
 		return nil, err
 	}
 
-	weekBalance, err := as.Balance(on.StartOf(Weekly).Add(-1))
+	yesterdayBalance, err := NewBalance(journal, on.Add(-1), AverageCost)
 	if err != nil {
 		return nil, err
 	}
 
-	monthBalance, err := as.Balance(on.StartOf(Monthly).Add(-1))
+	weekBalance, err := NewBalance(journal, on.StartOf(Weekly).Add(-1), AverageCost)
 	if err != nil {
 		return nil, err
 	}
 
-	quarterBalance, err := as.Balance(on.StartOf(Quarterly).Add(-1))
+	monthBalance, err := NewBalance(journal, on.StartOf(Monthly).Add(-1), AverageCost)
 	if err != nil {
 		return nil, err
 	}
 
-	yearBalance, err := as.Balance(on.StartOf(Yearly).Add(-1))
+	quarterBalance, err := NewBalance(journal, on.StartOf(Quarterly).Add(-1), AverageCost)
+	if err != nil {
+		return nil, err
+	}
+
+	yearBalance, err := NewBalance(journal, on.StartOf(Yearly).Add(-1), AverageCost)
 	if err != nil {
 		return nil, err
 	}

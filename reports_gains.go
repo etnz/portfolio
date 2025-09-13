@@ -25,9 +25,8 @@ type SecurityGains struct {
 
 // NewGainsReport computes the realized and unrealized gains for all securities
 // over a given period, using a specified cost basis accounting method.
-func (as *AccountingSystem) NewGainsReport(period Range, method CostBasisMethod) (*GainsReport, error) {
-
-	journal, err := as.newJournal()
+func NewGainsReport(ledger *Ledger, reportingCurrency string, period Range, method CostBasisMethod) (*GainsReport, error) {
+	journal, err := newJournal(ledger, reportingCurrency)
 	if err != nil {
 		return nil, fmt.Errorf("could not get journal: %w", err)
 	}
@@ -40,13 +39,13 @@ func (as *AccountingSystem) NewGainsReport(period Range, method CostBasisMethod)
 	if err != nil {
 		return nil, fmt.Errorf("could not create balance from journal: %w", err)
 	}
-	return as.calculateGains(endBalance, startBalance, method)
+	return calculateGains(endBalance, startBalance, method, reportingCurrency)
 }
-func (as *AccountingSystem) calculateGains(endBalance, startBalance *Balance, method CostBasisMethod) (*GainsReport, error) {
+func calculateGains(endBalance, startBalance *Balance, method CostBasisMethod, reportingCurrency string) (*GainsReport, error) {
 	report := &GainsReport{
 		Range:             Range{From: startBalance.on.Add(1), To: endBalance.on},
 		Method:            method,
-		ReportingCurrency: as.ReportingCurrency,
+		ReportingCurrency: reportingCurrency,
 		Securities:        []SecurityGains{},
 	}
 	// TotalPortfolio value is broken in three parts:
@@ -60,7 +59,7 @@ func (as *AccountingSystem) calculateGains(endBalance, startBalance *Balance, me
 	//  market value gain:=  total gain - cash flow, and counterparty change
 	// Completely independant: realized gain:
 	// unrealized gains standing (does not depend on the period actually)
-	totalRealized := M(0, as.ReportingCurrency) // always in reporting currency, even 0
+	totalRealized := M(0, reportingCurrency) // always in reporting currency, even 0
 	for sec := range endBalance.Securities() {
 
 		realizedGain := endBalance.RealizedGain(sec.Ticker()).Sub(startBalance.RealizedGain(sec.Ticker()))

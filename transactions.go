@@ -109,8 +109,8 @@ func (t secCmd) MarshalJSON() ([]byte, error) {
 // for a specified amount.
 type Buy struct {
 	secCmd
-	Quantity Quantity `json:"quantity"` // Quantity is the number of shares or units bought.
-	Amount   Money    `json:"amount"`   // Amount is the total cost of the purchase.
+	Quantity Quantity // Quantity is the number of shares or units bought.
+	Amount   Money    // Amount is the total cost of the purchase.
 }
 
 // NewBuy creates a new Buy transaction.
@@ -175,8 +175,8 @@ func (t *Buy) Validate(ledger *Ledger) error {
 // for a specified amount.
 type Sell struct {
 	secCmd
-	Quantity Quantity `json:"quantity"` // Quantity is the number of shares or units sold.
-	Amount   Money    `json:"amount"`   // Amount is the total proceeds from the sale.
+	Quantity Quantity // Quantity is the number of shares or units sold.
+	Amount   Money    // Amount is the total proceeds from the sale.
 }
 
 // MarshalJSON implements the json.Marshaler interface for Sell.
@@ -331,7 +331,7 @@ func NewDividend(day Date, memo, security string, amount Money) Dividend {
 func (t Dividend) MarshalJSON() ([]byte, error) {
 	var w jsonObjectWriter
 	w.EmbedFrom(t.secCmd)
-	w.Optional("amount", t.Amount)
+	w.EmbedFrom(t.Amount)
 	w.Optional("dividendPerShare", t.DividendPerShare.value)
 	return w.MarshalJSON()
 }
@@ -376,8 +376,8 @@ func (t *Dividend) Validate(ledger *Ledger, b *Balance) error {
 // within the portfolio.
 type Deposit struct {
 	baseCmd
-	Amount  Money  `json:"amount"`            // Amount is the quantity of cash deposited.
-	Settles string `json:"settles,omitempty"` // Settles is an optional counterparty account that this deposit settles.
+	Amount  Money  // Amount is the quantity of cash deposited.
+	Settles string // Settles is an optional counterparty account that this deposit settles.
 }
 
 func (t Deposit) Currency() string {
@@ -415,7 +415,7 @@ func (t *Deposit) Validate(ledger *Ledger) error {
 	if !t.Amount.IsPositive() {
 		return fmt.Errorf("deposit amount must be positive, got %v", t.Amount)
 	}
-
+	// TODO: this validation is not correct, it should be done in the journal
 	if err := ValidateCurrency(t.Amount.Currency()); err != nil {
 		return fmt.Errorf("invalid currency for deposit: %w", err)
 	}
@@ -437,8 +437,8 @@ func (t *Deposit) Validate(ledger *Ledger) error {
 // within the portfolio.
 type Withdraw struct {
 	baseCmd
-	Amount  Money  `json:"amount"`            // Amount is the quantity of cash withdrawn.
-	Settles string `json:"settles,omitempty"` // Settles is an optional counterparty account that this withdrawal settles.
+	Amount  Money  // Amount is the quantity of cash withdrawn.
+	Settles string // Settles is an optional counterparty account that this withdrawal settles.
 }
 
 // MarshalJSON implements the json.Marshaler interface for Withdraw.
@@ -508,9 +508,9 @@ func (t *Withdraw) Currency() string { return t.Amount.Currency() }
 // such as a loan or an accrued expense/income.
 type Accrue struct {
 	baseCmd
-	Counterparty string `json:"counterparty"`     // Counterparty is the name of the entity with whom the accrual is made.
-	Amount       Money  `json:"amount"`           // Amount is the value of the accrual. Positive for receivables, negative for payables.
-	Create       bool   `json:"create,omitempty"` // Create is true if this accrual creates a new counterparty account.
+	Counterparty string // Counterparty is the name of the entity with whom the accrual is made.
+	Amount       Money  // Amount is the value of the accrual. Positive for receivables, negative for payables.
+	Create       bool   // Create is true if this accrual creates a new counterparty account.
 }
 
 // MarshalJSON implements the json.Marshaler interface for Accrue.

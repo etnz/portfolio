@@ -29,9 +29,8 @@ func main() {
 	fmt.Printf("%s=%%s\n", os.Getenv("%s"))
 	fmt.Printf("%s=%%s\n", os.Getenv("%s"))
 	fmt.Printf("%s=%%s\n", os.Getenv("%s"))
-	fmt.Printf("%s=%%s\n", os.Getenv("%s"))
 }
-`, EnvMarketFile, EnvMarketFile, EnvLedgerFile, EnvLedgerFile, EnvDefaultCurrency, EnvDefaultCurrency, EnvVerbose, EnvVerbose)
+`, EnvLedgerFile, EnvLedgerFile, EnvDefaultCurrency, EnvDefaultCurrency, EnvVerbose, EnvVerbose)
 
 	helloCmdPath := filepath.Join(tempDir, "pcs-hello")
 
@@ -60,14 +59,12 @@ func main() {
 	log.Printf("Compiled pcs binary to %s", pcsBinaryPath)
 
 	// Define random values for global flags
-	expectedMarketFile := filepath.Join(tempDir, "random_market.jsonl")
 	expectedLedgerFile := filepath.Join(tempDir, "random_ledger.jsonl")
 	expectedDefaultCurrency := "XYZ"
 	expectedVerbose := true
 
 	// 5. Call pcs binary with extension and global flags
 	args := []string{
-		"--market-file", expectedMarketFile,
 		"--ledger-file", expectedLedgerFile,
 		"--default-currency", expectedDefaultCurrency,
 		"-v",
@@ -96,7 +93,6 @@ func main() {
 		Name  string
 		Value string
 	}{
-		{EnvMarketFile, expectedMarketFile},
 		{EnvLedgerFile, expectedLedgerFile},
 		{EnvDefaultCurrency, expectedDefaultCurrency},
 		{EnvVerbose, strconv.FormatBool(expectedVerbose)},

@@ -17,23 +17,21 @@ The `pcs gains` report answers the question: "What is the total economic change 
 This scenario demonstrates the calculation of realized and unrealized gains for a security that has been partially sold.
 
 ```bash setup
-# Set up the market data.
-pcs add-security -s EURUSD -id EURUSD -c USD
-pcs add-security -s MSFT -id US0378331005.XNAS -c USD
 # Fund the portfolio with EUR and USD.
 pcs deposit -d 2025-01-01 -c EUR -a 10000
 pcs deposit -d 2025-01-01 -c USD -a 5000
 # Add stock to the ledger and make the first buy transaction.
 pcs declare -d 2025-01-02 -s MSFT -id US0378331005.XNAS -c USD
+pcs declare -d 2025-01-02 -s EURUSD -id EURUSD -c EUR
 pcs buy -d 2025-01-02 -s MSFT -q 10 -a 4000
 # Manually updating market data to explicitly show price changes.
 # In a real-world daily routine, `pcs fetch-security` would automate this.
-pcs update-security -id US0378331005.XNAS -d 2025-02-28 -p 400
-pcs update-security -id US0378331005.XNAS -d 2025-03-05 -p 420
-pcs update-security -id US0378331005.XNAS -d 2025-03-31 -p 450
-pcs update-security -id EURUSD -d 2025-02-28 -p 1.1
-pcs update-security -id EURUSD -d 2025-03-05 -p 1.1
-pcs update-security -id EURUSD -d 2025-03-31 -p 1.1
+pcs price -s MSFT -d 2025-02-28 -p 400
+pcs price -s MSFT -d 2025-03-05 -p 420
+pcs price -s MSFT -d 2025-03-31 -p 450
+pcs price -s EURUSD -d 2025-02-28 -p 1.1
+pcs price -s EURUSD -d 2025-03-05 -p 1.1
+pcs price -s EURUSD -d 2025-03-31 -p 1.1
 # Sell the stock.
 pcs sell -d 2025-03-06 -s MSFT -q 5 -a 2250
 ```
@@ -60,23 +58,21 @@ pcs gains --period month -d 2025-03-31 -c EUR
 This scenario demonstrates a situation where an asset is bought before the reporting period and sold entirely within the period, resulting in a negative unrealized gain.
 
 ```bash setup
-# Set up the market data.
-pcs add-security -s EURUSD -id EURUSD -c USD
-pcs add-security -s GOOG -id US02079K3059.XNAS -c USD
 # Fund the portfolio with EUR and USD.
 pcs deposit -d 2025-01-01 -c EUR -a 10000
 pcs deposit -d 2025-01-01 -c USD -a 2000
 # Add stock to the ledger and make the first buy transaction.
 pcs declare -d 2025-01-01 -s GOOG -id US02079K3059.XNAS -c USD
+pcs declare -d 2025-01-01 -s EURUSD -id EURUSD -c EUR
 pcs buy -d 2025-01-02 -s GOOG -q 10 -a 1000
 # Manually updating market data to explicitly show price changes.
 # In a real-world daily routine, `pcs fetch-security` would automate this.
-pcs update-security -d 2025-02-28 -id US02079K3059.XNAS -p 120
-pcs update-security -d 2025-03-15 -id US02079K3059.XNAS -p 110
-pcs update-security -d 2025-03-31 -id US02079K3059.XNAS -p 110
-pcs update-security -d 2025-02-28 -id EURUSD -p 1.1
-pcs update-security -d 2025-03-15 -id EURUSD -p 1.1
-pcs update-security -d 2025-03-31 -id EURUSD -p 1.1
+pcs price -d 2025-02-28 -s GOOG -p 120
+pcs price -d 2025-03-15 -s GOOG -p 110
+pcs price -d 2025-03-31 -s GOOG -p 110
+pcs price -d 2025-02-28 -s EURUSD -p 1.1
+pcs price -d 2025-03-15 -s EURUSD -p 1.1
+pcs price -d 2025-03-31 -s EURUSD -p 1.1
 # Sell the stock.
 pcs sell -d 2025-03-15 -s GOOG -q 10 -a 1100
 ```

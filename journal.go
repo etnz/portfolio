@@ -2,7 +2,6 @@ package portfolio
 
 import (
 	"fmt"
-	"sort"
 )
 
 // event represents a single, atomic operation in the portfolio's history.
@@ -135,19 +134,13 @@ type updateForex struct {
 
 func (e updateForex) date() Date { return e.on }
 
-// newJournal converts a Ledger of high-level transactions and market data events
+// NewJournal converts a Ledger of high-level transactions and market data events
 // into a Journal of low-level, atomic events.
-func NewJournal(ledger *Ledger, marketData *MarketData, reportingCurrency string) (*Journal, error) {
+func newJournal(ledger *Ledger, reportingCurrency string) (*Journal, error) {
 	journal := &Journal{
 		events: make([]event, 0, len(ledger.transactions)*2), // Pre-allocate with a guess
 		cur:    reportingCurrency,
 	}
-
-	// Keep track of which securities have price/split data from the ledger
-	// to avoid using market.jsonl data for them.
-	// key with alway be on.String()+ticker
-	ledgerPriceSource := make(map[string]struct{})
-	ledgerSplitSource := make(map[ID]struct{})
 
 	for _, tx := range ledger.transactions {
 		switch v := tx.(type) {
@@ -230,95 +223,40 @@ func NewJournal(ledger *Ledger, marketData *MarketData, reportingCurrency string
 				)
 			}
 		case UpdatePrice:
+			// either update forex or price
+			sec := ledger.securities[v.Security]
+			if base, quote, isCur := sec.id.CurrencyPair(); isCur == nil {
+				// updateForex into the target cur
+
+				if quote == reportingCurrency {
+					// This is directly the right pair
+					v.Price.cur = quote
+					journal.events = append(journal.events,
+						updateForex{on: v.When(), currency: base, rate: v.Price},
+					)
+				}
+				if base == reportingCurrency {
+					// This is the inverse pair
+					p := M(1/v.Price.AsFloat(), base)
+					p.value = p.value.Round(5) // is enought for an approximate price anyway.
+					journal.events = append(journal.events,
+						updateForex{on: v.When(), currency: quote, rate: p},
+					)
+				}
+			}
+			// Update Sec
+			v.Price.cur = ledger.securities[v.Security].Currency()
 			journal.events = append(journal.events,
 				updatePrice{on: v.When(), security: v.Security, price: v.Price},
 			)
-			ledgerPriceSource[v.When().String()+v.Security] = struct{}{}
+
 		case Split:
-			sec := ledger.Security(v.Security)
 			journal.events = append(journal.events,
 				splitShare{on: v.When(), security: v.Security, numerator: v.Numerator, denominator: v.Denominator},
 			)
-			ledgerSplitSource[sec.ID()] = struct{}{}
 		default:
 			return nil, fmt.Errorf("unhandled transaction type: %T", tx)
 		}
 	}
-
-	// Add market events like splits and prices.
-
-	// Map market data ID to delcared securities in the ledger.
-	idToTickers := make(map[ID][]string)
-	for ticker, sec := range ledger.securities {
-		idToTickers[sec.ID()] = append(idToTickers[sec.ID()], ticker)
-	}
-
-	for id, splits := range marketData.splits {
-		if _, fromLedger := ledgerSplitSource[id]; fromLedger {
-			continue
-		}
-		tickers := idToTickers[id]
-		for _, ticker := range tickers {
-			for _, s := range splits {
-				journal.events = append(journal.events,
-					splitShare{on: s.Date, security: ticker, numerator: s.Numerator, denominator: s.Denominator},
-				)
-			}
-		}
-	}
-
-	// UpdatePrice of security declared in the ledger.
-	for id, history := range marketData.prices {
-		tickers := idToTickers[id]
-		for _, ticker := range tickers {
-			for on, price := range history.Values() {
-				if _, fromLedger := ledgerPriceSource[on.String()+ticker]; fromLedger {
-					continue
-				}
-				cur := marketData.securities[id].Currency()
-				p := M(price, cur)
-				journal.events = append(journal.events,
-					updatePrice{on: on, security: ticker, price: p},
-				)
-			}
-		}
-	}
-
-	// UpdateForex update currency forex rate into the reporting one.
-	for id, history := range marketData.prices {
-		base, quote, err := id.CurrencyPair()
-		if err != nil {
-			// not a forex
-			continue
-		}
-		switch journal.cur {
-		case quote:
-			for on, price := range history.Values() {
-				// TODO: History should use Money, not float64 anymore
-				p := M(price, quote)
-
-				journal.events = append(journal.events,
-					updateForex{on: on, rate: p, currency: base},
-				)
-			}
-		case base:
-			// we know the reverse forex, convert it on the fly.
-			for on, price := range history.Values() {
-				// TODO: History should use Money, not float64 anymore
-				p := M(1/price, base)
-				p.value = p.value.Round(5) // is enought for an approximate price anyway.
-
-				journal.events = append(journal.events,
-					updateForex{on: on, rate: p, currency: quote},
-				)
-			}
-		}
-	}
-
-	// Sort all events chronologically.
-	sort.SliceStable(journal.events, func(i, j int) bool {
-		return journal.events[i].date().Before(journal.events[j].date())
-	})
-
 	return journal, nil
 }

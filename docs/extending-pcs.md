@@ -21,7 +21,6 @@ To allow your external commands to seamlessly integrate with the user's setup, `
 
 The following environment variables are set:
 
-* `PCS_MARKET_FILE`: The absolute path to the `market.jsonl` file currently in use.
 * `PCS_LEDGER_FILE`: The absolute path to the `transactions.jsonl` file currently in use.
 * `PCS_DEFAULT_CURRENCY`: The default currency (e.g., "EUR") set by the user.
 

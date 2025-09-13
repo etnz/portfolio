@@ -15,12 +15,21 @@
             "cwd": "/tmp/",
         },
         {
+            "name": "pcs price",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "pcs/main.go",
+            "args": ["price", "-s=EURUSD", "-d=2025-01-02", "-p=1.1"],
+            "cwd": "/tmp/",
+        },
+        {
             "name": "pcs daily",
             "type": "go",
             "request": "launch",
             "mode": "debug",
             "program": "pcs/main.go",
-            "args": ["daily", "-d=-1d", "-c=EUR"],
+            "args": ["daily", "-d=2025-01-03"],
             "cwd": "/tmp/",
         },
         {

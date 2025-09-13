@@ -17,22 +17,15 @@ func TestAccountingSystem_NewHoldingReport(t *testing.T) {
 		NewBuy(NewDate(2025, time.January, 15), "", "GOOG", Q(50), USD(50*2800.0)),
 		NewSell(NewDate(2025, time.February, 1), "", "AAPL", Q(25), USD(25*160.0)),
 		NewDeposit(NewDate(2025, time.February, 5), "", EUR(10000), ""),
+		NewUpdatePrice(NewDate(2025, time.February, 1), "AAPL", USD(160.0)),
+		NewUpdatePrice(NewDate(2025, time.February, 1), "GOOG", USD(2900.0)),
+		// USDEUR is not a security, it's a forex rate. The journal will create it.
+		// For the test, we can add an update-price for a fake ticker.
+		NewDeclare(o, "", "USDEUR", USDEUR, "EUR"),
+		NewUpdatePrice(NewDate(2025, time.February, 1), "USDEUR", EUR(0.9)),
 	)
 
-	market := NewMarketData()
-	market.Add(NewSecurity(AAPL, "AAPL", "USD"))
-	market.Add(NewSecurity(GOOG, "GOOG", "USD"))
-	market.Add(NewSecurity(USDEUR, "USDEUR", "EUR"))
-	market.Append(AAPL, NewDate(2025, time.February, 1), 160.0)
-	market.Append(GOOG, NewDate(2025, time.February, 1), 2900.0)
-	market.Append(USDEUR, NewDate(2025, time.February, 1), 0.9)
-
-	as, err := NewAccountingSystem(ledger, market, "EUR")
-	if err != nil {
-		t.Fatalf("NewAccountingSystem() error = %v", err)
-	}
-
-	report, err := as.NewHoldingReport(NewDate(2025, time.February, 5))
+	report, err := NewHoldingReport(ledger, NewDate(2025, time.February, 5), "EUR")
 	if err != nil {
 		t.Fatalf("NewHoldingReport() error = %v", err)
 	}

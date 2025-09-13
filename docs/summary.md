@@ -20,24 +20,22 @@ The `pcs summary` report provides an overview of your investment strategy's perf
 This scenario demonstrates the calculation of Time-Weighted Return (TWR) for a simple investment over different periods.
 
 ```bash setup
-# Set up the market data.
-pcs add-security -s EURUSD -id EURUSD -c USD
-pcs add-security -s MSFT -id US0378331005.XNAS -c USD
 # Manually updating market data to explicitly show price changes.
 # In a real-world daily routine, `pcs fetch-security` would automate this.
-pcs update-security -d 2025-01-02 -id US0378331005.XNAS -p 100
-pcs update-security -d 2025-01-03 -id US0378331005.XNAS -p 105
-pcs update-security -d 2025-01-08 -id US0378331005.XNAS -p 110
-pcs update-security -d 2025-01-31 -id US0378331005.XNAS -p 115
-pcs update-security -d 2025-01-02 -id EURUSD -p 1.1
-pcs update-security -d 2025-01-03 -id EURUSD -p 1.1
-pcs update-security -d 2025-01-08 -id EURUSD -p 1.1
-pcs update-security -d 2025-01-31 -id EURUSD -p 1.1
+# Add stock to the ledger and make the first buy transaction.
+pcs declare -d 2025-01-01 -s MSFT -id US0378331005.XNAS -c USD
+pcs declare -d 2025-01-02 -s EURUSD -id EURUSD -c EUR
+pcs price -d 2025-01-02 -s MSFT -p 100
+pcs price -d 2025-01-03 -s MSFT -p 105
+pcs price -d 2025-01-08 -s MSFT -p 110
+pcs price -d 2025-01-31 -s MSFT -p 115
+pcs price -d 2025-01-02 -s EURUSD -p 1.1
+pcs price -d 2025-01-03 -s EURUSD -p 1.1
+pcs price -d 2025-01-08 -s EURUSD -p 1.1
+pcs price -d 2025-01-31 -s EURUSD -p 1.1
 # Fund the portfolio with EUR and USD.
 pcs deposit -d 2025-01-01 -c EUR -a 10000
 pcs deposit -d 2025-01-01 -c USD -a 2000
-# Add stock to the ledger and make the first buy transaction.
-pcs declare -d 2025-01-01 -s MSFT -id US0378331005.XNAS -c USD
 pcs buy -d 2025-01-02 -s MSFT -q 10 -a 1000
 ```
 
@@ -52,12 +50,12 @@ pcs summary -d 2025-01-31 -c EUR
   
   ## Performance
   
-   Period    | Return  
-  -----------|---------
-   Day 31    | +0.38%  
-   Week 5    | +0.38%  
-   January   | +10.69% 
-   Q1        | +10.69% 
-   2025      | +10.69% 
-   Inception | +10.69%
+   Period    | Return 
+  -----------|--------
+   Day 31    | +0.38% 
+   Week 5    | +0.38% 
+   January   | +8.12% 
+   Q1        | +8.12% 
+   2025      | +8.12% 
+   Inception | +8.12%
 ```

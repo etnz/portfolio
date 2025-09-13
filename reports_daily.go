@@ -40,14 +40,19 @@ func (r *DailyReport) HasBreakdown() bool {
 	return !r.MarketGains.IsZero() || !r.RealizedGains.IsZero() || !r.NetCashFlow.IsZero()
 }
 
-// NewDailyReport calculates and returns a summary of the portfolio's performance for a single day.
-func (as *AccountingSystem) NewDailyReport(on Date) (*DailyReport, error) {
-	endBalance, err := as.Balance(on)
+// NewDailyReport calculates and returns a summary of the portfolio's performance for a single day from a given ledger.
+func NewDailyReport(ledger *Ledger, on Date, reportingCurrency string) (*DailyReport, error) {
+	journal, err := newJournal(ledger, reportingCurrency)
+	if err != nil {
+		return nil, err
+	}
+
+	endBalance, err := NewBalance(journal, on, AverageCost)
 	if err != nil {
 		return nil, err
 	}
 	// 1. Calculate value at previous day's close
-	startBalance, err := as.Balance(on.Add(-1))
+	startBalance, err := NewBalance(journal, on.Add(-1), AverageCost)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +60,7 @@ func (as *AccountingSystem) NewDailyReport(on Date) (*DailyReport, error) {
 	report := &DailyReport{
 		Date:              on,
 		Time:              time.Now(), // Generation time
-		ReportingCurrency: as.ReportingCurrency,
+		ReportingCurrency: reportingCurrency,
 		ActiveAssets:      []AssetGain{},
 		Transactions:      []Transaction{},
 	}
@@ -64,7 +69,7 @@ func (as *AccountingSystem) NewDailyReport(on Date) (*DailyReport, error) {
 	report.ValueAtPrevClose = startBalance.TotalPortfolioValue()
 
 	// 3. Get all transactions for the specified day
-	for _, tx := range as.Ledger.transactions {
+	for _, tx := range ledger.transactions {
 		if tx.When() == on {
 			report.Transactions = append(report.Transactions, tx)
 		}

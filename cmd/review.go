@@ -72,22 +72,22 @@ func (c *reviewCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 		c.update = true
 	}
 
-	// 2. Create the accounting system
-	as, err := DecodeAccountingSystem()
+	// 2. Decode the ledger
+	ledger, err := DecodeLedger()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating accounting system: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error decoding ledger: %v\n", err)
 		return subcommands.ExitFailure
 	}
 
 	if c.update {
-		if err := as.MarketData.UpdateIntraday(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
-			// We can continue with stale prices, so this is not a fatal error.
-		}
+		// if err := as.MarketData.UpdateIntraday(); err != nil {
+		// 	fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
+		// 	// We can continue with stale prices, so this is not a fatal error.
+		// }
 	}
 
 	// 3. Generate the report
-	report, err := as.NewReviewReport(r)
+	report, err := portfolio.NewReviewReport(ledger, *defaultCurrency, r)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating review report: %v\n", err)
 		return subcommands.ExitFailure
