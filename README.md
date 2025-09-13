@@ -56,7 +56,7 @@ Successfully appended transaction to transactions.jsonl
 ```
 
 > [!NOTE]
-> id uses Apple stock's ISIN followed by the exchange MIC code (XETR for XETRA). You can find this information on any financial websites. `pcs search-security Apple` can also help you find it.
+> id uses Apple stock's ISIN followed by the exchange MIC code (XETR for XETRA). You can find this information on any financial websites. `pcs search Apple` can also help you find it.
 
 
 Your corporate savings plan let you buy shares of funds that unfortunately are often not publicly traded. You can still track it by giving it a unique "private" identifier, and updating them manually (or by other tricks):
@@ -70,14 +70,16 @@ Successfully appended transaction to transactions.jsonl
 ```
 
 > [!NOTE]
-> -id is private identifier that identifies your bank's private fund.
+> The `-id` is a private identifier that uniquely represents your bank's private fund.
 
-Public securities will have their prices fetched automatically, while private securities will need to be updated manually or by using an data provider extension.
+Publicly traded securities can be fetched automatically. `pcs` supports `eodhd` out of the box, but its extension mechanism allows you to use your preferred data provider.
+
+Privately traded securities, often found in bank savings accounts, can be more tedious to update. You can either update the fund price manually using the CLI or automate the process by writing or finding a suitable provider extension.
 
 
 ### Recording Transactions
 
-Let's deposit some cash into your account.
+Let's record that we have deposited some cash into your account.
 
 ```bash run
 pcs deposit -d 2025-08-27 -a 10000 -c EUR
@@ -92,7 +94,7 @@ Successfully appended transaction to transactions.jsonl
 
 
 
-Let's buy some Apple stock.
+Let's record that we bought some Apple's stock with that money.
 
 ```bash run
 pcs buy -d 2025-08-27 -s AAPL -q 10 -a 1500.0
@@ -115,11 +117,13 @@ Successfully appended transaction to transactions.jsonl
 
 ### Keeping Your Portfolio Up-to-Date
 
-You can update the prices for your securities using the `price` command.
+Recording the transaction you have initiated is not enough to compute the value of your portfolio. You also need the latest information from the market.
 
-For publicly traded securities or assets you can get the latest prices automatically, which is very handy for daily updates. You would just run `pcs fetch <provider>`.
+There are two options:
+  - automatically fetch market data using a provider `pcs fetch <provider>
+  - manual set the price using the command `pcs price`.
 
-However for the purpose of this tutorial only, let's manually set the price for Apple stock to its closing price on 2025-08-27:
+However for the purpose of the tutorial, we are only going to use the manual method. We can read from any financial site Apple's closing price on 2025-08-27:
 
 ```bash run
 pcs price -s AAPL -d 2025-08-27 -p 193.20
@@ -129,7 +133,7 @@ pcs price -s AAPL -d 2025-08-27 -p 193.20
 Successfully appended transaction to transactions.jsonl
 ```
 
-For private assets, you have to manually update their price using the same command. Or write your own command to fetch prices from your bank's API if they provide one. Here we'll set the price for your corporate savings plan fund to its value on 2025-08-27:
+From your corporate saving bank site you can get the price on 2025-08-27:
 
 ```bash run
 pcs price -s BankFund1 -d 2025-08-27 -p 11.23
@@ -138,7 +142,6 @@ pcs price -s BankFund1 -d 2025-08-27 -p 11.23
 ```console check
 Successfully appended transaction to transactions.jsonl
 ```
-
 
 
 ### The Payoff: Reporting
@@ -212,13 +215,3 @@ pcs review -d 2025-08-27
 ## User Manual
 
 For a detailed guide on all the features and commands, please refer to the [User Manual](./docs/readme.md).
-
-## About This Project
-
-This project is an exercise in using AI to generate code. The maintainer is using Gemini Code Assist as a full stack software engineer:
-* the initial ontology (naming concepts, like ledger), project structure, CLI commands names, consistency accross function names.
-* All design documents, and implementation plans.
-* This readme (except this section)
-* Github issues interactions. Most of the comments, many issues descriptions.
-* All commit messages.
-* All the code, including tests.
