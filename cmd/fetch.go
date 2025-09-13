@@ -13,6 +13,7 @@ import (
 )
 
 type fetchCmd struct {
+	inception bool
 }
 
 func (*fetchCmd) Name() string     { return "fetch" }
@@ -26,6 +27,9 @@ and appends the new data to the ledger as transactions.
 It analyzes the ledger to determine the required date range for fetching.
 At least one provider must be specified.
 
+The --inception flag can be used to ignore the last known data point and
+force a full refresh from the security's first transaction date.
+
 Supported providers:
   - amundi: Fetches data for Amundi funds. Requires 'pcs amundi-login' first.
   - eodhd:  Fetches data from EOD Historical Data. Requires an API key
@@ -37,7 +41,9 @@ if an API key is available.
 `
 }
 
-func (c *fetchCmd) SetFlags(f *flag.FlagSet) {}
+func (c *fetchCmd) SetFlags(f *flag.FlagSet) {
+	f.BoolVar(&c.inception, "inception", false, "Force fetching data from the security's inception date.")
+}
 
 func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	ledger, err := DecodeLedger()
@@ -53,18 +59,24 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		id := security.ID()
 		securities[id] = append(securities[id], security)
 
-		from, ok := ledger.LastKnownMarketDataDate(security.Ticker())
-		if !ok {
-			// No market data yet, use the security's inception date.
+		var from portfolio.Date
+		var ok bool
+
+		if c.inception { // --inception flag is set
 			from, ok = ledger.InceptionDate(security.Ticker())
-			if !ok {
-				// No transactions for this specific ticker, skip.
-				continue
-			}
 		} else {
-			// Fetch from the day after the last known data point.
-			from = from.Add(1)
+			// Default behavior: start from the last known data point.
+			from, ok = ledger.LastKnownMarketDataDate(security.Ticker())
+			if !ok {
+				// Fallback to inception date if no market data is known.
+				from, ok = ledger.InceptionDate(security.Ticker())
+			}
 		}
+
+		if !ok { // If no valid start date could be found, skip this security.
+			continue
+		}
+
 		to := portfolio.Today()
 		if from.After(to) {
 			continue // Already up-to-date.
