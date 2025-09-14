@@ -4,25 +4,19 @@
 
 # pcs: Your Private, Unified Portfolio Tracker
 
-![pcs-large](docs/pcs-medium.png)
+For the long-term investor with a scattered and diverse portfolio, `pcs` is the **durable** command-line tool that **unifies** your entire financial world.
 
-In a world where your investments are scattered across multiple platforms—from corporate savings plans and retirement accounts to various online brokers—getting a single, clear view of your financial health is a challenge. `pcs` is a local-first, command-line tool designed to solve this problem by providing a unified, private, and auditable view of your entire investment portfolio.
+By placing your financial data directly under your control in simple, local text files, `pcs` provides a permanent and auditable record of your wealth. It is **built to last**.
 
-## The Challenge: A Scattered Portfolio
+`pcs` provides **essential clarity and insights**, making it effortless to answer the two most critical questions at any point in your financial journey: "What is my net worth?" and "How is it performing?".
 
-Many of us have assets spread across a variety of disconnected accounts:
 
-*   **Corporate Savings Plans:** Often managed by specific institutions and not easily tracked in standard brokerage accounts.
-*   **Retirement Plans:** Typically held in separate, dedicated accounts.
-*   **Corporate Stock Options:** Managed by a specific broker, adding another silo to your portfolio.
-*   **Online Trading Platforms:** Modern online banks and trading platforms that offer stock and crypto trading.
-*   **Traditional Life Insurance:** Held in a traditional bank, with its own interface and reporting.
+## The Solution: A Unified, Durable Portfolio
 
-This scattered landscape makes it incredibly difficult to answer a simple question: "What is my total net worth, and how is it performing?"
-
-## The Solution: A Unified, Private Portfolio
-
-`pcs` allows you to bring all your assets into a single view, giving you a clear picture of your entire portfolio. The tool is designed to handle both publicly-traded stocks and private, hard-to-track assets, like corporate savings plans or even real estate. Because `pcs` is a local-first tool that operates on your own machine, you have complete privacy and control over your financial data.
+`pcs` solves this by being asset-agnostic and built for durability.
+*   **Unify Everything**: It is designed from the ground up to track a diverse range of assets, from public stocks and private funds to liabilities, consolidating every part of your wealth into one coherent picture.
+*   **Built to Last**: Your data lives in a simple, local text file (`transactions.jsonl`). You own it forever. The text-based format works perfectly with version control (like Git), creating an immutable, auditable history of your wealth that will outlast any proprietary cloud service.
+*   **Essential Clarity**: Financial tools often overwhelm users with complex analytics. `pcs` focuses on providing simple, clear answers to the core questions that matter most.
 
 ## Getting Started: Your First Unified Portfolio
 

@@ -4,15 +4,15 @@
 
 ### The Ledger
 
-The **Ledger** represents your portfolio. It's a chronological record of every transaction you make, from buying and selling securities to depositing cash and all the information you can get from the market (prices, splits, dividends, etc.). The ledger is stored in the `transactions.jsonl` file, and it serves as the single source of truth for all your financial activities.
+The **Ledger** is the heart of your financial record, embodying the pillar of **durability**. It's a simple, human-readable text file (`transactions.jsonl`) that contains a chronological record of every transaction you make. Because you own this file, your financial history is permanent and safe from the whims of any cloud provider. It serves as the single, auditable source of truth for your entire portfolio.
 
 ### Counterparty Accounts
 
-A **Counterparty Account** represents the financial balance with a specific external entity. It's used to track assets or liabilities that are not cash or securities, such as a loan to a friend, a tax liability, or an amount owed to a landlord. These are managed primarily with the `accrue` command, which can create a new account or update an existing one. A positive balance represents a receivable (an asset), while a negative balance represents a payable (a liability).
+A **Counterparty Account** is a key feature for **unifying** your complete financial picture. It represents the financial balance with any external entity, allowing you to track assets and liabilities that aren't traditional securities. This includes loans to friends, tax liabilities, or rent owed. By tracking these, `pcs` ensures that your net worth calculation is truly comprehensive.
 
 ### The Security ID
 
-The **Security ID** is a unique identifier for each asset in your portfolio. It's a powerful concept that allows `pcs` to handle a wide range of assets, from publicly traded stocks to private funds.
+The **Security ID** is the mechanism that enables `pcs` to **unify** a diverse range of assets. It's a unique, unambiguous identifier for everything you own, from publicly traded stocks (using standard ISINs) to private funds in a corporate savings plan.
 
 The ID is the crucial link between your **Ledger** and the **Market Data**. This separation allows you to use short, convenient tickers in your ledger (e.g., `AAPL`) without worrying about conflicts in a large market data store. The `declare` command creates this link, mapping your personal ticker to the globally unique Security ID. Market data provider (e.g eodhd) can fetch updates from the market solely based on the ID.
 

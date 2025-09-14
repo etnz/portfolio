@@ -1,6 +1,10 @@
 ## Cost Basis Methods
 
-When you invest, understanding how capital gains are calculated is crucial, especially for tax purposes. A **capital gain** is the profit you make from selling an asset (like a stock or a fund) for more than you bought it. Conversely, a **capital loss** occurs when you sell an asset for less than its purchase price.
+## Purpose
+
+To provide **essential clarity** on your tax liabilities, `pcs` helps you accurately calculate capital gains and losses. A critical part of this calculation is the **cost basis**—the original value of an asset for tax purposes. Because different jurisdictions have different rules, `pcs` supports multiple methods to ensure your reporting is compliant and clear.
+
+## What is Cost Basis?
 
 There are two main types of capital gains:
 
@@ -15,6 +19,3 @@ Many countries have specific rules or even legally binding methods for calculati
 
 *   **`average`**: This method calculates the cost basis by averaging the cost of all shares. For example, in France, the *Prix Moyen Pondéré d'Acquisition* (PMP), which is a weighted average cost method, is legally binding for individual capital gains on fungible securities. For more details, refer to the official French tax documentation: [impots.gouv.fr](https://www.impots.gouv.fr/portail/particulier/plus-values-de-cessions-de-valeurs-mobilieres-et-droits-sociaux).
 *   **`fifo`**: This method (First-In, First-Out) assumes that the first shares purchased are the first ones sold. For instance, in Germany, the FIFO principle is legally binding for capital gains tax purposes on securities. For more details, refer to relevant German tax information, e.g., [fondsvermittlung24.de](https://www.fondsvermittlung24.de/abgeltungsteuer-fifo-methode/).
-
-
-

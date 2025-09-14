@@ -1,8 +1,10 @@
 # Summary Report
 
-## Purpose
+**Command:** `pcs summary`
 
 The `pcs summary` report provides an overview of your investment strategy's performance, focusing on metrics that reflect the growth of your capital independent of cash contributions or withdrawals. It helps answer the question: "How well is my investment *strategy* performing as a percentage, regardless of when I added or removed cash?"
+
+This report provides **essential clarity** by focusing on the Time-Weighted Return (TWR), the standard for measuring pure investment performance.
 
 ## Key Metrics & Calculation Methods
 

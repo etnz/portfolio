@@ -1,6 +1,61 @@
-# Future Directions and Ideas
+# Product Value Proposition: pcs
 
-This document outlines potential future directions for `pcs`, framed as solutions to common, long-term investor problems. These are not committed features but high-level ideas that explore how the tool could evolve in alignment with our core product value proposition. They serve as a basis for community discussion and future prioritization.
+## Vision
+
+To be the permanent and unified home for your entire financial life, making wealth tracking effortless and insightful over decades.
+
+## Core Value Proposition
+
+For the long-term investor with a scattered and diverse portfolio, `pcs` is the **durable** command-line tool that **unifies** your entire financial world.
+
+Unlike cloud-based platforms that can disappear and force you into a painful migration from a poorly documented format that risks derailing your tracking efforts entirely, `pcs` provides a permanent, auditable, and easily-maintainable record of your wealth. It is **built to last**.
+
+It makes it effortless to answer the two most critical questions at any point in your financial journey: "What is my net worth?" and "How is it performing?"**. It provides **essentials clarity and insights**.
+
+## The "Why": Key Pillars of `pcs`
+
+### Pillar 1: Unify Everything
+
+The modern investor's wealth is fragmented. It lives in corporate savings plans with private funds, in multiple brokerage accounts, in stock option portals, and in physical assets like real estate. This fragmentation makes a single view of one's net worth nearly impossible to achieve.
+
+* **`pcs` solves this by being asset-agnostic.** It is designed from the ground up to track a diverse range of assets:
+
+  * Publicly traded stocks and ETFs.
+
+  * Private funds, frequent in corporate savings plans and retirement plans.
+
+  * Liabilities and counterparty accounts (e.g., taxes owed, loans).
+
+  * Future support for stock options, real estate, and more.
+
+The primary goal is to consolidate every part of your wealth into one coherent picture.
+
+### Pillar 2: Built to Last (Durability & Effortless Tracking)
+
+Wealth tracking is a multi-decade endeavor. The biggest barrier to long-term tracking is friction; if the process is too cumbersome, it won't be sustained. `pcs` is built for durability by making the process of maintaining your financial record as seamless as possible.
+
+* **`pcs` is built for durability, giving you ultimate control:**
+
+  * **Local-First:** Your data lives in a simple text file (`transactions.jsonl`) on your machine. You own it, forever.
+
+  * **Auditable & Versionable:** The text-based format works perfectly with Git. This creates an immutable, auditable history of your wealth.
+
+  * **Easy Backtracking:** Starting a portfolio today means recording years of history. `pcs` is designed to make this backtracking process as simple as possible, allowing you to easily add, correct, and annotate past transactions.
+
+  * **Frictionless Data Entry:** The primary goal is to make tracking sustainable. The **extension mechanism** allows for connecting to any data source, and future integrations with **AI-powered importers** (e.g., reading transaction data from screenshots) will further streamline this process.
+
+### Pillar 3: Essential Clarity & Insight
+
+Financial tools often overwhelm users with complex analytics that don't answer their core questions. `pcs` focuses on providing essential clarity.
+
+* **`pcs` focuses on simplicity and clarity:**
+
+  * **Answering the Core Questions:** The analysis provided by `pcs` is intentionally focused on the two questions that matter most: "What is my net worth?" and "How is it performing?".
+
+
+## Future Directions and Ideas
+
+This section outlines potential future directions for `pcs`, framed as solutions to common, long-term investor problems. These are not committed features but high-level ideas that explore how the tool could evolve in alignment with our core product value proposition. They serve as a basis for community discussion and future prioritization.
 
 ### Pillar 1: Unify Everything
 

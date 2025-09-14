@@ -4,7 +4,7 @@
 
 ## Purpose
 
-The holding report provides a comprehensive snapshot of your portfolio's composition and value at a specific point in time. It is designed to answer the fundamental question: "What do I own, and what is it worth?"
+The holding report provides a comprehensive snapshot of your portfolio's composition and value at a specific point in time. It is designed to provide **clarity** by answering the fundamental question: "What do I own, and what is it worth?"
 
 This report is essential for understanding your asset allocation, monitoring your investments, and preparing for financial reviews or tax reporting.
 

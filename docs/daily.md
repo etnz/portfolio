@@ -1,6 +1,6 @@
 # Daily Report
 
-## Purpose
+**Command:** `pcs daily`
 
 The `pcs daily` report provides a snapshot of your portfolio's performance on a day-by-day basis. It helps you track the daily changes in your portfolio's value, including realized and unrealized gains/losses, and cash movements.
 

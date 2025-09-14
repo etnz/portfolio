@@ -1,8 +1,10 @@
-## Performance Calculation
+## Purpose
 
-`pcs` calculates portfolio performance using the **Time-Weighted Return (TWR)** method. TWR measures the compound growth rate of a portfolio, removing the distorting effects of cash flows. This is the industry standard for comparing investment manager performance.
+To provide **essential clarity** on one of the core questions of investing—"How is my strategy performing?"—`pcs` uses the Time-Weighted Return (TWR) method. This method is specifically chosen because it isolates the performance of your investment choices from the timing and size of your cash deposits or withdrawals, giving you a true measure of your strategy's effectiveness.
 
 ### Methodology
+
+TWR measures the compound growth rate of a portfolio. It is the industry standard for comparing the performance of investment managers because it is not influenced by cash flows.
 
 The TWR method breaks the total investment period into smaller sub-periods, using each external cash flow (e.g., a deposit or withdrawal) as a dividing point. A simple rate of return is calculated for each sub-period.
 

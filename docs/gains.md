@@ -1,8 +1,10 @@
 # Gains Report
 
-## Purpose
+**Command:** `pcs gains`
 
 The `pcs gains` report answers the question: "What is the total economic change in my assets' value according to accounting principles?" It breaks down the change in value into realized (from sales) and unrealized (from price changes) gains and losses.
+
+This report provides **essential clarity** on your investment performance and is crucial for understanding tax implications.
 
 ## Key Metrics and Their Calculation
 
