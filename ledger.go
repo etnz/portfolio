@@ -238,10 +238,13 @@ func (l *Ledger) AppendOrUpdate(txs ...Transaction) {
 			for i, existingTx := range l.transactions {
 				if oldTx, ok := existingTx.(Split); ok &&
 					oldTx.When() == newTx.When() &&
-					oldTx.Security == newTx.Security &&
-					(oldTx.Numerator != newTx.Numerator || oldTx.Denominator != newTx.Denominator) {
-					log.Printf("%v: update %v split %v/%v with %v/%v", oldTx.Date, oldTx.Security, oldTx.Numerator, oldTx.Denominator, newTx.Numerator, newTx.Denominator)
-					l.transactions[i] = newTx // Replace existing
+					oldTx.Security == newTx.Security {
+					// if identical do nothing
+					if oldTx.Numerator != newTx.Numerator || oldTx.Denominator != newTx.Denominator {
+						log.Printf("%v: update %v split %v/%v with %v/%v", oldTx.Date, oldTx.Security, oldTx.Numerator, oldTx.Denominator, newTx.Numerator, newTx.Denominator)
+						l.transactions[i] = newTx // Replace existing
+					}
+					// we keep replaced to avoid 'append' later on.
 					replaced = true
 					break
 				}
@@ -250,8 +253,11 @@ func (l *Ledger) AppendOrUpdate(txs ...Transaction) {
 			for i, existingTx := range l.transactions {
 				if oldTx, ok := existingTx.(Dividend); ok {
 					if oldTx.When() == newTx.When() && oldTx.Security == newTx.Security {
-						log.Printf("%v: update %v dividend per share %v with %v", oldTx.Date, oldTx.Security, oldTx.DividendPerShare, newTx.DividendPerShare)
-						l.transactions[i] = newTx // Replace existing
+						// if identical do nothing
+						if oldTx.DividendPerShare != newTx.DividendPerShare {
+							log.Printf("%v: update %v dividend per share %v with %v", oldTx.Date, oldTx.Security, oldTx.DividendPerShare, newTx.DividendPerShare)
+							l.transactions[i] = newTx // Replace existing
+						}
 						replaced = true
 						break
 					}
