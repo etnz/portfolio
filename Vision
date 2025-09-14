@@ -1,0 +1,29 @@
+# Future Directions and Ideas
+
+This document outlines potential future directions for `pcs`, framed as solutions to common, long-term investor problems. These are not committed features but high-level ideas that explore how the tool could evolve in alignment with our core product value proposition. They serve as a basis for community discussion and future prioritization.
+
+### Pillar 1: Unify Everything
+
+* **1. The Problem of "Potential Wealth":** A significant part of my compensation is tied up in employee stock options, but they aren't part of my net worth until they vest and I exercise them. It's difficult to track this "potential" wealth alongside my actual assets without distorting my current financial picture. I need a way to see both my current net worth and the future potential from these grants in one place.
+
+* **2. The Problem of Infrequent Valuation for Illiquid Assets:** My biggest assets, like my house or private funds, don't have a daily market price. This makes my net worth calculation static and inaccurate for long periods. I get a precise value when I buy or sell, but in between, I'm flying blind. I need a way to get a *reasonable estimate* of their value on any given day, using public data like market indexes as a proxy, and be able to correct this estimate whenever I get a new 'real' valuation, ensuring my historical net worth is always as accurate as possible.
+
+* **3. The Problem of "Financial Compartments":** My personal finances are separate from the joint accounts I share with my family, and I also manage a small portfolio for my children. I need the flexibility to analyze these "financial compartments" individually while also being able to see a consolidated, aggregated view of our entire family's wealth.
+
+### Pillar 2: Built to Last (Durability & Effortless Tracking)
+
+* **4. The Problem of Tedious Data Entry:** Manually typing every transaction from my bank's web interface or PDF statements is the biggest chore in wealth tracking. It's so time-consuming and error-prone that it makes me want to give up. I need a radically faster and easier way to get my transaction history into `pcs`.
+
+* **5. The Problem of Correcting the Past:** When I started my portfolio, I had to add years of historical data, and I know I made mistakes. Finding and fixing a single incorrect entry from five years ago in a long text file is intimidating and I'm afraid I'll break something. I need a safe and intuitive way to edit my financial history without risk.
+
+* **6. The Problem of "Hidden" Liabilities:** Every time I sell a stock for a profit, I create a future tax liability that isn't immediately visible. My net worth looks higher than it actually is because I forget to account for the money I'll eventually owe the government. I need a way to automatically track the tax implications of my actions as they happen.
+
+* **7. The Problem of Data "Rot":** Over many years, small errors can creep into my financial record—a typo in a price, a transaction I forgot to categorize. These small issues can compound and make me lose trust in my own data. I need a way to periodically audit my ledger to find and fix these inconsistencies, ensuring my financial record remains accurate and reliable for decades to come.
+
+### Pillar 3: Essential Clarity & Insight
+
+* **8. The Problem of "Context-Free" Numbers:** My report tells me I'm up or down by a certain percentage, but I have no idea *why*. Was it because one stock did particularly well, or was it a broader market trend? I need a narrative that explains the story behind the numbers and connects my portfolio's performance to real-world events.
+
+* **9. The Problem of "Model-Driven Uncertainty":** My portfolio's value, both past and future, relies on predictive models—from index-based estimators for my illiquid assets to market trend projections for scenario planning. These models are powerful, but they are also assumptions. I have no way to validate how well my chosen estimators have performed against real data in the past, nor can I easily see how sensitive my actual wealth estimation is to changes in these assumptions. I need a way to backtest my models' historical accuracy and perform sensitivity analysis to understand the range of potential outcomes, giving me confidence not just in the numbers, but in the system I'm using to generate them.
+
+* **10. The Problem of an Uncertain Future:** My portfolio is a perfect record of the past, but it tells me nothing about the future. My financial future is a complex mix of predictable events (like mortgage payments and stock vesting dates) and unpredictable ones (like market crashes, when I might buy a house, or a potential inheritance). I need more than a simple forecast; I need a tool that lets me model different future **scenarios** so I can understand the potential range of my future wealth and make better long-term decisions. What happens to my 10-year outlook if the market crashes next year and takes two years to recover? What if I inherit later than expected?
