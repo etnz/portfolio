@@ -140,7 +140,7 @@ Successfully appended transaction to transactions.jsonl
 
 ### The Payoff: Reporting
 
-Now, you can see a unified view of your portfolio:
+Now, you can see a unified view of your portfolio: 
 
 ```bash run
 pcs review -d 2025-08-27
@@ -178,11 +178,11 @@ pcs review -d 2025-08-27
   
   ## Performance View
   
-   Asset     |         Gain | Dividends | Total Return |    Return % 
-  -----------|--------------|-----------|--------------|-------------
-   AAPL      |     +€432.00 |      0.00 |     +€432.00 |       +Inf% 
-   BankFund1 |      -€77.00 |      0.00 |      -€77.00 |       +Inf% 
-   **Total** | **+€355.00** |  **0.00** | **+€355.00** | **+41.85%** 
+   Asset     |         Gain | Dividends | Total Return 
+  -----------|--------------|-----------|--------------
+   AAPL      |     +€432.00 |      0.00 |     +€432.00 
+   BankFund1 |      -€77.00 |      0.00 |      -€77.00 
+   **Total** | **+€355.00** |  **0.00** | **+€355.00** 
   
   ## Tax View
   

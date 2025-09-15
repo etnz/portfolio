@@ -75,25 +75,23 @@ func ReviewMarkdown(report *portfolio.ReviewReport) string {
 
 	// --- Performance View ---
 	fmt.Fprintf(&b, "\n## Performance View\n\n")
-	fmt.Fprintln(&b, "| Asset | Gain | Dividends | Total Return | Return % |")
-	fmt.Fprintln(&b, "|:---|---:|---:|---:|---:|")
+	fmt.Fprintln(&b, "| Asset | Gain | Dividends | Total Return |")
+	fmt.Fprintln(&b, "|:---|---:|---:|---:|")
 	for _, asset := range report.Assets {
 		if !asset.Gain().IsZero() || asset.Value.Return != 0 {
-			fmt.Fprintf(&b, "| %s | %s | %s | %s | %s |\n",
+			fmt.Fprintf(&b, "| %s | %s | %s | %s |\n",
 				asset.Security,
 				asset.Gain().SignedString(),
 				asset.Dividends.SignedString(),
 				asset.TotalReturn().SignedString(),
-				asset.Value.Return.SignedString(),
 			)
 		}
 	}
-	fmt.Fprintf(&b, "| **%s** | **%s** | **%s** | **%s** | **%s** |\n",
+	fmt.Fprintf(&b, "| **%s** | **%s** | **%s** | **%s** |\n",
 		"Total",
 		report.Total.Gain().SignedString(),
 		report.Total.Dividends.SignedString(),
 		report.Total.TotalReturn().SignedString(),
-		report.PortfolioValue.Return.SignedString(),
 	)
 
 	// --- Tax View ---
