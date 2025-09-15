@@ -15,6 +15,7 @@ type DailyReport struct {
 	TotalGain         Money
 	MarketGains       Money
 	RealizedGains     Money
+	Dividends         Money
 	NetCashFlow       Money
 	ActiveAssets      []AssetGain
 	Transactions      []Transaction
@@ -76,7 +77,8 @@ func NewDailyReport(ledger *Ledger, on Date, reportingCurrency string) (*DailyRe
 	}
 
 	// 4. Calculate Net Cash Flow and Realized Gains for the day
-	report.NetCashFlow = endBalance.TotalCash().Sub(startBalance.TotalCash())
+	report.NetCashFlow = endBalance.TotalCashFlow().Sub(startBalance.TotalCashFlow())
+	report.Dividends = endBalance.TotalDividendsReceived().Sub(startBalance.TotalDividendsReceived())
 
 	// Gains have to be computed per security (in fact per securities currency)
 	// then converted to the reporting currency.
@@ -91,7 +93,8 @@ func NewDailyReport(ledger *Ledger, on Date, reportingCurrency string) (*DailyRe
 
 	// 5. Calculate Total Gain and Market Gains
 	report.TotalGain = report.ValueAtClose.Sub(report.ValueAtPrevClose)
-	report.MarketGains = report.ValueAtClose.Sub(report.ValueAtPrevClose).Sub(totalRealized).Sub(report.NetCashFlow)
+	// MarketGains is the change in value not accounted for by cash flows, realized gains, or dividends.
+	report.MarketGains = report.TotalGain.Sub(report.NetCashFlow).Sub(report.RealizedGains).Sub(report.Dividends)
 
 	// 6. Calculate Active Asset Gains
 	for sec := range endBalance.Securities() {

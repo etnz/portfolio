@@ -103,16 +103,7 @@ func (l *Ledger) Validate(tx Transaction, reportingCurrency string) (Transaction
 		err = v.Validate(l, balance)
 		tx = v
 	case Dividend:
-		var j *Journal
-		j, err = newJournal(l, reportingCurrency)
-		if err != nil {
-			return nil, fmt.Errorf("invalid journal: %w", err)
-		}
-		balance, e := NewBalance(j, tx.When(), FIFO) // TODO: Make cost basis method configurable
-		if e != nil {
-			return nil, fmt.Errorf("could not create balance from journal: %w", e)
-		}
-		err = v.Validate(l, balance)
+		err = v.Validate(l)
 		tx = v
 	case Deposit:
 		err = v.Validate(l)
@@ -254,8 +245,8 @@ func (l *Ledger) AppendOrUpdate(txs ...Transaction) {
 				if oldTx, ok := existingTx.(Dividend); ok {
 					if oldTx.When() == newTx.When() && oldTx.Security == newTx.Security {
 						// if identical do nothing
-						if oldTx.DividendPerShare != newTx.DividendPerShare {
-							log.Printf("%v: update %v dividend per share %v with %v", oldTx.Date, oldTx.Security, oldTx.DividendPerShare, newTx.DividendPerShare)
+						if !oldTx.Amount.Equal(newTx.Amount) {
+							log.Printf("%v: update %v dividend per share %v with %v", oldTx.Date, oldTx.Security, oldTx.Amount, newTx.Amount)
 							l.transactions[i] = newTx // Replace existing
 						}
 						replaced = true
@@ -629,4 +620,64 @@ func (l *Ledger) InceptionDate(security string) (Date, bool) {
 		}
 	}
 	return Date{}, false
+}
+
+// Clean remove spurious market data from the ledger
+// On a given day, market data relative to an asset not held will be deleted.
+func (l *Ledger) Clean() error {
+	// creates a journal, and scan it computing correct positions and cleaning the ledger on the fly
+	j, err := newJournal(l, "EUR")
+	if err != nil {
+		return fmt.Errorf("could not create journal: %w", err)
+	}
+
+	holdings := make(map[string]Quantity)
+
+	for _, e := range j.events {
+		switch v := e.(type) {
+		case acquireLot:
+			holdings[v.security] = holdings[v.security].Add(v.quantity)
+		case disposeLot:
+			holdings[v.security] = holdings[v.security].Sub(v.quantity)
+		case splitShare:
+			if holdings[v.security].IsZero() {
+				// mark the source transaction for deletion.
+				l.transactions[e.source()] = nil
+				continue
+			}
+			num := Q(v.numerator)
+			den := Q(v.denominator)
+			holdings[v.security] = holdings[v.security].Mul(num).Div(den)
+
+		case updatePrice:
+			if holdings[v.security].IsZero() {
+				// modify the source transaction to delete this asset's price.
+				u := l.transactions[e.source()].(UpdatePrice)
+				delete(u.Prices, v.security)
+				if len(u.Prices) == 0 {
+					// Delete the source transaction if empty.
+					l.transactions[e.source()] = nil
+				} else {
+					// Otherwise copy the shrinked version.
+					l.transactions[e.source()] = u
+				}
+			}
+
+		case receiveDividend:
+			if holdings[v.security].IsZero() {
+				// mark the source transaction for deletion.
+				l.transactions[e.source()] = nil
+				continue
+			}
+		}
+	}
+	// Delete marked transactions.
+	newTxs := make([]Transaction, 0, len(l.transactions))
+	for _, tx := range l.transactions {
+		if tx != nil {
+			newTxs = append(newTxs, tx)
+		}
+	}
+	l.transactions = newTxs
+	return nil
 }

@@ -35,6 +35,9 @@ func DailyMarkdown(r *portfolio.DailyReport) string {
 		if !r.RealizedGains.IsZero() {
 			fmt.Fprintf(&b, "| Realized Market | %s |\n", r.RealizedGains.SignedString())
 		}
+		if !r.Dividends.IsZero() {
+			fmt.Fprintf(&b, "| Dividends | %s |\n", r.Dividends.SignedString())
+		}
 		if !r.NetCashFlow.IsZero() {
 			fmt.Fprintf(&b, "| Net Cash Flow | %s |\n", r.NetCashFlow.SignedString())
 		}

@@ -74,7 +74,7 @@
             "request": "launch",
             "mode": "debug",
             "program": "pcs/main.go",
-            "args": [ "fetch", "-inception","eodhd"],
+            "args": [ "-v","fetch", "-inception","eodhd"],
             "cwd": "/tmp/",
         },
         {

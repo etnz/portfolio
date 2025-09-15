@@ -34,6 +34,7 @@ type AssetReview struct {
 	Value            Performance
 	Buys             Money
 	Sells            Money
+	Dividends        Money
 	RealizedGains    Money
 	UnrealizedGains  Money
 }
@@ -48,6 +49,12 @@ func (ar AssetReview) Flow() Money {
 // It's calculated as the change in market value minus the net trading flow.
 func (ar AssetReview) Gain() Money {
 	return ar.Value.Change().Sub(ar.Flow())
+}
+
+// TotalReturn returns the total economic benefit from the asset, including market gains and dividends.
+func (ar AssetReview) TotalReturn() Money {
+	// Note: ar.Gain() already includes realized and unrealized gains.
+	return ar.Gain().Add(ar.Dividends)
 }
 
 type CashAccountReview struct {
@@ -146,12 +153,14 @@ func NewReviewReport(ledger *Ledger, reportingCurrency string, period Range) (*R
 		// Calculate flows and gains within the period
 		buysInPeriod := endBalance.Buys(ticker).Sub(startBalance.Buys(ticker))
 		sellsInPeriod := endBalance.Sells(ticker).Sub(startBalance.Sells(ticker))
+		dividendsInPeriod := endBalance.DividendsReceived(ticker).Sub(startBalance.DividendsReceived(ticker))
 		realizedGain := endBalance.RealizedGain(ticker).Sub(startBalance.RealizedGain(ticker))
 		unrealizedGain := endBalance.MarketValue(ticker).Sub(endBalance.CostBasis(ticker))
 
 		// Sum up total realized gains for the report summary
 		total.Buys = total.Buys.Add(endBalance.Convert(buysInPeriod))
 		total.Sells = total.Sells.Add(endBalance.Convert(sellsInPeriod))
+		total.Dividends = total.Dividends.Add(endBalance.Convert(dividendsInPeriod))
 		total.RealizedGains = total.RealizedGains.Add(endBalance.Convert(realizedGain))
 		total.UnrealizedGains = total.UnrealizedGains.Add(endBalance.Convert(unrealizedGain))
 
@@ -172,6 +181,7 @@ func NewReviewReport(ledger *Ledger, reportingCurrency string, period Range) (*R
 			Value:            NewPerformanceWithReturn(startValue, endValue, priceReturn),
 			Buys:             buysInPeriod,
 			Sells:            sellsInPeriod,
+			Dividends:        dividendsInPeriod,
 			RealizedGains:    realizedGain,
 			UnrealizedGains:  unrealizedGain,
 		})
@@ -198,4 +208,9 @@ func NewReviewReport(ledger *Ledger, reportingCurrency string, period Range) (*R
 
 func (r *ReviewReport) NetGains() Money {
 	return r.PortfolioValue.End.Sub(r.PortfolioValue.Start).Sub(r.CashFlow)
+}
+
+// TotalReturn returns the total economic benefit from the portfolio, including market gains and dividends.
+func (r *ReviewReport) TotalReturn() Money {
+	return r.NetGains().Add(r.Total.Dividends)
 }

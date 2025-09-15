@@ -24,7 +24,12 @@ func ReviewMarkdown(report *portfolio.ReviewReport) string {
 	fmt.Fprintln(&b, "|---:|---:|")
 	fmt.Fprintf(&b, "| %s | %s |\n", "Previous Value", report.PortfolioValue.Start.String())
 	fmt.Fprintf(&b, "| %s | %s |\n", "Cash Flow", report.CashFlow.SignedString())
-	fmt.Fprintf(&b, "| %s | %s |\n", "Net Gains", report.NetGains().SignedString())
+	fmt.Fprintf(&b, "| %s | %s |\n", "Market Gains", report.NetGains().SignedString())
+	if !report.Total.Dividends.IsZero() {
+		fmt.Fprintf(&b, "| %s | %s |\n", "Dividends", report.Total.Dividends.SignedString())
+		fmt.Fprintln(&b, "|   |   |")
+		fmt.Fprintf(&b, "| **%s** | **%s** |\n", "Total Return", report.TotalReturn().SignedString())
+	}
 
 	fmt.Fprintln(&b, "|   |   |")
 	fmt.Fprintf(&b, "| **%s** | **%s** |\n", "Net Change", report.PortfolioValue.Change().String())
@@ -70,40 +75,46 @@ func ReviewMarkdown(report *portfolio.ReviewReport) string {
 
 	// --- Performance View ---
 	fmt.Fprintf(&b, "\n## Performance View\n\n")
-	fmt.Fprintln(&b, "| Asset | Gain | Return % |")
-	fmt.Fprintln(&b, "|:---|---:|---:|")
+	fmt.Fprintln(&b, "| Asset | Gain | Dividends | Total Return | Return % |")
+	fmt.Fprintln(&b, "|:---|---:|---:|---:|---:|")
 	for _, asset := range report.Assets {
 		if !asset.Gain().IsZero() || asset.Value.Return != 0 {
-			fmt.Fprintf(&b, "| %s | %s | %s |\n",
+			fmt.Fprintf(&b, "| %s | %s | %s | %s | %s |\n",
 				asset.Security,
 				asset.Gain().SignedString(),
+				asset.Dividends.SignedString(),
+				asset.TotalReturn().SignedString(),
 				asset.Value.Return.SignedString(),
 			)
 		}
 	}
-	fmt.Fprintf(&b, "| **%s** | **%s** | **%s** |\n",
+	fmt.Fprintf(&b, "| **%s** | **%s** | **%s** | **%s** | **%s** |\n",
 		"Total",
 		report.Total.Gain().SignedString(),
+		report.Total.Dividends.SignedString(),
+		report.Total.TotalReturn().SignedString(),
 		report.PortfolioValue.Return.SignedString(),
 	)
 
 	// --- Tax View ---
 	fmt.Fprintf(&b, "\n## Tax View\n\n")
-	fmt.Fprintln(&b, "| Asset | Invested | Realized | Unrealized |")
-	fmt.Fprintln(&b, "|:---|---:|---:|---:|")
+	fmt.Fprintln(&b, "| Asset | Invested | Dividends | Realized | Unrealized |")
+	fmt.Fprintln(&b, "|:---|---:|---:|---:|---:|")
 	for _, asset := range report.Assets {
 		if !asset.Buys.IsZero() || !asset.RealizedGains.IsZero() || !asset.UnrealizedGains.IsZero() {
-			fmt.Fprintf(&b, "| %s | %s | %s | %s |\n",
+			fmt.Fprintf(&b, "| %s | %s | %s | %s | %s |\n",
 				asset.Security,
 				asset.Buys.String(),
+				asset.Dividends.SignedString(),
 				asset.RealizedGains.SignedString(),
 				asset.UnrealizedGains.SignedString(),
 			)
 		}
 	}
-	fmt.Fprintf(&b, "| **%s** | **%s** | **%s** | **%s** |\n",
+	fmt.Fprintf(&b, "| **%s** | **%s** | **%s** | **%s** | **%s** |\n",
 		"Total",
 		report.Total.Buys.String(),
+		report.Total.Dividends.SignedString(),
 		report.Total.RealizedGains.SignedString(),
 		report.Total.UnrealizedGains.SignedString(),
 	)

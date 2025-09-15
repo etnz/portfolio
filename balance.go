@@ -26,6 +26,8 @@ type Balance struct {
 	lots map[string]lots
 	// realizedGains holds the cumulative realized gains for each security ticker.
 	realizedGains map[string]Money
+	// dividendsReceived holds the cumulative dividends received for each security.
+	dividendsReceived map[string]Money
 	// buys holds the total amount spent on buying a security.
 	buys map[string]Money
 	// sells holds the total amount received from selling a security.
@@ -60,6 +62,7 @@ func newBalance(on Date) *Balance {
 		securities:           make(map[string]Security),
 		lots:                 make(map[string]lots),
 		realizedGains:        make(map[string]Money),
+		dividendsReceived:    make(map[string]Money),
 		buys:                 make(map[string]Money),
 		sells:                make(map[string]Money),
 		prices:               make(map[string]Money),
@@ -170,6 +173,11 @@ func (b *Balance) apply(e event, method CostBasisMethod) error {
 		b.prices[v.security] = v.price
 	case updateForex:
 		b.forex[v.currency] = v.rate
+	case receiveDividend:
+		dps := v.amount
+		position := b.Position(v.security)
+		totalAmount := dps.Mul(position)
+		b.dividendsReceived[v.security] = b.dividendsReceived[v.security].Add(totalAmount)
 	default:
 		return fmt.Errorf("unknown event type: %T", v)
 	}
@@ -242,6 +250,20 @@ func (b *Balance) RealizedGain(ticker string) Money {
 		g.cur = b.securities[ticker].currency
 	}
 	return g
+}
+
+// DividendsReceived returns the total dividends received for a security.
+func (b *Balance) DividendsReceived(ticker string) Money {
+	return b.dividendsReceived[ticker]
+}
+
+// TotalDividendsReceived returns the total dividends across all holdings.
+func (b *Balance) TotalDividendsReceived() Money {
+	var total Money = M(0, b.cur)
+	for _, amount := range b.dividendsReceived {
+		total = total.Add(b.Convert(amount))
+	}
+	return total
 }
 
 // MarketValue returns the total market value of a security.

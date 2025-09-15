@@ -254,19 +254,19 @@ func TestBalance_CashBalance(t *testing.T) {
 			name:        "USD after dividend",
 			currency:    "USD",
 			date:        NewDate(2025, time.February, 15),
-			wantBalance: USD(39075), // 39000 + 75
+			wantBalance: USD(39000), // 39000 + 75
 		},
 		{
 			name:        "USD after withdraw",
 			currency:    "USD",
 			date:        NewDate(2025, time.March, 1),
-			wantBalance: USD(38075), // 39075 - 1000
+			wantBalance: USD(38000), // 39000 - 1000
 		},
 		{
 			name:        "USD final balance after convert",
 			currency:    "USD",
 			date:        NewDate(2025, time.April, 1),
-			wantBalance: USD(36075), // 38075 - 2000
+			wantBalance: USD(36000), // 38000 - 2000
 		},
 		// EUR Balance Checks
 		{

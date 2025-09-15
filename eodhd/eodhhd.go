@@ -422,6 +422,28 @@ func eodhdSplits(apiKey, ticker string, splits map[portfolio.Date]portfolio.Spli
 	return nil
 }
 
+// eodhdDividends returns the dividend history for a given EODHD ticker.
+func eodhdDividends(apiKey, ticker string, dividends map[portfolio.Date]portfolio.DividendInfo) error {
+	addr := fmt.Sprintf("https://eodhd.com/api/div/%s?fmt=json&api_token=%s", ticker, apiKey)
+
+	type apiDividend struct {
+		Date  portfolio.Date  `json:"date"` // ex-dividend date, see https://eodhd.com/financial-apis/api-splits-dividends
+		Value decimal.Decimal `json:"value"`
+	}
+
+	content := make([]apiDividend, 0)
+	if err := jwget(newDailyCachingClient(), addr, &content); err != nil {
+		return err
+	}
+
+	for _, d := range content {
+		dividends[d.Date] = portfolio.DividendInfo{
+			Amount: d.Value.InexactFloat64(),
+		}
+	}
+	return nil
+}
+
 // SearchResult matches the structure of a single item in the EODHD search API response.
 type SearchResult struct {
 	Code              string         `json:"Code"`
@@ -506,7 +528,11 @@ func (f *fetcher) Fetch() (map[portfolio.ID]portfolio.ProviderResponse, error) {
 			errs = errors.Join(errs, fmt.Errorf("failed to fetch splits for %s: %w", id, err))
 		}
 
-		// TODO: Fetch dividends (requires EODHD API support and integration)
+		// Fetch dividends
+		err = f.updateSecurityDividends(id, resp.Dividends)
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("failed to fetch dividends for %s: %w", id, err))
+		}
 
 		f.response[id] = resp
 	}
@@ -588,4 +614,38 @@ func (*fetcher) updateSecuritySplits(sec portfolio.ID, splits map[portfolio.Date
 	}
 
 	return eodhdSplits(apiKey, ticker, splits)
+}
+
+func (*fetcher) updateSecurityDividends(sec portfolio.ID, dividends map[portfolio.Date]portfolio.DividendInfo) error {
+	apiKey := eodhdApiKey()
+	if apiKey == "" {
+		return errors.New("EODHD API key is not set. Use -eodhd-api-key flag or EODHD_API_KEY environment variable")
+	}
+
+	var ticker string
+	var err error
+
+	// Determine security type and fetch ticker accordingly.
+	if isin, mic, mssiErr := sec.MSSI(); mssiErr == nil {
+		// This is an MSSI security.
+		ticker, err = eodhdSearchByMSSI(apiKey, isin, mic)
+		if err != nil {
+			return fmt.Errorf("failed to get ticker for MSSI %s: %w", sec, err)
+		}
+	} else if isin, fundErr := sec.ISIN(); fundErr == nil {
+		// This is a Fund.
+		ticker, err = eodhdSearchByISIN(apiKey, isin)
+		if err != nil {
+			return fmt.Errorf("failed to get ticker for ISIN %s: %w", sec, err)
+		}
+	} else {
+		// This is a private or unsupported security type for updates.
+		return nil // Not an error, just nothing to do.
+	}
+
+	if ticker == "" {
+		return nil // No ticker found, nothing to do.
+	}
+
+	return eodhdDividends(apiKey, ticker, dividends)
 }

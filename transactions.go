@@ -319,8 +319,7 @@ func (t *Declare) Validate(ledger *Ledger) error {
 // for a held security.
 type Dividend struct {
 	secCmd
-	Amount           Money // Amount is the total dividend amount received.
-	DividendPerShare Money // DividendPerShare is the amount paid per share.
+	Amount Money // Amount is the dividend paid per share.
 }
 
 // NewDividend creates a new Dividend transaction.
@@ -336,7 +335,6 @@ func (t Dividend) MarshalJSON() ([]byte, error) {
 	var w jsonObjectWriter
 	w.EmbedFrom(t.secCmd)
 	w.EmbedFrom(t.Amount)
-	w.Optional("dividendPerShare", t.DividendPerShare.value)
 	return w.MarshalJSON()
 }
 
@@ -347,30 +345,13 @@ func (t Dividend) Equal(other Transaction) bool {
 
 // Validate checks the Dividend transaction's fields. It ensures the dividend
 // amount is positive.
-func (t *Dividend) Validate(ledger *Ledger, b *Balance) error {
+func (t *Dividend) Validate(ledger *Ledger) error {
 	if err := t.secCmd.Validate(ledger); err != nil {
 		return err
 	}
 
-	// Quick fix: if amount is missing but dividend per share is provided, calculate it.
-	if t.Amount.IsZero() && t.DividendPerShare.IsPositive() {
-		position := b.Position(t.Security)
-		if position.IsZero() {
-			return fmt.Errorf("cannot calculate total dividend for %s, position is zero on %s", t.Security, t.When())
-		}
-		// TODO: Broker-paid dividends are often net of taxes. The actual amount might be
-		// slightly less than (position * dividend_per_share). This could be modeled
-		// in the future by creating an associated tax withdrawal transaction.
-		t.Amount = t.DividendPerShare.Mul(position)
-	}
-
-	if !t.Amount.IsPositive() && !t.DividendPerShare.IsPositive() {
-		return errors.New("dividend must have a positive amount or dividendPerShare")
-	}
-
-	// Final check on the amount, which should now be populated.
-	if !t.Amount.IsZero() && !t.Amount.IsPositive() {
-		return fmt.Errorf("dividend amount must be positive, got %v", t.Amount)
+	if !t.Amount.IsPositive() {
+		return errors.New("dividend must have a positive amount per share")
 	}
 	return nil
 }

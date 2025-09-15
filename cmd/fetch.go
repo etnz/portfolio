@@ -122,6 +122,7 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 			}
 			// In the future, we would merge responses carefully.
 			for id, resp := range amundiResponses {
+				// TODO: ignore empty responses.
 				allResponses[id] = resp
 			}
 		case "eodhd":
@@ -131,6 +132,7 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 				// Don't exit, other providers might succeed.
 			}
 			for id, resp := range eodhdResponses {
+				// TODO: ignore empty responses or merge with other provider responses.
 				allResponses[id] = resp
 			}
 		default:
@@ -164,24 +166,17 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 				tx := portfolio.NewSplit(date, sec.Ticker(), split.Numerator, split.Denominator)
 				newTxs = append(newTxs, tx)
 			}
-			// TODO(#74): Re-enable dividend fetching once market data is fully decoupled from validation.
-			// The validation for a Dividend transaction requires calculating the total amount
-			// from a per-share value. This calculation depends on the exact position on the
-			// dividend date, which can be affected by stock splits.
-			// Currently, split data is still partially tied to the market.jsonl file,
-			// which is not available during the ledger-only validation phase of the `fetch`
-			// command. This creates a dependency issue.
-			//
-			// for date, dividend := range resp.Dividends {
-			// 	if !reqRange.Contains(date) {
-			// 		continue
-			// 	}
-			// 	dps := portfolio.M(dividend.Amount, sec.Currency())
-			// 	// Create a dividend transaction with a zero total amount. The validation step will calculate it.
-			// 	tx := portfolio.NewDividend(date, "fetched from provider", sec.Ticker(), portfolio.M(0, sec.Currency()))
-			// 	tx.DividendPerShare = dps
-			// 	newTxs = append(newTxs, tx)
-			// }
+			for date, dividend := range resp.Dividends {
+				if !reqRange.Contains(date) {
+					continue
+				}
+				// Create a dividend transaction with a zero total amount. The validation
+				// step, which runs when the ledger is loaded, will calculate the
+				// total amount based on the position at that date.
+				dps := portfolio.M(dividend.Amount, sec.Currency())
+				tx := portfolio.NewDividend(date, "fetched from provider", sec.Ticker(), dps)
+				newTxs = append(newTxs, tx)
+			}
 		}
 	}
 
@@ -192,6 +187,13 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 
 	// 4. Apply updates to the ledger and write it back
 	ledger.AppendOrUpdate(newTxs...)
+
+	// now we have imported probably too much market data, indeed we have market data about assets in period were
+	// we don't own them. We need to clean them up.
+	// We do a quick journal scan, to compute only positions, and on the fly build the list of spurious transactions.
+	if err := ledger.Clean(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error cleaning ledger: %v\n", err)
+	}
 
 	file, err := os.Create(*ledgerFile)
 	if err != nil {

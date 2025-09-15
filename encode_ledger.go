@@ -149,23 +149,14 @@ func decodeLedger(r io.Reader, ledger *Ledger) error {
 			var temp struct {
 				secCmd
 				amountCmd
-				DividendPerShare decimal.Decimal `json:"dividendPerShare"`
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
 				return err
 			}
-
-			dpsMoney := M(temp.DividendPerShare, temp.Currency)
-			// If currency was not in the dividendPerShare object, but was in the top-level amount, use it.
-			if dpsMoney.Currency() == "" && temp.Currency != "" {
-				dpsMoney = M(temp.DividendPerShare, temp.Currency)
-			}
-
 			// Create the final transaction struct
 			decodedTx = Dividend{
-				secCmd:           temp.secCmd,
-				Amount:           temp.Money(),
-				DividendPerShare: dpsMoney,
+				secCmd: temp.secCmd,
+				Amount: temp.Money(),
 			}
 		case CmdDeposit:
 			// Use a temporary type that has all possible fields.
