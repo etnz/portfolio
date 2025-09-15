@@ -7,6 +7,7 @@ import (
 
 func TestAccountingSystem_CalculateGains_FilterZeroGainRows(t *testing.T) {
 	ledger := NewLedger()
+	ledger.currency = "USD"
 	o := NewDate(2025, time.January, 1)
 	ZEROID, _ := NewPrivate("ZERO-ID")
 	ledger.Append(
@@ -16,7 +17,7 @@ func TestAccountingSystem_CalculateGains_FilterZeroGainRows(t *testing.T) {
 		NewUpdatePrice(NewDate(2025, time.February, 1), "ZERO", USD(100.0)),
 	)
 
-	report, err := NewGainsReport(ledger, "USD", Range{From: NewDate(2025, time.March, 1), To: NewDate(2025, time.March, 31)}, AverageCost)
+	report, err := NewGainsReport(ledger, Range{From: NewDate(2025, time.March, 1), To: NewDate(2025, time.March, 31)}, AverageCost)
 	if err != nil {
 		t.Fatalf("NewGainsReport() error = %v", err)
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/etnz/portfolio/amundi"
 	"github.com/etnz/portfolio/eodhd"
 	"github.com/google/subcommands"
+	"github.com/shopspring/decimal"
 )
 
 type fetchCmd struct {
@@ -122,7 +123,9 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 			}
 			// In the future, we would merge responses carefully.
 			for id, resp := range amundiResponses {
-				// TODO: ignore empty responses.
+				if len(resp.Dividends) == 0 && len(resp.Prices) == 0 && len(resp.Splits) == 0 {
+					continue
+				}
 				allResponses[id] = resp
 			}
 		case "eodhd":
@@ -132,16 +135,21 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 				// Don't exit, other providers might succeed.
 			}
 			for id, resp := range eodhdResponses {
-				// TODO: ignore empty responses or merge with other provider responses.
+				if len(resp.Dividends) == 0 && len(resp.Prices) == 0 && len(resp.Splits) == 0 {
+					continue
+				}
 				allResponses[id] = resp
 			}
 		default:
 			fmt.Fprintf(os.Stderr, "Warning: unsupported provider %q, skipping.\n", provider)
 		}
 	}
+	// if two providers are providing data for the same security current implementation will ignore the first one.
 
 	// Append new data to the ledger.
 	var newTxs []portfolio.Transaction
+	// updatePrices will contain one UpdatePrice transaction per day
+	updatePrices := make(map[portfolio.Date]portfolio.UpdatePrice)
 	for id, resp := range allResponses {
 		// Do not trust the provider. Only process data for securities that were
 		// actually requested.
@@ -156,8 +164,14 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 				if !reqRange.Contains(date) {
 					continue // Only create transactions for the requested date range.
 				}
-				tx := portfolio.NewUpdatePrice(date, sec.Ticker(), portfolio.M(price, sec.Currency()))
-				newTxs = append(newTxs, tx)
+
+				upd, exist := updatePrices[date]
+				if !exist {
+					upd = portfolio.NewUpdatePrices(date, make(map[string]decimal.Decimal))
+				}
+				upd.Prices[sec.Ticker()] = decimal.NewFromFloat(price)
+				updatePrices[date] = upd
+
 			}
 			for date, split := range resp.Splits {
 				if !reqRange.Contains(date) {
@@ -178,6 +192,10 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 				newTxs = append(newTxs, tx)
 			}
 		}
+		// now append all the update prices (one per day at once)
+		for _, upd := range updatePrices {
+			newTxs = append(newTxs, upd)
+		}
 	}
 
 	if len(newTxs) == 0 {
@@ -185,14 +203,17 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		return subcommands.ExitSuccess
 	}
 
-	// 4. Apply updates to the ledger and write it back
-	ledger.AppendOrUpdate(newTxs...)
+	// This is a mess. it will append market data even for positions not held.
+	// Then we call Clean() to remove them (incorrectly btw).
+	// we are loosing track of what number of actual updates.
+	// SO AppendOrUpdate should not append useless data market, and therefore should compute holdings
+	// on each date.
 
-	// now we have imported probably too much market data, indeed we have market data about assets in period were
-	// we don't own them. We need to clean them up.
-	// We do a quick journal scan, to compute only positions, and on the fly build the list of spurious transactions.
-	if err := ledger.Clean(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error cleaning ledger: %v\n", err)
+	// 4. Apply updates to the ledger and write it back
+	upd, err := ledger.UpdateMarketData(newTxs...)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error updating ledger: %v\n", err)
+		return subcommands.ExitFailure
 	}
 
 	file, err := os.Create(*ledgerFile)
@@ -207,6 +228,30 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		return subcommands.ExitFailure
 	}
 
-	fmt.Printf("✅ Successfully fetched and appended %d new market data points to the ledger.\n", len(newTxs))
+	if upd.Total() == 0 {
+		fmt.Println("✅ Successfully fetch updates, but there are no new data points.")
+		return subcommands.ExitSuccess
+	}
+
+	fmt.Printf("✅ Successfully updated %d data points.\n", upd.Total())
+	if upd.NewSplits() > 0 {
+		fmt.Printf(" * %d new splits.\n", upd.NewSplits())
+	}
+	if upd.UpdatedSplits() > 0 {
+		fmt.Printf(" * %d updated splits.\n", upd.UpdatedSplits())
+	}
+	if upd.AddedDividends() > 0 {
+		fmt.Printf(" * %d new dividends.\n", upd.AddedDividends())
+	}
+	if upd.UpdatedDividends() > 0 {
+		fmt.Printf(" * %d updated dividends.\n", upd.UpdatedDividends())
+	}
+	if upd.AddedPrices() > 0 {
+		fmt.Printf(" * %d new prices.\n", upd.AddedPrices())
+	}
+	if upd.UpdatedPrices() > 0 {
+		fmt.Printf(" * %d updated prices.\n", upd.UpdatedPrices())
+	}
+
 	return subcommands.ExitSuccess
 }

@@ -69,9 +69,9 @@ type CoutnerpartyAccountReview struct {
 
 // NewReviewReport returns a report with all transactions in a given period.
 func NewReviewReport(ledger *Ledger, reportingCurrency string, period Range) (*ReviewReport, error) {
-	journal, err := newJournal(ledger, reportingCurrency)
-	if err != nil {
-		return nil, err
+	journal := ledger.journal
+	if journal == nil {
+		return &ReviewReport{}, nil
 	}
 
 	// Compute the balance on the last days and on the day before the first to compute several

@@ -7,6 +7,7 @@ import (
 
 func TestBalance_Position(t *testing.T) {
 	ledger := NewLedger()
+	ledger.currency = "USD"
 	o := NewDate(2025, time.January, 1)
 	ledger.Append(
 		NewDeclare(o, "", "AAPL", AAPL, "USD"),
@@ -19,9 +20,9 @@ func TestBalance_Position(t *testing.T) {
 		NewSell(NewDate(2025, time.March, 1), "", "GOOG", Q(50), USD(50*2900.0)), // Sell all GOOG
 	)
 
-	journal, err := newJournal(ledger, "USD")
-	if err != nil {
-		t.Fatalf("NewJournal() error = %v", err)
+	journal := ledger.journal
+	if journal == nil {
+		t.Fatal("journal is nil")
 	}
 
 	testCases := []struct {
@@ -114,6 +115,8 @@ func TestBalance_Position(t *testing.T) {
 
 func TestBalance_BuysAndSells(t *testing.T) {
 	ledger := NewLedger()
+	ledger.currency = "USD"
+
 	o := NewDate(2025, time.January, 1)
 	ledger.Append(
 		NewDeclare(o, "", "AAPL", AAPL, "USD"),
@@ -126,9 +129,9 @@ func TestBalance_BuysAndSells(t *testing.T) {
 		NewSell(NewDate(2025, time.March, 15), "", "AAPL", Q(50), USD(8000)),    // Sell 2
 	)
 
-	journal, err := newJournal(ledger, "USD")
-	if err != nil {
-		t.Fatalf("NewJournal() error = %v", err)
+	journal := ledger.journal
+	if journal == nil {
+		t.Fatal("journal is nil")
 	}
 
 	testCases := []struct {
@@ -200,6 +203,7 @@ func TestBalance_BuysAndSells(t *testing.T) {
 
 func TestBalance_CashBalance(t *testing.T) {
 	ledger := NewLedger()
+	ledger.currency = "USD"
 	o := NewDate(2025, time.January, 1)
 	ledger.Append(
 		NewDeclare(o, "", "AAPL", AAPL, "USD"),
@@ -214,9 +218,9 @@ func TestBalance_CashBalance(t *testing.T) {
 		NewWithdraw(NewDate(2025, time.April, 1), "", EUR(500)),                     // -500 EUR
 	)
 
-	journal, err := newJournal(ledger, "USD")
-	if err != nil {
-		t.Fatalf("NewJournal() error = %v", err)
+	journal := ledger.journal
+	if journal == nil {
+		t.Fatal("journal is nil")
 	}
 
 	testCases := []struct {
@@ -318,15 +322,16 @@ func TestBalance_CashBalance(t *testing.T) {
 
 func TestBalance_CounterpartyAccountBalance(t *testing.T) {
 	ledger := NewLedger()
+	ledger.currency = "USD"
 	o := NewDate(2025, time.January, 1)
 	ledger.Append(
 		NewAccrue(o, "interest", "bux", EUR(10.0)),
 		NewDeposit(NewDate(2025, time.January, 5), "", EUR(10.0), "bux"),
 	)
 
-	journal, err := newJournal(ledger, "USD")
-	if err != nil {
-		t.Fatalf("NewJournal() error = %v", err)
+	journal := ledger.journal
+	if journal == nil {
+		t.Fatal("journal is nil")
 	}
 
 	testCases := []struct {
@@ -365,6 +370,7 @@ func TestBalance_CounterpartyAccountBalance(t *testing.T) {
 
 func TestBalance_TotalMarketValue(t *testing.T) {
 	ledger := NewLedger()
+	ledger.currency = "USD"
 	o := NewDate(2025, time.January, 1)
 	apple := NewSecurity(AAPL, "AAPL", "USD")
 	ledger.Append(
@@ -373,9 +379,9 @@ func TestBalance_TotalMarketValue(t *testing.T) {
 		NewUpdatePrice(NewDate(2025, time.January, 10), "AAPL", USD(160.0)),
 	)
 
-	journal, err := newJournal(ledger, "USD")
-	if err != nil {
-		t.Fatalf("NewJournal() error = %v", err)
+	journal := ledger.journal
+	if journal == nil {
+		t.Fatal("journal is nil")
 	}
 
 	testCases := []struct {

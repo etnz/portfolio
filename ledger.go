@@ -7,51 +7,20 @@ import (
 	"log"
 	"maps"
 	"slices"
-	"sort"
+	"strings"
 
 	"github.com/shopspring/decimal"
 )
-
-// CostBasisMethod defines the method for calculating cost basis.
-type CostBasisMethod int
-
-const (
-	// AverageCost calculates the cost basis by averaging the cost of all shares.
-	AverageCost CostBasisMethod = iota
-	// FIFO (First-In, First-Out) calculates the cost basis by assuming the first shares purchased are the first ones sold.
-	FIFO
-)
-
-func (m CostBasisMethod) String() string {
-	switch m {
-	case AverageCost:
-		return "average"
-	case FIFO:
-		return "fifo"
-	default:
-		return "unknown"
-	}
-}
-
-// ParseCostBasisMethod parses a string into a CostBasisMethod.
-func ParseCostBasisMethod(s string) (CostBasisMethod, error) {
-	switch s {
-	case "average":
-		return AverageCost, nil
-	case "fifo":
-		return FIFO, nil
-	default:
-		return 0, fmt.Errorf("unknown cost basis method: %q", s)
-	}
-}
 
 // Ledger represents a list of transactions.
 //
 // In a Ledger transactions are always in chronological order.
 type Ledger struct {
+	currency       string // ledger currency
 	transactions   []Transaction
 	securities     map[string]Security // index securities by ticker
 	counterparties map[string]string   // index counterparties currency by counterparty name
+	journal        *Journal
 }
 
 // NewLedger creates an empty ledger.
@@ -60,6 +29,7 @@ func NewLedger() *Ledger {
 		transactions:   make([]Transaction, 0),
 		securities:     make(map[string]Security),
 		counterparties: make(map[string]string),
+		journal:        nil,
 	}
 }
 
@@ -80,7 +50,7 @@ func (l *Ledger) Security(ticker string) *Security {
 // Validate checks a transaction for correctness and applies quick fixes where
 // applicable (e.g., resolving "sell all"). It returns the validated (and
 // potentially modified) transaction or an error detailing any validation failures.
-func (l *Ledger) Validate(tx Transaction, reportingCurrency string) (Transaction, error) {
+func (l *Ledger) Validate(tx Transaction) (Transaction, error) {
 	// For validations that need the state of the portfolio, we compute the balance
 	// on the transaction date.
 	var err error
@@ -89,18 +59,7 @@ func (l *Ledger) Validate(tx Transaction, reportingCurrency string) (Transaction
 		err = v.Validate(l)
 		tx = v
 	case Sell:
-		// todo: recomputing the whole journal everytime is expensive.
-		var j *Journal
-		j, err = newJournal(l, reportingCurrency)
-		if err != nil {
-			return nil, fmt.Errorf("invalid journal: %w", err)
-		}
-
-		balance, e := NewBalance(j, tx.When(), FIFO) // TODO: Make cost basis method configurable
-		if e != nil {
-			return nil, fmt.Errorf("could not create balance from journal: %w", e)
-		}
-		err = v.Validate(l, balance)
+		err = v.Validate(l)
 		tx = v
 	case Dividend:
 		err = v.Validate(l)
@@ -186,82 +145,214 @@ func (l *Ledger) UpdateIntraday() error {
 			newTxs = append(newTxs, NewUpdatePrice(Today(), sec.Ticker(), price))
 		}
 	}
-	l.AppendOrUpdate(newTxs...)
+	l.UpdateMarketData(newTxs...)
 	return errs
 }
 
 // Append appends transactions to this ledger and maintains the chronological order of transactions.
-func (l *Ledger) Append(txs ...Transaction) {
+func (l *Ledger) Append(txs ...Transaction) error {
+	// logic is a bit more complicated than that.
 	l.transactions = append(l.transactions, txs...)
 	// process security declarations and counterparty account creation.
 	l.processTx(txs...)
 	// The ledger is not sorted anymore, the journal is.
-	l.stableSort() // Ensure the ledger remains sorted after appending
+	return l.newJournal()
 }
 
-// AppendOrUpdate adds a transaction to the ledger. If the transaction is a
+type MarketDataUpdate struct {
+	newSplits, updatedSplits, addedDiv, updatedDiv, addedPrices, updatedPrices int
+}
+
+func (m MarketDataUpdate) NewSplits() int        { return m.newSplits }
+func (m MarketDataUpdate) UpdatedSplits() int    { return m.updatedSplits }
+func (m MarketDataUpdate) AddedDividends() int   { return m.addedDiv }
+func (m MarketDataUpdate) UpdatedDividends() int { return m.updatedDiv }
+func (m MarketDataUpdate) AddedPrices() int      { return m.addedPrices }
+func (m MarketDataUpdate) UpdatedPrices() int    { return m.updatedPrices }
+func (m MarketDataUpdate) Total() int {
+	return m.NewSplits() + m.UpdatedSplits() + m.AddedDividends() + m.UpdatedDividends() + m.AddedPrices() + m.UpdatedPrices()
+}
+
+// UpdateMarketData adds a transaction to the ledger. If the transaction is a
 // market data update (UpdatePrice or Split) and an entry for the same security
 // on the same day already exists, it replaces the old entry. Otherwise, it
 // appends the new transaction.
-func (l *Ledger) AppendOrUpdate(txs ...Transaction) {
-	for _, tx := range txs {
-		var replaced bool
-		switch newTx := tx.(type) {
-		case UpdatePrice:
-			for i, existingTx := range l.transactions {
-				if oldTx, ok := existingTx.(UpdatePrice); ok && oldTx.When() == newTx.When() {
-					// An UpdatePrice for this day already exists. Merge the prices.
-					if oldTx.Prices == nil {
-						oldTx.Prices = make(map[string]decimal.Decimal)
-					}
-					for ticker, price := range newTx.Prices {
-						if old, existed := oldTx.Prices[ticker]; !existed || !old.Equal(price) {
-							log.Printf("%v: update %v price from %s with %s", newTx.Date, ticker, old, price)
-							oldTx.Prices[ticker] = price
-						}
-					}
-					l.transactions[i] = oldTx // Update in place.
-					replaced = true
-					break // Found the right day, no need to check further.
-				}
-			}
+func (l *Ledger) UpdateMarketData(txs ...Transaction) (MarketDataUpdate, error) {
+
+	// first thing is to append splits, because they might cause changes in holdings for instance
+	// we'll dispatch transactions per type first.
+
+	newSplits, updatedSplits := 0, 0
+	updates := make([]UpdatePrice, 0)
+	dividends := make([]Dividend, 0)
+	for _, t := range txs {
+		switch ntx := t.(type) {
 		case Split:
-			for i, existingTx := range l.transactions {
-				if oldTx, ok := existingTx.(Split); ok &&
-					oldTx.When() == newTx.When() &&
-					oldTx.Security == newTx.Security {
-					// if identical do nothing
-					if oldTx.Numerator != newTx.Numerator || oldTx.Denominator != newTx.Denominator {
-						log.Printf("%v: update %v split %v/%v with %v/%v", oldTx.Date, oldTx.Security, oldTx.Numerator, oldTx.Denominator, newTx.Numerator, newTx.Denominator)
-						l.transactions[i] = newTx // Replace existing
-					}
-					// we keep replaced to avoid 'append' later on.
-					replaced = true
+			// Find a split same day same security
+			index, split := -1, Split{}
+			for i, tx := range l.transactions {
+				prev, isSplit := tx.(Split)
+				if isSplit && prev.Security == ntx.Security && prev.When() == ntx.When() {
+					index, split = i, prev
 					break
 				}
 			}
-		case Dividend:
-			for i, existingTx := range l.transactions {
-				if oldTx, ok := existingTx.(Dividend); ok {
-					if oldTx.When() == newTx.When() && oldTx.Security == newTx.Security {
-						// if identical do nothing
-						if !oldTx.Amount.Equal(newTx.Amount) {
-							log.Printf("%v: update %v dividend per share %v with %v", oldTx.Date, oldTx.Security, oldTx.Amount, newTx.Amount)
-							l.transactions[i] = newTx // Replace existing
-						}
-						replaced = true
-						break
-					}
+			if index < 0 {
+				// Add
+				log.Printf("%v: append %v split %v/%v", ntx.Date, ntx.Security, ntx.Numerator, ntx.Denominator)
+				newSplits++
+				l.transactions = append(l.transactions, ntx)
+			} else {
+				if split.Numerator != ntx.Numerator || split.Denominator != ntx.Denominator {
+					// new is different, update in place.
+					log.Printf("%v: add %v split %v/%v -> %v/%v", ntx.Date, ntx.Security, split.Numerator, split.Denominator, ntx.Numerator, ntx.Denominator)
+					updatedSplits++
+					l.transactions[index] = ntx
 				}
+			}
+
+		case UpdatePrice:
+			// just store for later process
+			updates = append(updates, ntx)
+		case Dividend:
+			dividends = append(dividends, ntx)
+		}
+	}
+
+	if newSplits > 0 || updatedSplits > 0 {
+		// Splits have changed, journal is not obsolete.
+		if err := l.newJournal(); err != nil {
+			return MarketDataUpdate{newSplits: newSplits, updatedSplits: updatedSplits}, fmt.Errorf("invalid split transactions: %w", err)
+		}
+	}
+	// now we have a pretty nice ledger to work with.
+
+	// append all dividends
+	addedDiv, updatedDiv := 0, 0
+	for _, ndiv := range dividends {
+		if l.Holding(ndiv.Date, ndiv.Security).IsZero() {
+			continue // skip dividends on non held assets.
+		}
+		index, div := -1, Dividend{}
+		for i, tx := range l.transactions {
+			prev, isDiv := tx.(Dividend)
+			if isDiv && prev.Security == ndiv.Security && prev.When() == ndiv.When() {
+				index, div = i, prev
+				break
+			}
+		}
+		if index < 0 {
+			// Add
+			log.Printf("%v: add %v dividend %v", ndiv.Date, ndiv.Security, ndiv.Amount)
+			l.transactions = append(l.transactions, ndiv)
+			addedDiv++
+		} else {
+			if !div.Amount.Equal(ndiv.Amount) {
+				// new is different, update in place.
+				log.Printf("%v: update %v dividend %v -> %v", ndiv.Date, ndiv.Security, div.Amount, ndiv.Amount)
+				updatedDiv++
+				l.transactions[index] = ndiv
+			}
+		}
+	}
+
+	// append all updatePrice
+	addedPrices, updatedPrices := 0, 0
+	for _, nup := range updates {
+		// remove updates relative to non held
+		for t := range nup.PricesIter() {
+			if l.Holding(nup.Date, t).IsZero() {
+				// remove it from the updates
+				delete(nup.Prices, t)
+			}
+		}
+		if len(nup.Prices) == 0 {
+			continue
+		}
+		// Check if an UpdatePrice transaction for the same date already exists.
+		index, updatePrice := -1, UpdatePrice{}
+		for i, tx := range l.transactions {
+			prev, isUpdatePrice := tx.(UpdatePrice)
+			if isUpdatePrice && prev.When() == nup.When() {
+				index, updatePrice = i, prev
+				break
 			}
 		}
 
-		if !replaced {
-			// If no existing transaction was found and replaced, append the new one.
-			l.Append(tx)
-			log.Printf("%v: append %q %v", tx.When(), tx.What(), tx)
+		if index < 0 {
+			// No existing UpdatePrice for this date, append the new one.
+			var buf strings.Builder
+			for ticker, price := range nup.PricesIter() {
+				buf.WriteString(ticker)
+				buf.WriteString(":")
+				buf.WriteString(price.String())
+				buf.WriteString(" ")
+			}
+
+			log.Printf("%v: add update-price %v", nup.Date, buf.String())
+			l.transactions = append(l.transactions, nup)
+			addedPrices += len(nup.Prices)
+		} else {
+			// clean existing from updates relative to non held assets
+			for t := range updatePrice.PricesIter() {
+				if l.Holding(updatePrice.Date, t).IsZero() {
+					// remove it from the updates
+					delete(updatePrice.Prices, t)
+				}
+			}
+			// We have a bunch of newprices for some tickers and another bunch of existing prices.
+			// some of the 'new' are not new (same value), and some of the existing ones need to be kept.
+			// we want to count the really new ones (to actually change the ledger)
+			// we want to merge all prices (new, and old), new having priority.
+			onlyNew, all := mergePrices(nup.Prices, updatePrice.Prices)
+
+			addedPrices += len(onlyNew)
+			nup.Prices = all
+
+			if len(onlyNew) > 0 {
+				var buf strings.Builder
+				for ticker, price := range onlyNew {
+					buf.WriteString(ticker)
+					buf.WriteString(":")
+					buf.WriteString(price.String())
+					buf.WriteString(" ")
+				}
+				log.Printf("%v: update existing update-price %v", nup.Date, buf.String())
+				l.transactions[index] = nup
+				updatedPrices++
+			}
 		}
 	}
+
+	upd := MarketDataUpdate{newSplits: newSplits, updatedSplits: updatedSplits, addedDiv: addedDiv, updatedDiv: updatedDiv, addedPrices: addedPrices, updatedPrices: updatedPrices}
+
+	if addedPrices > 0 || updatedPrices > 0 || addedDiv > 0 || updatedDiv > 0 {
+		// If any market data was added or updated, the journal is now obsolete.
+		if err := l.newJournal(); err != nil {
+			return upd, fmt.Errorf("invalid market data transactions: %w", err)
+		}
+	}
+
+	return upd, nil
+}
+
+// We have a bunch of newprices for some tickers and another bunch of existing prices.
+// some of the 'new' are not new (same value), and some of the existing ones need to be kept.
+// we want to count the really new ones (to actually change the ledger)
+// we want to merge all prices (new, and old), new having priority.
+func mergePrices(updated, existing map[string]decimal.Decimal) (onlyNew, all map[string]decimal.Decimal) {
+	all = make(map[string]decimal.Decimal)
+	maps.Copy(all, existing)
+	maps.Copy(all, updated)
+	// now compute the only new one
+	onlyNew = make(map[string]decimal.Decimal)
+	for k, v := range updated {
+		e, existed := existing[k]
+		if !existed || !e.Equal(v) {
+			onlyNew[k] = v
+		}
+	}
+	return onlyNew, all
 }
 
 func (l *Ledger) processTx(txs ...Transaction) {
@@ -302,10 +393,43 @@ func (l Ledger) Transactions(filters ...func(Transaction) bool) iter.Seq2[int, T
 
 // stableSort sorts the ledger by transaction date. The sort is stable, meaning
 // transactions on the same day maintain their original relative order.
+//
+// Some transactions should be put at the beginning of the day: Dividend, UpdatePrice, and Splits aka Market Data transactions.
 func (l *Ledger) stableSort() {
-	sort.SliceStable(l.transactions, func(i, j int) bool {
-		return l.transactions[i].When().Before(l.transactions[j].When())
+	slices.SortStableFunc(l.transactions, func(a, b Transaction) int {
+		// we want to sort by year, month, day, class of transaction.
+		dateA, dateB := a.When(), b.When()
+		// return -1 or +1 is correct, return a reasonable distance makes it faster.
+		// we'll use 12 month in a year, 30 days in a month, and 2 classes
+		const months, days, classes = 12, 30, 3
+
+		if dateA.y != dateB.y {
+			return (dateA.y - dateB.y) * months * days * classes
+		}
+		if dateA.m != dateB.m {
+			return int(dateA.m-dateB.m) * days * classes
+		}
+		if dateA.d != dateB.d {
+			return (dateA.d - dateB.d) * classes
+		}
+		const declare, market, ops = 0, 1, 2
+		classOf := func(t CommandType) int {
+			switch t {
+			case CmdDeclare:
+				return declare
+			case CmdDividend, CmdSplit, CmdUpdatePrice:
+				return market
+			default:
+				return ops
+			}
+		}
+		classA, classB := classOf(a.What()), classOf(b.What())
+		if classA != classB {
+			return classA - classB
+		}
+		return 0 // they are identical
 	})
+
 }
 
 // OldestTransactionDate returns the date of the earliest transaction in the ledger.
@@ -328,44 +452,18 @@ func (l *Ledger) NewestTransactionDate() Date {
 
 // CashBalance computes the total cash in a specific currency on a specific date.
 func (l *Ledger) CashBalance(currency string, on Date) Money {
-	balance := M(decimal.Zero, currency)
-	for _, tx := range l.transactions {
-		if tx.When().After(on) {
-			// The ledger is sorted by date, so it's safe to break.
-			break
-		}
-		switch v := tx.(type) {
-		case Buy:
-			if sec, ok := l.securities[v.Security]; ok && sec.Currency() == currency {
-				balance = balance.Sub(v.Amount)
-			}
-		case Sell:
-			if sec, ok := l.securities[v.Security]; ok && sec.Currency() == currency {
-				balance = balance.Add(v.Amount)
-			}
-		case Dividend:
-			if sec, ok := l.securities[v.Security]; ok && sec.Currency() == currency {
-				balance = balance.Add(v.Amount)
-			}
-		case Deposit:
-			if v.Currency() == currency {
-				balance = balance.Add(v.Amount)
-			}
-		case Withdraw:
-			if v.Currency() == currency {
-				balance = balance.Sub(v.Amount)
-			}
-		case Convert:
-			// Fix: Use decimal.Decimal's Sub and Add methods for Convert transaction amounts
-			if v.FromCurrency() == currency {
-				balance = balance.Sub(v.FromAmount)
-			}
-			if v.ToCurrency() == currency {
-				balance = balance.Add(v.ToAmount)
-			}
-		}
+	if l.journal == nil {
+		return M(decimal.Zero, currency)
 	}
-	return balance
+	return l.journal.CashBalance(on, currency)
+}
+
+// Holding computes the current holding for a ticker
+func (l *Ledger) Holding(on Date, ticker string) Quantity {
+	if l.journal == nil {
+		return Q(decimal.Zero)
+	}
+	return l.journal.Holding(ticker, on)
 }
 
 // CounterpartyAccountBalance computes the balance of a counterparty account on a specific date.
@@ -626,10 +724,10 @@ func (l *Ledger) InceptionDate(security string) (Date, bool) {
 // On a given day, market data relative to an asset not held will be deleted.
 func (l *Ledger) Clean() error {
 	// creates a journal, and scan it computing correct positions and cleaning the ledger on the fly
-	j, err := newJournal(l, "EUR")
-	if err != nil {
-		return fmt.Errorf("could not create journal: %w", err)
+	if l.journal != nil {
+		return nil
 	}
+	j := l.journal
 
 	holdings := make(map[string]Quantity)
 

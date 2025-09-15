@@ -36,7 +36,7 @@ pcs price -s EURUSD -d 2025-03-05 -p 1.1
 ```
 
 ```bash run
-pcs holding -d 2025-03-05 -c EUR
+pcs holding -d 2025-03-05
 ```
 
 ```console check
@@ -70,30 +70,30 @@ pcs accrue -d 2025-03-06 -c USD -payable TaxAccount -a 60
 ```
 
 ```bash run
-pcs holding -d 2025-03-06 -c USD
+pcs holding -d 2025-03-06
 ```
 
 ```console check
 # Holding Report on 2025-03-06
   
-  Total Portfolio Value: **$16,240.00**
+  Total Portfolio Value: **€14,763.63**
   
   ## Securities
   
    Ticker | Quantity |   Price | Market Value 
   --------|----------|---------|--------------
-   MSFT   |        5 | $420.00 |    $2,100.00 
+   MSFT   |        5 | $420.00 |    €1,909.08 
   
   ## Cash
   
    Currency |    Balance |      Value 
   ----------|------------|------------
-   EUR      | €10,000.00 | $11,000.00 
-   USD      |  $3,200.00 |  $3,200.00 
+   EUR      | €10,000.00 | €10,000.00 
+   USD      |  $3,200.00 |  €2,909.08 
   
   ## Counterparties
   
    Name       | Balance |   Value 
   ------------|---------|---------
-   TaxAccount | -$60.00 | -$60.00
+   TaxAccount | -$60.00 | -€54.54
 ```

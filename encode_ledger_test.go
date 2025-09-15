@@ -10,9 +10,12 @@ import (
 
 func TestDecodeLedger(t *testing.T) {
 	// A multi-line string representing a JSONL stream with all command types
+
 	jsonlStream := `
+{"command":"declare","date":"2025-08-01","ticker":"AAPL","id":"US0378331005.XNAS","currency":"USD"}
 {"command":"buy","date":"2025-08-01","security":"AAPL","quantity":10,"price":195.5}
 {"command":"deposit","date":"2025-08-02","amount":5000,"currency":"USD"}
+{"command":"declare","date":"2025-08-01","ticker":"GOOG","id":"US02079K1079.XNAS","currency":"USD"}
 {"command":"sell","date":"2025-08-02","security":"GOOG","quantity":5,"price":140.2}
 {"command":"dividend","date":"2025-08-03","security":"AAPL","amount":5.50}
 {"command":"withdraw","date":"2025-08-04","amount":1000,"currency":"USD"}
@@ -28,15 +31,17 @@ func TestDecodeLedger(t *testing.T) {
 	}
 
 	// 2. Check the number of transactions decoded
-	expectedCount := 6
+	expectedCount := 8
 	if len(ledger.transactions) != expectedCount {
 		t.Fatalf("DecodeLedger() decoded wrong number of transactions. Got: %d, want: %d", len(ledger.transactions), expectedCount)
 	}
 
 	// 3. Check the type of each decoded transaction
 	expectedTypes := []reflect.Type{
+		reflect.TypeOf(Declare{}),
 		reflect.TypeOf(Buy{}),
 		reflect.TypeOf(Deposit{}),
+		reflect.TypeOf(Declare{}),
 		reflect.TypeOf(Sell{}),
 		reflect.TypeOf(Dividend{}),
 		reflect.TypeOf(Withdraw{}),

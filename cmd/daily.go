@@ -14,10 +14,9 @@ import (
 
 // dailyCmd holds the flags for the 'daily' subcommand.
 type dailyCmd struct {
-	date     string
-	currency string
-	update   bool
-	watch    int
+	date   string
+	update bool
+	watch  int
 }
 
 func (*dailyCmd) Name() string     { return "daily" }
@@ -31,8 +30,6 @@ func (*dailyCmd) Usage() string {
 
 func (c *dailyCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", portfolio.Today().String(), "Date for the report. See the user manual for supported date formats.")
-	f.StringVar(&c.currency, "c", "EUR", "Reporting currency for the report")
-	f.BoolVar(&c.update, "u", false, "update with latest intraday prices before calculating the report")
 	f.IntVar(&c.watch, "w", 0, "run every n seconds")
 }
 
@@ -62,7 +59,8 @@ func (c *dailyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 			}
 		}
 
-		report, err := portfolio.NewDailyReport(ledger, on, c.currency)
+		// TODO: handle report currency
+		report, err := portfolio.NewDailyReport(ledger, on)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error calculating daily report: %v\n", err)
 			return subcommands.ExitFailure

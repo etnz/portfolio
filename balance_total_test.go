@@ -7,6 +7,7 @@ import (
 
 func TestBalance_TotalPortfolioValue(t *testing.T) {
 	ledger := NewLedger()
+	ledger.currency = "USD"
 	o := NewDate(2025, time.January, 1)
 	ledger.Append(
 		NewDeclare(o, "", "AAPL", AAPL, "USD"),
@@ -23,9 +24,9 @@ func TestBalance_TotalPortfolioValue(t *testing.T) {
 		NewUpdatePrice(NewDate(2025, time.January, 15), "USDEUR", EUR(1.2)),
 	)
 
-	journal, err := newJournal(ledger, "USD")
-	if err != nil {
-		t.Fatalf("NewJournal() error = %v", err)
+	journal := ledger.journal
+	if journal == nil {
+		t.Fatal("journal is nil")
 	}
 
 	testCases := []struct {

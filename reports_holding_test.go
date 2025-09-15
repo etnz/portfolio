@@ -8,6 +8,7 @@ import (
 
 func TestAccountingSystem_NewHoldingReport(t *testing.T) {
 	ledger := NewLedger()
+	ledger.currency = "EUR"
 	o := NewDate(2025, time.January, 1)
 
 	ledger.Append(
@@ -25,7 +26,7 @@ func TestAccountingSystem_NewHoldingReport(t *testing.T) {
 		NewUpdatePrice(NewDate(2025, time.February, 1), "USDEUR", EUR(0.9)),
 	)
 
-	report, err := NewHoldingReport(ledger, NewDate(2025, time.February, 5), "EUR")
+	report, err := NewHoldingReport(ledger, NewDate(2025, time.February, 5))
 	if err != nil {
 		t.Fatalf("NewHoldingReport() error = %v", err)
 	}

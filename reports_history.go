@@ -26,6 +26,10 @@ func NewHistory(ledger *Ledger, security, currency, reportingCurrency string) (*
 		Currency: currency,
 		Entries:  []HistoryEntry{},
 	}
+	journal := ledger.journal
+	if journal == nil {
+		return report, nil
+	}
 
 	var predicate func(Transaction) bool
 	if security != "" {
@@ -44,11 +48,6 @@ func NewHistory(ledger *Ledger, security, currency, reportingCurrency string) (*
 		}
 		previous = on
 		days = append(days, on)
-	}
-
-	journal, err := newJournal(ledger, reportingCurrency)
-	if err != nil {
-		return nil, err
 	}
 
 	for _, on := range days {

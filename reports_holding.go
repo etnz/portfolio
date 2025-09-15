@@ -45,20 +45,20 @@ type CounterpartyHolding struct {
 }
 
 // NewHoldingReport calculates and returns a detailed holdings report for a given date.
-func NewHoldingReport(ledger *Ledger, on Date, reportingCurrency string) (*HoldingReport, error) {
+func NewHoldingReport(ledger *Ledger, on Date) (*HoldingReport, error) {
+	journal := ledger.journal
+	if journal == nil {
+		return &HoldingReport{}, nil
+	}
 	report := &HoldingReport{
 		Date:              on,
 		Time:              time.Now(), // Generation time
-		ReportingCurrency: reportingCurrency,
+		ReportingCurrency: journal.cur,
 		Securities:        []SecurityHolding{},
 		Cash:              []CashHolding{},
 		Counterparties:    []CounterpartyHolding{},
 	}
 
-	journal, err := newJournal(ledger, reportingCurrency)
-	if err != nil {
-		return nil, err
-	}
 	balance, err := NewBalance(journal, on, FIFO)
 	if err != nil {
 		return nil, err

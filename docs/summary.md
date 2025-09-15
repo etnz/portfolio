@@ -42,7 +42,7 @@ pcs buy -d 2025-01-02 -s MSFT -q 10 -a 1000
 ```
 
 ```bash run
-pcs summary -d 2025-01-31 -c EUR
+pcs summary -d 2025-01-31
 ```
 
 ```console check

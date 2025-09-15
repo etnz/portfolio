@@ -7,8 +7,9 @@ import (
 
 // Money represents a monetary value.
 type Money struct {
-	value decimal.Decimal // as major unit value
-	cur   string
+	value      decimal.Decimal // as major unit value
+	cur        string
+	fractional bool // true to persist in full digits
 }
 
 func M[T float32 | float64 | int | int32 | int64 | uint | uint32 | uint64 | decimal.Decimal](value T, currency string) Money {
@@ -74,9 +75,21 @@ func (m Money) SignedString() string {
 	return m.String()
 }
 
+// exact return a copy of money that will be persisted with all the digits.
+func (m Money) exact() Money {
+	m.fractional = true
+	return m
+}
+
 func (m Money) MarshalJSON() ([]byte, error) {
 	var w jsonObjectWriter
 	w.Optional("currency", m.cur)
-	w.Append("amount", m.value.Round(2))
+	// it was rounded to 2, which is ok in USD and EUR but should at the very least use cur.Fraction.
+	// however, money is used for dividend per share that can be fractional.
+	rounded := m.value // no rounding by default
+	if !m.fractional {
+		rounded = m.value.Round(int32(m.currency().Fraction))
+	}
+	w.Append("amount", rounded)
 	return w.MarshalJSON()
 }

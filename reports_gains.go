@@ -4,6 +4,39 @@ import (
 	"fmt"
 )
 
+// CostBasisMethod defines the method for calculating cost basis.
+type CostBasisMethod int
+
+const (
+	// AverageCost calculates the cost basis by averaging the cost of all shares.
+	AverageCost CostBasisMethod = iota
+	// FIFO (First-In, First-Out) calculates the cost basis by assuming the first shares purchased are the first ones sold.
+	FIFO
+)
+
+func (m CostBasisMethod) String() string {
+	switch m {
+	case AverageCost:
+		return "average"
+	case FIFO:
+		return "fifo"
+	default:
+		return "unknown"
+	}
+}
+
+// ParseCostBasisMethod parses a string into a CostBasisMethod.
+func ParseCostBasisMethod(s string) (CostBasisMethod, error) {
+	switch s {
+	case "average":
+		return AverageCost, nil
+	case "fifo":
+		return FIFO, nil
+	default:
+		return 0, fmt.Errorf("unknown cost basis method: %q", s)
+	}
+}
+
 // GainsReport contains the results of a capital gains calculation.
 type GainsReport struct {
 	Range             Range
@@ -25,10 +58,10 @@ type SecurityGains struct {
 
 // NewGainsReport computes the realized and unrealized gains for all securities
 // over a given period, using a specified cost basis accounting method.
-func NewGainsReport(ledger *Ledger, reportingCurrency string, period Range, method CostBasisMethod) (*GainsReport, error) {
-	journal, err := newJournal(ledger, reportingCurrency)
-	if err != nil {
-		return nil, fmt.Errorf("could not get journal: %w", err)
+func NewGainsReport(ledger *Ledger, period Range, method CostBasisMethod) (*GainsReport, error) {
+	journal := ledger.journal
+	if journal == nil {
+		return &GainsReport{}, nil
 	}
 
 	endBalance, err := NewBalance(journal, period.To, method)
@@ -39,7 +72,7 @@ func NewGainsReport(ledger *Ledger, reportingCurrency string, period Range, meth
 	if err != nil {
 		return nil, fmt.Errorf("could not create balance from journal: %w", err)
 	}
-	return calculateGains(endBalance, startBalance, method, reportingCurrency)
+	return calculateGains(endBalance, startBalance, method, journal.cur)
 }
 func calculateGains(endBalance, startBalance *Balance, method CostBasisMethod, reportingCurrency string) (*GainsReport, error) {
 	report := &GainsReport{

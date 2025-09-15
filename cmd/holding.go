@@ -13,9 +13,8 @@ import (
 
 // holdingCmd holds the flags for the 'holding' subcommand.
 type holdingCmd struct {
-	date     string
-	currency string
-	update   bool
+	date   string
+	update bool
 }
 
 func (*holdingCmd) Name() string     { return "holding" }
@@ -29,9 +28,6 @@ func (*holdingCmd) Usage() string {
 
 func (c *holdingCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", portfolio.Today().String(), "Date for the holdings report. See the user manual for supported date formats.")
-	f.StringVar(&c.currency, "c", "EUR", "Reporting currency for market values")
-	f.BoolVar(&c.update, "u", false, "update with latest intraday prices before calculating the report")
-
 }
 
 func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -59,7 +55,7 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		}
 	}
 
-	report, err := portfolio.NewHoldingReport(ledger, on, c.currency)
+	report, err := portfolio.NewHoldingReport(ledger, on)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating holding report: %v\n", err)
 		return subcommands.ExitFailure

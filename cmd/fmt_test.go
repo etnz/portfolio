@@ -36,9 +36,10 @@ func TestFmtDefaultOutput(t *testing.T) {
 {"command":"deposit","date":"2025-01-01","currency":"USD","amount":2000}
 {"command":"declare","date":"2025-01-01","ticker":"MSFT","id":"US0378331005.XNAS","currency":"USD"}
 `
-	expectedFormattedContent := `{"command":"deposit","date":"2025-01-01","currency":"USD","amount":2000}
-{"command":"declare","date":"2025-01-01","ticker":"MSFT","id":"US0378331005.XNAS","currency":"USD"}
-{"command":"buy","date":"2025-01-02","security":"MSFT","quantity":10,"currency":"USD","amount":1000}`
+	expectedFormattedContent := `{"command":"declare","date":"2025-01-01","ticker":"MSFT","id":"US0378331005.XNAS","currency":"USD"}
+{"command":"deposit","date":"2025-01-01","currency":"USD","amount":2000}
+{"command":"buy","date":"2025-01-02","security":"MSFT","quantity":10,"currency":"USD","amount":1000}
+`
 
 	// Create a temporary default ledger file
 	tempLedgerFile := createTempLedger(t, originalLedgerContent)
@@ -79,9 +80,11 @@ func TestFmtToFileOutput(t *testing.T) {
 {"command":"deposit","date":"2025-01-01","currency":"USD","amount":2000}
 {"command":"declare","date":"2025-01-01","ticker":"MSFT","id":"US0378331005.XNAS","currency":"USD"}
 `
-	expectedFormattedContent := `{"command":"deposit","date":"2025-01-01","currency":"USD","amount":2000}
+	expectedFormattedContent := `
 {"command":"declare","date":"2025-01-01","ticker":"MSFT","id":"US0378331005.XNAS","currency":"USD"}
-{"command":"buy","date":"2025-01-02","security":"MSFT","quantity":10,"currency":"USD","amount":1000}`
+{"command":"deposit","date":"2025-01-01","currency":"USD","amount":2000}
+{"command":"buy","date":"2025-01-02","security":"MSFT","quantity":10,"currency":"USD","amount":1000}
+`
 
 	// Create a temporary input ledger file
 	tempInputLedger := createTempLedger(t, originalLedgerContent)
@@ -126,8 +129,9 @@ func TestFmtToStdoutOutput(t *testing.T) {
 {"command":"deposit","date":"2025-01-01","currency":"USD","amount":2000}
 {"command":"declare","date":"2025-01-01","ticker":"MSFT","id":"US0378331005.XNAS","currency":"USD"}
 `
-	expectedFormattedContent := `{"command":"deposit","date":"2025-01-01","currency":"USD","amount":2000}
+	expectedFormattedContent := `
 {"command":"declare","date":"2025-01-01","ticker":"MSFT","id":"US0378331005.XNAS","currency":"USD"}
+{"command":"deposit","date":"2025-01-01","currency":"USD","amount":2000}
 {"command":"buy","date":"2025-01-02","security":"MSFT","quantity":10,"currency":"USD","amount":1000}
 `
 

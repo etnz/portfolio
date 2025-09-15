@@ -42,10 +42,10 @@ func (r *DailyReport) HasBreakdown() bool {
 }
 
 // NewDailyReport calculates and returns a summary of the portfolio's performance for a single day from a given ledger.
-func NewDailyReport(ledger *Ledger, on Date, reportingCurrency string) (*DailyReport, error) {
-	journal, err := newJournal(ledger, reportingCurrency)
-	if err != nil {
-		return nil, err
+func NewDailyReport(ledger *Ledger, on Date) (*DailyReport, error) {
+	journal := ledger.journal
+	if journal == nil {
+		return &DailyReport{}, nil
 	}
 
 	endBalance, err := NewBalance(journal, on, AverageCost)
@@ -61,7 +61,7 @@ func NewDailyReport(ledger *Ledger, on Date, reportingCurrency string) (*DailyRe
 	report := &DailyReport{
 		Date:              on,
 		Time:              time.Now(), // Generation time
-		ReportingCurrency: reportingCurrency,
+		ReportingCurrency: journal.cur,
 		ActiveAssets:      []AssetGain{},
 		Transactions:      []Transaction{},
 	}

@@ -137,10 +137,11 @@ type updateForex struct {
 
 // NewJournal converts a Ledger of high-level transactions and market data events
 // into a Journal of low-level, atomic events.
-func newJournal(ledger *Ledger, reportingCurrency string) (*Journal, error) {
+func (ledger *Ledger) newJournal() error {
+	ledger.stableSort()
 	journal := &Journal{
 		events: make([]event, 0, len(ledger.transactions)*2), // Pre-allocate with a guess
-		cur:    reportingCurrency,
+		cur:    ledger.currency,
 	}
 
 	for src, tx := range ledger.transactions {
@@ -149,7 +150,7 @@ func newJournal(ledger *Ledger, reportingCurrency string) (*Journal, error) {
 		case Buy:
 			sec := ledger.Security(v.Security)
 			if sec == nil {
-				return nil, fmt.Errorf("security %q not declared for buy transaction on %s", v.Security, v.When())
+				return fmt.Errorf("security %q not declared for buy transaction on %s", v.Security, v.When())
 			}
 
 			journal.events = append(journal.events,
@@ -159,7 +160,7 @@ func newJournal(ledger *Ledger, reportingCurrency string) (*Journal, error) {
 		case Sell:
 			sec := ledger.Security(v.Security)
 			if sec == nil {
-				return nil, fmt.Errorf("security %q not declared for sell transaction on %s", v.Security, v.When())
+				return fmt.Errorf("security %q not declared for sell transaction on %s", v.Security, v.When())
 			}
 			journal.events = append(journal.events,
 				disposeLot{baseEvent: b, security: v.Security, quantity: v.Quantity, proceeds: v.Amount},
@@ -168,7 +169,7 @@ func newJournal(ledger *Ledger, reportingCurrency string) (*Journal, error) {
 		case Dividend:
 			sec := ledger.Security(v.Security)
 			if sec == nil {
-				return nil, fmt.Errorf("security %q not declared for dividend transaction on %s", v.Security, v.When())
+				return fmt.Errorf("security %q not declared for dividend transaction on %s", v.Security, v.When())
 			}
 			journal.events = append(journal.events,
 				receiveDividend{baseEvent: b, security: v.Security, amount: v.Amount},
@@ -233,18 +234,18 @@ func newJournal(ledger *Ledger, reportingCurrency string) (*Journal, error) {
 				sec := ledger.Security(ticker)
 				if sec == nil {
 					// This should have been caught by validation, but we check again.
-					return nil, fmt.Errorf("security %q from update-price not declared", ticker)
+					return fmt.Errorf("security %q from update-price not declared", ticker)
 				}
 				price := M(priceDecimal, sec.Currency())
 
 				// Handle forex updates
 				if base, quote, err := sec.ID().CurrencyPair(); err == nil {
-					if quote == reportingCurrency {
+					if quote == journal.cur {
 						journal.events = append(journal.events,
 							updateForex{baseEvent: b, currency: base, rate: price},
 						)
 					}
-					if base == reportingCurrency {
+					if base == journal.cur {
 						p := M(decimal.NewFromInt(1).Div(price.value), base)
 						p.value = p.value.Round(5) // is enought for an approximate price anyway.
 						journal.events = append(journal.events,
@@ -265,8 +266,51 @@ func newJournal(ledger *Ledger, reportingCurrency string) (*Journal, error) {
 				splitShare{baseEvent: b, security: v.Security, numerator: v.Numerator, denominator: v.Denominator},
 			)
 		default:
-			return nil, fmt.Errorf("unhandled transaction type: %T", tx)
+			return fmt.Errorf("unhandled transaction type: %T", tx)
 		}
 	}
-	return journal, nil
+	ledger.journal = journal
+	return nil
+}
+
+// CashBalance computes the total cash in a specific currency on a specific date.
+func (j *Journal) CashBalance(on Date, currency string) Money {
+	balance := M(decimal.Zero, currency)
+	for _, e := range j.events {
+		if e.date().After(on) {
+			break
+		}
+		switch v := e.(type) {
+		case creditCash:
+			if v.currency() == currency {
+				balance = balance.Add(v.amount)
+			}
+		case debitCash:
+			if v.currency() == currency {
+				balance = balance.Sub(v.amount)
+			}
+		}
+	}
+	return balance
+}
+
+// Holding computes the number of shares for a specific ticker on a specific date.
+func (j *Journal) Holding(ticker string, on Date) Quantity {
+	var holding Quantity
+	for _, e := range j.events {
+		if e.date().After(on) {
+			break
+		}
+		switch v := e.(type) {
+		case acquireLot:
+			if v.security == ticker {
+				holding = holding.Add(v.quantity)
+			}
+		case disposeLot:
+			if v.security == ticker {
+				holding = holding.Sub(v.quantity)
+			}
+		}
+	}
+	return holding
 }

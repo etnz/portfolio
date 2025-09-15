@@ -44,24 +44,25 @@ func (a convertCmd) ToMoney() Money {
 // DecodeLedger decodes transactions from a stream of JSONL data from an io.Reader,
 // decodes each line into the appropriate transaction struct, and returns a sorted Ledger.
 func DecodeLedger(r io.Reader) (*Ledger, error) {
-	ledger := NewLedger()
-	if err := decodeLedger(r, ledger); err != nil {
+	ledger, err := decodeLedger(r)
+	if err != nil {
 		return nil, err
 	}
 	// Perform a stable sort and index securities and accounts.
 	ledger.stableSort()
 	// fill up the maps
 	ledger.processTx(ledger.transactions...)
+	err = ledger.newJournal()
 
-	return ledger, nil
+	return ledger, err
 }
 
 // DecodeValidateLedger decode the ledger and validate every transactions.
 // if market is nil, skip all validations.
 func DecodeValidateLedger(r io.Reader) (*Ledger, error) {
 	// Same as DecodeLedger except that it will perform a stricter validation.
-	ledger := NewLedger()
-	if err := decodeLedger(r, ledger); err != nil {
+	ledger, err := decodeLedger(r)
+	if err != nil {
 		return nil, err
 	}
 
@@ -74,7 +75,7 @@ func DecodeValidateLedger(r io.Reader) (*Ledger, error) {
 	ledger.transactions = make([]Transaction, 0, len(txs))
 	for _, tx := range txs {
 		log.Println("validating", tx)
-		t, err := ledger.Validate(tx, "")
+		t, err := ledger.Validate(tx)
 		if err != nil {
 			return nil, err
 		}
@@ -87,7 +88,10 @@ func DecodeValidateLedger(r io.Reader) (*Ledger, error) {
 // this method is private, since the ledger could be unsorted, and with invalid indexes
 // of securities etc. It is meant to be called to either simply sort transactions and compute indexes
 // or perform a strict validation.
-func decodeLedger(r io.Reader, ledger *Ledger) error {
+func decodeLedger(r io.Reader) (*Ledger, error) {
+	ledger := NewLedger()
+	// TODO: ledger should persist its currency.
+	ledger.currency = "EUR"
 
 	scanner := bufio.NewScanner(r)
 
@@ -101,7 +105,7 @@ func decodeLedger(r io.Reader, ledger *Ledger) error {
 			Command CommandType `json:"command"`
 		}
 		if err := json.Unmarshal(lineBytes, &identifier); err != nil {
-			return fmt.Errorf("could not identify command in line %q: %w", string(lineBytes), err)
+			return nil, fmt.Errorf("could not identify command in line %q: %w", string(lineBytes), err)
 		}
 
 		var decodedTx Transaction
@@ -117,7 +121,7 @@ func decodeLedger(r io.Reader, ledger *Ledger) error {
 				Quantity Quantity `json:"quantity"`
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return err
+				return nil, err
 			}
 
 			// Create the final transaction struct
@@ -135,7 +139,7 @@ func decodeLedger(r io.Reader, ledger *Ledger) error {
 				Quantity Quantity `json:"quantity"`
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return err
+				return nil, err
 			}
 
 			// Create the final transaction struct
@@ -151,7 +155,7 @@ func decodeLedger(r io.Reader, ledger *Ledger) error {
 				amountCmd
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return err
+				return nil, err
 			}
 			// Create the final transaction struct
 			decodedTx = Dividend{
@@ -166,7 +170,7 @@ func decodeLedger(r io.Reader, ledger *Ledger) error {
 				Settles string `json:"settles,omitempty"`
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return err
+				return nil, err
 			}
 
 			// Create the final transaction struct
@@ -183,7 +187,7 @@ func decodeLedger(r io.Reader, ledger *Ledger) error {
 				Settles string `json:"settles,omitempty"`
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return err
+				return nil, err
 			}
 
 			// Create the final transaction struct
@@ -196,7 +200,7 @@ func decodeLedger(r io.Reader, ledger *Ledger) error {
 			// Use a temporary type that has all possible fields.
 			temp := convertCmd{}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return err
+				return nil, err
 			}
 
 			// Create the final transaction struct
@@ -218,7 +222,7 @@ func decodeLedger(r io.Reader, ledger *Ledger) error {
 				Create       bool   `json:"create,omitempty"`
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return err
+				return nil, err
 			}
 
 			// Create the final transaction struct
@@ -234,7 +238,7 @@ func decodeLedger(r io.Reader, ledger *Ledger) error {
 				Prices map[string]decimal.Decimal `json:"prices"`
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return err
+				return nil, err
 			}
 			decodedTx = UpdatePrice{
 				baseCmd: temp.baseCmd,
@@ -247,7 +251,7 @@ func decodeLedger(r io.Reader, ledger *Ledger) error {
 				Denominator int64 `json:"den"`
 			}
 			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return err
+				return nil, err
 			}
 			// default Numerator and Denominator to 1
 			if temp.Denominator == 0 {
@@ -268,16 +272,16 @@ func decodeLedger(r io.Reader, ledger *Ledger) error {
 		}
 
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// Raw append in this function.
 		ledger.transactions = append(ledger.transactions, decodedTx)
 	}
 
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("error reading from input: %w", err)
+		return nil, fmt.Errorf("error reading from input: %w", err)
 	}
-	return nil
+	return ledger, nil
 }
 
 // EncodeTransaction marshals a single transaction to JSON and writes it to the

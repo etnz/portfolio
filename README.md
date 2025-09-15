@@ -198,11 +198,11 @@ pcs review -d 2025-08-27
   ------------|--------------|--------------------------------------------
    2025-08-27 | declare      | Declared AAPL as US0378331005.XETR in EUR  
    2025-08-27 | declare      | Declared BankFund1 as My-bank-Fund1 in EUR 
+   2025-08-27 | update-price | update-price                               
+   2025-08-27 | update-price | update-price                               
    2025-08-27 | deposit      | Deposited €10,000.00                       
    2025-08-27 | buy          | Bought 10 of AAPL for €1,500.00            
-   2025-08-27 | buy          | Bought 100 of BankFund1 for €1,200.00      
-   2025-08-27 | update-price | update-price                               
-   2025-08-27 | update-price | update-price
+   2025-08-27 | buy          | Bought 100 of BankFund1 for €1,200.00
 ```
 
 

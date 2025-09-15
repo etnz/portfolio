@@ -13,12 +13,11 @@ import (
 
 // gainsCmd holds the flags for the 'gains' subcommand.
 type gainsCmd struct {
-	period   string
-	start    string
-	end      string
-	currency string
-	method   string
-	update   bool
+	period string
+	start  string
+	end    string
+	method string
+	update bool
 }
 
 func (*gainsCmd) Name() string     { return "gains" }
@@ -34,9 +33,7 @@ func (c *gainsCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.period, "period", portfolio.Monthly.String(), "Predefined period (day, week, month, quarter, year)")
 	f.StringVar(&c.start, "s", "", "Start date of the reporting period. See the user manual for supported date formats.")
 	f.StringVar(&c.end, "d", portfolio.Today().String(), "End date of the reporting period. See the user manual for supported date formats.")
-	f.StringVar(&c.currency, "c", "EUR", "Reporting currency")
 	f.StringVar(&c.method, "method", "average", "Cost basis method (average, fifo)")
-	f.BoolVar(&c.update, "u", false, "update with latest intraday prices before calculating gains")
 }
 
 func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -98,7 +95,7 @@ func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 	}
 
 	// Calculate gains
-	report, err := portfolio.NewGainsReport(ledger, c.currency, period, method)
+	report, err := portfolio.NewGainsReport(ledger, period, method)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error calculating gains: %v\n", err)
 		return subcommands.ExitFailure

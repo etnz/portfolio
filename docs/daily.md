@@ -40,7 +40,7 @@ On the next day, the portfolio is showing some gains.
 
 
 ```bash run
-pcs daily -d 2025-01-03 -c EUR
+pcs daily -d 2025-01-03
 ```
 
 ```console check
@@ -97,7 +97,7 @@ Observe how the total daily gain remains positive, and the breakdown clarifies t
 
 
 ```bash run
-pcs daily -d 2025-01-03 -c EUR
+pcs daily -d 2025-01-03
 ```
 
 ```console check

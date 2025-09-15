@@ -39,7 +39,7 @@ pcs sell -d 2025-03-06 -s MSFT -q 5 -a 2250
 ```
 
 ```bash run
-pcs gains --period month -d 2025-03-31 -c EUR
+pcs gains --period month -d 2025-03-31
 ```
 
 ```console check
@@ -80,7 +80,7 @@ pcs sell -d 2025-03-15 -s GOOG -q 10 -a 1100
 ```
 
 ```bash run
-pcs gains --period month -d 2025-03-31 -c EUR
+pcs gains --period month -d 2025-03-31
 ```
 
 ```console check

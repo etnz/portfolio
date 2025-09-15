@@ -216,7 +216,7 @@ func (t *Sell) Currency() string { return t.Amount.Currency() }
 // position size on the transaction date. It ensures the final quantity and
 // price are positive and that the position is sufficient to cover the sale. It
 // now accepts a Ledger and a Balance object.
-func (t *Sell) Validate(ledger *Ledger, b *Balance) error {
+func (t *Sell) Validate(ledger *Ledger) error {
 	if err := t.secCmd.Validate(ledger); err != nil {
 		return err
 	}
@@ -234,17 +234,18 @@ func (t *Sell) Validate(ledger *Ledger, b *Balance) error {
 		return fmt.Errorf("sell transaction amount must be positive, got %v", t.Amount)
 	}
 
+	pos := ledger.Holding(t.When(), t.Security)
 	if t.Quantity.IsZero() {
 		// quick fix, sell all.
-		t.Quantity = b.Position(t.Security)
+		t.Quantity = pos
 	}
 
 	if !t.Quantity.IsPositive() {
 		return fmt.Errorf("sell transaction quantity must be positive, got %s", t.Quantity.String())
 	}
 
-	if b.Position(t.Security).LessThan(t.Quantity) {
-		return fmt.Errorf("cannot sell %v of %s, position is only %v", t.Quantity, t.Security, b.Position(t.Security))
+	if pos.LessThan(t.Quantity) {
+		return fmt.Errorf("cannot sell %v of %s, position is only %v", t.Quantity, t.Security, pos)
 	}
 
 	return nil
@@ -334,7 +335,9 @@ func NewDividend(day Date, memo, security string, amount Money) Dividend {
 func (t Dividend) MarshalJSON() ([]byte, error) {
 	var w jsonObjectWriter
 	w.EmbedFrom(t.secCmd)
-	w.EmbedFrom(t.Amount)
+	// by default money is persisted in its minor unit.
+	// so we must call exact() to persist the dps.
+	w.EmbedFrom(t.Amount.exact())
 	return w.MarshalJSON()
 }
 
@@ -696,7 +699,6 @@ func (t UpdatePrice) PricesIter() iter.Seq2[string, decimal.Decimal] {
 			}
 		}
 	}
-
 }
 
 func (t UpdatePrice) Equal(other Transaction) bool {

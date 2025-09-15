@@ -13,15 +13,14 @@ import (
 
 // summaryCmd holds the flags for the 'summary' subcommand.
 type summaryCmd struct {
-	date     string
-	currency string
-	update   bool
+	date   string
+	update bool
 }
 
 func (*summaryCmd) Name() string     { return "summary" }
 func (*summaryCmd) Synopsis() string { return "display a portfolio performance summary" }
 func (*summaryCmd) Usage() string {
-	return `pcs summary [-d <date>] [-c <currency>] [-u]
+	return `pcs summary [-d <date>]
 
   Displays a summary of the portfolio, including total market value.
 `
@@ -29,8 +28,6 @@ func (*summaryCmd) Usage() string {
 
 func (c *summaryCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", portfolio.Today().String(), "Date for the summary. See the user manual for supported date formats.")
-	f.StringVar(&c.currency, "c", "EUR", "Reporting currency for the summary")
-	f.BoolVar(&c.update, "u", false, "update with latest intraday prices before calculating summary")
 }
 
 func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -58,7 +55,7 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		// }
 	}
 
-	summary, err := portfolio.NewSummary(ledger, on, c.currency)
+	summary, err := portfolio.NewSummary(ledger, on)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error calculating portfolio summary: %v\n", err)
 		return subcommands.ExitFailure

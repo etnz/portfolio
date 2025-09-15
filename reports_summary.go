@@ -1,7 +1,5 @@
 package portfolio
 
-import "fmt"
-
 // Summary provides a comprehensive, at-a-glance overview of the portfolio's
 // state and performance on a given date.
 type Summary struct {
@@ -18,19 +16,14 @@ type Summary struct {
 
 // NewSummary calculates and returns a comprehensive summary of the portfolio's
 // state and performance on a given date.
-func NewSummary(ledger *Ledger, on Date, reportingCurrency string) (*Summary, error) {
-	if reportingCurrency == "" {
-		return nil, fmt.Errorf("reporting currency is not set in accounting system")
+func NewSummary(ledger *Ledger, on Date) (*Summary, error) {
+	journal := ledger.journal
+	if journal == nil {
+		return &Summary{}, nil
 	}
-
 	summary := &Summary{
 		Date:              on,
-		ReportingCurrency: reportingCurrency,
-	}
-
-	journal, err := newJournal(ledger, reportingCurrency)
-	if err != nil {
-		return nil, err
+		ReportingCurrency: journal.cur,
 	}
 
 	endBalance, err := NewBalance(journal, on, AverageCost)
