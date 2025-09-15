@@ -120,14 +120,17 @@ func ReviewMarkdown(report *portfolio.ReviewReport) string {
 	)
 
 	// --- Transactions ---
-	fmt.Fprintf(&b, "\n## Transactions\n\n")
-	if len(report.Transactions) == 0 {
-		fmt.Fprintln(&b, "No transactions in this period.")
-	} else {
-		fmt.Fprintln(&b, "| Date | Type | Description |")
-		fmt.Fprintln(&b, "|:---|:---|:---|")
-		for _, tx := range report.Transactions {
-			fmt.Fprintf(&b, "| %s | %s | %s |\n", tx.When(), tx.What(), Transaction(tx))
+	// only print section if not too big
+	if len(report.Transactions) < 20 {
+		fmt.Fprintf(&b, "\n## Transactions\n\n")
+		if len(report.Transactions) == 0 {
+			fmt.Fprintln(&b, "No transactions in this period.")
+		} else {
+			fmt.Fprintln(&b, "| Date | Type | Description |")
+			fmt.Fprintln(&b, "|:---|:---|:---|")
+			for _, tx := range report.Transactions {
+				fmt.Fprintf(&b, "| %s | %s | %s |\n", tx.When(), tx.What(), Transaction(tx))
+			}
 		}
 	}
 
