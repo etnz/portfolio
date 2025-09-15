@@ -234,7 +234,7 @@ func (t *Sell) Validate(ledger *Ledger) error {
 		return fmt.Errorf("sell transaction amount must be positive, got %v", t.Amount)
 	}
 
-	pos := ledger.Holding(t.When(), t.Security)
+	pos := ledger.Position(t.When(), t.Security)
 	if t.Quantity.IsZero() {
 		// quick fix, sell all.
 		t.Quantity = pos
@@ -306,7 +306,6 @@ func (t *Declare) Validate(ledger *Ledger) error {
 		return fmt.Errorf("invalid currency for declaration: %w", err)
 	}
 
-	// TODO add a check that the dclared does not already exists
 	ledgerSec := ledger.Security(t.Ticker)
 	if ledgerSec != nil {
 		return fmt.Errorf("security %q already declared in ledger", t.Ticker)
@@ -403,7 +402,6 @@ func (t *Deposit) Validate(ledger *Ledger) error {
 	if !t.Amount.IsPositive() {
 		return fmt.Errorf("deposit amount must be positive, got %v", t.Amount)
 	}
-	// TODO: this validation is not correct, it should be done in the journal
 	if err := ValidateCurrency(t.Amount.Currency()); err != nil {
 		return fmt.Errorf("invalid currency for deposit: %w", err)
 	}

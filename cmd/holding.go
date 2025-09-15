@@ -50,8 +50,8 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	if c.update {
 		err := ledger.UpdateIntraday()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
-			return subcommands.ExitFailure
+			// fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
+			// return subcommands.ExitFailure
 		}
 	}
 

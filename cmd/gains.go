@@ -72,19 +72,14 @@ func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		period = p.Range(endDate)
 	}
 
-	// TODO: re-implement update logic with `fetch`
-	if c.update {
-		// err := market.UpdateIntraday()
-		// if err != nil {
-		// 	fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
-		// 	return subcommands.ExitFailure
-		// }
-	}
-
 	ledger, err := DecodeLedger()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating accounting system: %v\n", err)
 		return subcommands.ExitFailure
+	}
+
+	if c.update {
+		ledger.UpdateIntraday()
 	}
 
 	// Parse cost basis method

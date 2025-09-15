@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+// TODO: all reports should be moved to their own package along with their reporting types.
+
 // DailyReport provides a summary of a single day's portfolio changes, including
 // a per-asset breakdown of performance.
 type DailyReport struct {

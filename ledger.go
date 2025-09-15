@@ -34,12 +34,14 @@ func NewLedger() *Ledger {
 }
 
 func (l *Ledger) CounterPartyCurrency(account string) (cur string, exists bool) {
+	// TODO: ledger should not hold index, this should be the journal.
 	cur, ok := l.counterparties[account]
 	return cur, ok
 }
 
 // Security return the security declared with this ticker, or nil if unknown.
 func (l *Ledger) Security(ticker string) *Security {
+	// TODO: ledger should not hold index, this should be the journal.
 	sec, ok := l.securities[ticker]
 	if !ok {
 		return nil
@@ -54,6 +56,8 @@ func (l *Ledger) Validate(tx Transaction) (Transaction, error) {
 	// For validations that need the state of the portfolio, we compute the balance
 	// on the transaction date.
 	var err error
+	// TODO: now that all transaction have the same validate method, we should make part of the interface
+	// and simplify this block.
 	switch v := tx.(type) {
 	case Buy:
 		err = v.Validate(l)
@@ -97,6 +101,8 @@ func (l *Ledger) Validate(tx Transaction) (Transaction, error) {
 // UpdateIntraday fetches the latest intraday prices for all securities in the ledger
 // from the tradegate provider and updates the ledger with them.
 func (l *Ledger) UpdateIntraday() error {
+	// TODO: Update Intraday should be done differently.
+	// a provider should be made, that can fetch data, and the UpdateMarketData should be used instead.
 	var newTxs []Transaction
 	var errs error
 
@@ -159,6 +165,7 @@ func (l *Ledger) Append(txs ...Transaction) error {
 	return l.newJournal()
 }
 
+// MarketDataUpdate provides a summary of changes made during a market data update.
 type MarketDataUpdate struct {
 	newSplits, updatedSplits, addedDiv, updatedDiv, addedPrices, updatedPrices int
 }
@@ -230,7 +237,7 @@ func (l *Ledger) UpdateMarketData(txs ...Transaction) (MarketDataUpdate, error) 
 	// append all dividends
 	addedDiv, updatedDiv := 0, 0
 	for _, ndiv := range dividends {
-		if l.Holding(ndiv.Date, ndiv.Security).IsZero() {
+		if l.Position(ndiv.Date, ndiv.Security).IsZero() {
 			continue // skip dividends on non held assets.
 		}
 		index, div := -1, Dividend{}
@@ -261,7 +268,7 @@ func (l *Ledger) UpdateMarketData(txs ...Transaction) (MarketDataUpdate, error) 
 	for _, nup := range updates {
 		// remove updates relative to non held
 		for t := range nup.PricesIter() {
-			if l.Holding(nup.Date, t).IsZero() {
+			if l.Position(nup.Date, t).IsZero() {
 				// remove it from the updates
 				delete(nup.Prices, t)
 			}
@@ -295,7 +302,7 @@ func (l *Ledger) UpdateMarketData(txs ...Transaction) (MarketDataUpdate, error) 
 		} else {
 			// clean existing from updates relative to non held assets
 			for t := range updatePrice.PricesIter() {
-				if l.Holding(updatePrice.Date, t).IsZero() {
+				if l.Position(updatePrice.Date, t).IsZero() {
 					// remove it from the updates
 					delete(updatePrice.Prices, t)
 				}
@@ -355,6 +362,9 @@ func mergePrices(updated, existing map[string]decimal.Decimal) (onlyNew, all map
 	return onlyNew, all
 }
 
+// processTx processes a slice of transactions to update the ledger's internal
+// indexes, such as declared securities and counterparty accounts.
+// This is typically called after transactions are appended to the ledger.
 func (l *Ledger) processTx(txs ...Transaction) {
 	for _, tx := range txs {
 		switch v := tx.(type) {
@@ -371,6 +381,8 @@ func (l *Ledger) processTx(txs ...Transaction) {
 
 // Transactions returns an iterator that yields each transaction in its original order.
 func (l Ledger) Transactions(filters ...func(Transaction) bool) iter.Seq2[int, Transaction] {
+	// TODO: there are other function to iterator over transactions, not all use the filter mechanism,
+	// we should probably unify them
 	// The returned iterator preserves the original order of transactions in the ledger.
 	return func(yield func(int, Transaction) bool) {
 		for i, tx := range l.transactions {
@@ -458,16 +470,17 @@ func (l *Ledger) CashBalance(currency string, on Date) Money {
 	return l.journal.CashBalance(on, currency)
 }
 
-// Holding computes the current holding for a ticker
-func (l *Ledger) Holding(on Date, ticker string) Quantity {
+// Position computes the current holding for a ticker
+func (l *Ledger) Position(on Date, ticker string) Quantity {
 	if l.journal == nil {
 		return Q(decimal.Zero)
 	}
-	return l.journal.Holding(ticker, on)
+	return l.journal.Position(ticker, on)
 }
 
 // CounterpartyAccountBalance computes the balance of a counterparty account on a specific date.
 func (l *Ledger) CounterpartyAccountBalance(account string, on Date) Money {
+	// TODO like for CashBalance the implementation should be in the journal.
 	var balance Money
 
 	for _, tx := range l.transactions {
@@ -577,45 +590,6 @@ func (l *Ledger) AllSecurities() iter.Seq[Security] {
 	}
 }
 
-// AllCurrencies iterates over all currencies that appear in the ledger.
-// in the ledger's transactions.
-func (l *Ledger) AllCurrencies() iter.Seq[string] {
-	return func(yield func(string) bool) {
-
-		visitedCurrencies := make(map[string]struct{})
-		// first visit all, then yeild
-		for _, tx := range l.transactions {
-			switch v := tx.(type) {
-			case Deposit:
-				visitedCurrencies[v.Currency()] = struct{}{}
-			case Withdraw:
-				visitedCurrencies[v.Currency()] = struct{}{}
-			case Convert:
-				visitedCurrencies[v.FromCurrency()] = struct{}{}
-				visitedCurrencies[v.ToCurrency()] = struct{}{}
-			case Declare:
-				visitedCurrencies[v.Currency] = struct{}{}
-			case Buy:
-				if sec := l.Security(v.Security); sec != nil {
-					visitedCurrencies[sec.Currency()] = struct{}{}
-				}
-			case Sell:
-				if sec := l.Security(v.Security); sec != nil {
-					visitedCurrencies[sec.Currency()] = struct{}{}
-				}
-			}
-		}
-		// Now yield the values
-		currencies := slices.Collect(maps.Keys(visitedCurrencies))
-		slices.Sort(currencies)
-		for _, currency := range currencies {
-			if !yield(currency) {
-				return
-			}
-		}
-	}
-}
-
 // BySecurity returns a predicate that filters transactions by security ticker.
 func BySecurity(ticker string) func(Transaction) bool {
 	return func(tx Transaction) bool {
@@ -718,64 +692,4 @@ func (l *Ledger) InceptionDate(security string) (Date, bool) {
 		}
 	}
 	return Date{}, false
-}
-
-// Clean remove spurious market data from the ledger
-// On a given day, market data relative to an asset not held will be deleted.
-func (l *Ledger) Clean() error {
-	// creates a journal, and scan it computing correct positions and cleaning the ledger on the fly
-	if l.journal != nil {
-		return nil
-	}
-	j := l.journal
-
-	holdings := make(map[string]Quantity)
-
-	for _, e := range j.events {
-		switch v := e.(type) {
-		case acquireLot:
-			holdings[v.security] = holdings[v.security].Add(v.quantity)
-		case disposeLot:
-			holdings[v.security] = holdings[v.security].Sub(v.quantity)
-		case splitShare:
-			if holdings[v.security].IsZero() {
-				// mark the source transaction for deletion.
-				l.transactions[e.source()] = nil
-				continue
-			}
-			num := Q(v.numerator)
-			den := Q(v.denominator)
-			holdings[v.security] = holdings[v.security].Mul(num).Div(den)
-
-		case updatePrice:
-			if holdings[v.security].IsZero() {
-				// modify the source transaction to delete this asset's price.
-				u := l.transactions[e.source()].(UpdatePrice)
-				delete(u.Prices, v.security)
-				if len(u.Prices) == 0 {
-					// Delete the source transaction if empty.
-					l.transactions[e.source()] = nil
-				} else {
-					// Otherwise copy the shrinked version.
-					l.transactions[e.source()] = u
-				}
-			}
-
-		case receiveDividend:
-			if holdings[v.security].IsZero() {
-				// mark the source transaction for deletion.
-				l.transactions[e.source()] = nil
-				continue
-			}
-		}
-	}
-	// Delete marked transactions.
-	newTxs := make([]Transaction, 0, len(l.transactions))
-	for _, tx := range l.transactions {
-		if tx != nil {
-			newTxs = append(newTxs, tx)
-		}
-	}
-	l.transactions = newTxs
-	return nil
 }

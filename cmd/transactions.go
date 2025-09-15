@@ -446,9 +446,6 @@ func (c *splitCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 // "sell all" quantities. The returned `portfolio.Transaction` is the validated
 // and potentially modified transaction.
 //
-// TODO(etnz): Make this function more generic to handle different types of
-// encoding and feedback, possibly by passing in an interface for output.
-// Create a GitHub issue for this refactoring.
 func handleTransaction(tx portfolio.Transaction, f *flag.FlagSet) (portfolio.Transaction, subcommands.ExitStatus) {
 	validatedTx, err := EncodeTransaction(tx)
 	if err != nil {

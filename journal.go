@@ -294,8 +294,8 @@ func (j *Journal) CashBalance(on Date, currency string) Money {
 	return balance
 }
 
-// Holding computes the number of shares for a specific ticker on a specific date.
-func (j *Journal) Holding(ticker string, on Date) Quantity {
+// Position computes the number of shares for a specific ticker on a specific date.
+func (j *Journal) Position(ticker string, on Date) Quantity {
 	var holding Quantity
 	for _, e := range j.events {
 		if e.date().After(on) {

@@ -10,6 +10,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// TODO: move the indivdual transaction persistence logic to the object themselves.
+
 func init() {
 	decimal.MarshalJSONWithoutQuotes = true
 }
