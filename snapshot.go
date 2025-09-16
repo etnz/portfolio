@@ -54,7 +54,7 @@ func (s *Snapshot) sum(iterator iter.Seq[string], metricFunc func(string) Money)
 func (s *Snapshot) VirtualAssetValue(ticker string) Money {
 	// This simulates a virtual portfolio for the given ticker.
 	// It starts with 1 unit of the reporting currency.
-	virtualCash := M(1, s.journal.cur)
+	var virtualCash Money
 	var virtualPosition Quantity // The number of virtual shares held.
 
 	// These track the state of the *actual* portfolio.
@@ -63,6 +63,11 @@ func (s *Snapshot) VirtualAssetValue(ticker string) Money {
 
 	for e := range s.events() {
 		switch v := e.(type) {
+		case declareSecurity:
+			if v.ticker == ticker {
+				lastPrice = M(0, v.currency)
+				virtualCash = M(0, v.currency)
+			}
 		case acquireLot:
 			if v.security == ticker {
 				if actualPosition.IsZero() {
@@ -100,6 +105,9 @@ func (s *Snapshot) VirtualAssetValue(ticker string) Money {
 	}
 
 	// Calculate the final value of the virtual portfolio.
+	if virtualCash.IsZero() {
+		return M(0, s.journal.cur) // Never invested, no value.
+	}
 	return virtualCash.Add(lastPrice.Mul(virtualPosition))
 }
 
