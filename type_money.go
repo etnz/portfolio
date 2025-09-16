@@ -45,6 +45,7 @@ func (m Money) GreaterThanOrEqual(n Money) bool { return m.value.GreaterThanOrEq
 func (m Money) Neg() Money                      { return Money{value: m.value.Neg(), cur: m.cur} }
 func (m Money) Mul(n Quantity) Money            { return Money{value: m.value.Mul(n.value), cur: m.cur} }
 func (m Money) Div(n Quantity) Money            { return Money{value: m.value.Div(n.value), cur: m.cur} }
+func (m Money) DivPrice(n Money) Quantity       { return Quantity{value: m.value.Div(n.value)} }
 
 // binary operators.
 func (m Money) Add(n Money) Money { return Money{value: m.value.Add(n.value), cur: cur(m, n)} }
