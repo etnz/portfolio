@@ -511,3 +511,25 @@ func (s *Snapshot) UnrealizedGains(ticker string, method CostBasisMethod) Money 
 	costBasis := s.CostBasis(ticker, method)
 	return marketValue.Sub(costBasis)
 }
+
+// TotalCashFlow returns the total cash flow across all currencies, converted to the reporting currency.
+func (s *Snapshot) TotalCashFlow() Money {
+	return s.sum(s.Currencies(), s.CashFlow)
+}
+
+// TotalNetTradingFlow returns the total net trading flow across all securities, converted to the reporting currency.
+func (s *Snapshot) TotalNetTradingFlow() Money {
+	return s.sum(s.Securities(), s.NetTradingFlow)
+}
+
+// TotalRealizedGains returns the total realized gains across all securities, converted to the reporting currency.
+func (s *Snapshot) TotalRealizedGains(method CostBasisMethod) Money {
+	return s.sum(s.Securities(), func(ticker string) Money {
+		return s.RealizedGains(ticker, method)
+	})
+}
+
+// TotalDividends returns the total dividends received across all securities, converted to the reporting currency.
+func (s *Snapshot) TotalDividends() Money {
+	return s.sum(s.Securities(), s.Dividends)
+}
