@@ -3,7 +3,6 @@ package portfolio
 import (
 	"encoding/json"
 	"fmt"
-	"iter"
 	"regexp"
 	"strconv"
 	"strings"
@@ -261,51 +260,6 @@ func (j Date) MarshalJSON() ([]byte, error) {
 // check that a Date pointer is a valid json marshall/unmarshaller type.
 var _ json.Marshaler = (*Date)(nil)
 var _ json.Unmarshaler = (*Date)(nil)
-
-// iterate returns an iterator over all unique, sorted dates from multiple series of dates.
-func iterate(series ...[]Date) iter.Seq[Date] {
-	return func(yield func(Date) bool) {
-		indexes := make([]int, len(series))
-		// find the reached mins
-		times := make([]Date, 0, len(series))
-		for {
-			times = times[:0] //empty the slice again
-			for i, index := range indexes {
-				if index < len(series[i]) {
-					on := series[i][index]
-					times = append(times, on)
-				}
-			}
-			if len(times) == 0 {
-				// All timeseries have been consumed, exit.
-				return
-			}
-			// there are some remaining values:
-			var m Date
-			if len(times) > 0 {
-				m = times[0]
-				for _, t := range times {
-					if t.Before(m) {
-						m = t
-					}
-				}
-			}
-			// now extract the ones that are equals to the min
-			for i, index := range indexes {
-				if index >= len(series[i]) {
-					continue
-				}
-				if on := series[i][index]; on == m {
-					// Updates and consume this value
-					indexes[i]++
-				}
-			}
-			if !yield(m) {
-				return
-			}
-		}
-	}
-}
 
 // Range represents a range of dates.
 type Range struct{ From, To Date }

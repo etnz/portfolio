@@ -445,7 +445,6 @@ func (c *splitCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 // This function also applies "quick fixes" during validation, such as resolving
 // "sell all" quantities. The returned `portfolio.Transaction` is the validated
 // and potentially modified transaction.
-//
 func handleTransaction(tx portfolio.Transaction, f *flag.FlagSet) (portfolio.Transaction, subcommands.ExitStatus) {
 	validatedTx, err := EncodeTransaction(tx)
 	if err != nil {

@@ -693,3 +693,37 @@ func (l *Ledger) InceptionDate(security string) (Date, bool) {
 	}
 	return Date{}, false
 }
+
+// NewSnapshot creates a new portfolio snapshot for a given date.
+func (l *Ledger) NewSnapshot(on Date) (*Snapshot, error) {
+	if l.journal == nil {
+		return nil, fmt.Errorf("cannot create snapshot with a nil journal")
+	}
+	s := &Snapshot{
+		journal: l.journal,
+		on:      on,
+	}
+	return s, nil
+}
+
+// NewReview creates a new portfolio review for a given period.
+func (l *Ledger) NewReview(period Range) (*Review, error) {
+	if l.journal == nil {
+		return nil, fmt.Errorf("cannot create review with a nil journal")
+	}
+
+	startSnapshot, err := l.NewSnapshot(period.From.Add(-1))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create start snapshot: %w", err)
+	}
+
+	endSnapshot, err := l.NewSnapshot(period.To)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create end snapshot: %w", err)
+	}
+
+	return &Review{
+		start: startSnapshot,
+		end:   endSnapshot,
+	}, nil
+}

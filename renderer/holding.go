@@ -1,101 +1,84 @@
 package renderer
 
 import (
-	"bytes"
+	"fmt"
+	"io"
+	"strings"
+	"time"
 
 	"github.com/etnz/portfolio"
-	md "github.com/nao1215/markdown"
 )
 
-func HoldingMarkdown(r *portfolio.HoldingReport) string {
-	var buf bytes.Buffer
-	doc := md.NewMarkdown(&buf)
+func HoldingMarkdown(s *portfolio.Snapshot) string {
+	var b strings.Builder
+	on := s.On()
 
-	valDay := r.Date.String()
-	genDate := portfolio.NewDate(r.Time.Year(), r.Time.Month(), r.Time.Day())
-	if r.Date == genDate {
-		valDay += " " + r.Time.Format("15:04:05")
+	valDay := on.String()
+	if on.IsToday() {
+		valDay += " " + time.Now().Format("15:04:05")
 	}
-	doc.H1("Holding Report on " + valDay)
+	fmt.Fprintf(&b, "# Holding Report on %s\n\n", valDay)
 
-	doc.PlainText("")
+	fmt.Fprintf(&b, "Total Portfolio Value: **%s**\n\n", s.TotalPortfolio().String())
 
-	doc.PlainText("Total Portfolio Value: " + md.Bold(r.TotalValue.String()))
-
-	if len(r.Securities) > 0 {
-		doc.H2("Securities")
-		table := md.TableSet{
-			Alignment: []md.TableAlignment{
-				md.AlignLeft,
-				md.AlignRight,
-				md.AlignRight,
-				md.AlignRight,
-			},
-			Header: []string{
-				"Ticker",
-				"Quantity",
-				"Price",
-				"Market Value",
-			},
+	// --- Securities Section ---
+	securitiesSection := Header(func(w io.Writer) {
+		fmt.Fprintln(w, "## Securities\n")
+		fmt.Fprintln(w, "| Ticker | Quantity | Price | Market Value |")
+		fmt.Fprintln(w, "|:---|---:|---:|---:|")
+	})
+	for ticker := range s.Securities() {
+		pos := s.Position(ticker)
+		if pos.IsZero() {
+			continue
 		}
-		for _, h := range r.Securities {
-			table.Rows = append(table.Rows, []string{
-				h.Ticker,
-				h.Quantity.String(),
-				h.Price.String(),
-				h.MarketValue.String(),
-			})
-		}
-		doc.Table(table)
+		securitiesSection.PrintHeader(&b)
+		fmt.Fprintf(&b, "| %s | %s | %s | %s |\n",
+			ticker,
+			pos.String(),
+			s.Price(ticker).String(),
+			s.Convert(s.MarketValue(ticker)).String(),
+		)
 	}
+	securitiesSection.PrintFooter(&b)
 
-	if len(r.Cash) > 0 {
-		doc.H2("Cash")
-		table := md.TableSet{
-			Alignment: []md.TableAlignment{
-				md.AlignLeft,
-				md.AlignRight,
-				md.AlignRight,
-			},
-			Header: []string{
-				"Currency",
-				"Balance",
-				"Value",
-			},
+	// --- Cash Section ---
+	cashSection := Header(func(w io.Writer) {
+		fmt.Fprintln(w, "\n## Cash\n")
+		fmt.Fprintln(w, "| Currency | Balance | Value |")
+		fmt.Fprintln(w, "|:---|---:|---:|")
+	})
+	for cur := range s.Currencies() {
+		bal := s.Cash(cur)
+		if bal.IsZero() {
+			continue
 		}
-		for _, c := range r.Cash {
-			table.Rows = append(table.Rows, []string{
-				c.Currency,
-				c.Balance.String(),
-				c.Value.String(),
-			})
-		}
-		doc.Table(table)
+		cashSection.PrintHeader(&b)
+		fmt.Fprintf(&b, "| %s | %s | %s |\n",
+			cur,
+			bal.String(),
+			s.Convert(bal).String(),
+		)
 	}
+	cashSection.PrintFooter(&b)
 
-	if len(r.Counterparties) > 0 {
-		doc.H2("Counterparties")
-		table := md.TableSet{
-			Alignment: []md.TableAlignment{
-				md.AlignLeft,
-				md.AlignRight,
-				md.AlignRight,
-			},
-			Header: []string{
-				"Name",
-				"Balance",
-				"Value",
-			},
+	// --- Counterparties Section ---
+	if !s.TotalCounterparty().IsZero() {
+		counterpartiesSection := Header(func(w io.Writer) {
+			fmt.Fprintln(w, "\n## Counterparties\n")
+			fmt.Fprintln(w, "| Name | Balance | Value |")
+			fmt.Fprintln(w, "|:---|---:|---:|")
+		})
+		for acc := range s.Counterparties() {
+			bal := s.Counterparty(acc)
+			if bal.IsZero() {
+				continue
+			}
+			counterpartiesSection.PrintHeader(&b)
+			fmt.Fprintf(&b, "| %s | %s | %s |\n",
+				acc, bal.SignedString(), s.Convert(bal).SignedString())
 		}
-		for _, c := range r.Counterparties {
-			table.Rows = append(table.Rows, []string{
-				c.Name,
-				c.Balance.SignedString(),
-				c.Value.SignedString(),
-			})
-		}
-		doc.Table(table)
 	}
 
-	return doc.String()
+	return b.String()
 }

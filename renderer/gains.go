@@ -1,48 +1,42 @@
 package renderer
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/etnz/portfolio"
-	md "github.com/nao1215/markdown"
 )
 
-func GainsMarkdown(r *portfolio.GainsReport) string {
-	var buf bytes.Buffer
-	doc := md.NewMarkdown(&buf)
+func GainsMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) string {
+	var b strings.Builder
+	end := review.End()
 
-	doc.H1("Capital Gains Report from " + r.Range.From.String() + " to " + r.Range.To.String())
-	doc.PlainText(fmt.Sprintf("Method: %s", r.Method))
+	fmt.Fprintf(&b, "# Capital Gains Report from %s to %s\n\n", review.Range().From.String(), review.Range().To.String())
+	fmt.Fprintf(&b, "Method: %s\n\n", method)
 
-	doc.H2("Gains per Security")
+	fmt.Fprintln(&b, "## Gains per Security\n")
+	fmt.Fprintln(&b, "| Security | Realized (Period) | Unrealized (at End) |")
+	fmt.Fprintln(&b, "|:---|---:|---:|")
 
-	table := md.TableSet{
-		Alignment: []md.TableAlignment{
-			md.AlignLeft,
-			md.AlignRight,
-			md.AlignRight,
-		},
-		Header: []string{
-			"Security",
-			"Realized",
-			"Unrealized",
-		},
+	for ticker := range end.Securities() {
+		realized, _ := review.AssetRealizedGains(ticker, method)
+		unrealized := end.UnrealizedGains(ticker, method)
+
+		if realized.IsZero() && unrealized.IsZero() && end.Position(ticker).IsZero() {
+			continue
+		}
+
+		fmt.Fprintf(&b, "| %s | %s | %s |\n",
+			ticker,
+			realized.SignedString(),
+			unrealized.SignedString(),
+		)
 	}
+	fmt.Fprintf(&b, "| **%s** | **%s** | **%s** |\n",
+		"Total",
+		review.RealizedGains(method).SignedString(),
+		end.TotalUnrealizedGains(method).SignedString(),
+	)
 
-	for _, s := range r.Securities {
-		table.Rows = append(table.Rows, []string{
-			s.Security,
-			s.Realized.SignedString(),
-			s.Unrealized.SignedString(),
-		})
-	}
-	table.Rows = append(table.Rows, []string{
-		md.Bold("Total"),
-		md.Bold(r.Realized.SignedString()),
-		md.Bold(r.Unrealized.SignedString()),
-	})
-	doc.Table(table)
-
-	return doc.String()
+	return b.String()
 }

@@ -1,47 +1,41 @@
 package renderer
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/etnz/portfolio"
-	md "github.com/nao1215/markdown"
 )
 
-func SummaryMarkdown(s *portfolio.Summary) string {
-	var buf bytes.Buffer
-	doc := md.NewMarkdown(&buf)
+// SummaryData holds all the calculated information needed by the summary renderer.
+type SummaryData struct {
+	Date             portfolio.Date
+	TotalMarketValue portfolio.Money
+	Daily            portfolio.Percent
+	WTD              portfolio.Percent // Week-to-Date
+	MTD              portfolio.Percent // Month-to-Date
+	QTD              portfolio.Percent // Quarter-to-Date
+	YTD              portfolio.Percent // Year-to-Date
+	Inception        portfolio.Percent
+}
 
-	doc.H1(fmt.Sprintf("Portfolio Summary on %s", s.Date))
-	doc.PlainText(fmt.Sprintf("Total Market Value: %s", s.TotalMarketValue.String()))
+func SummaryMarkdown(s *SummaryData) string {
+	var b strings.Builder
 
-	doc.H2("Performance")
+	fmt.Fprintf(&b, "# Portfolio Summary on %s\n\n", s.Date)
+	fmt.Fprintf(&b, "Total Market Value: %s\n\n", s.TotalMarketValue.String())
 
+	fmt.Fprintln(&b, "## Performance\n")
+	fmt.Fprintln(&b, "| Period | Return |")
+	fmt.Fprintln(&b, "|:---|---:|")
+	fmt.Fprintf(&b, "| Day %d | %s |\n", s.Date.Day(), s.Daily.SignedString())
 	_, week := s.Date.ISOWeek()
+	fmt.Fprintf(&b, "| Week %d | %s |\n", week, s.WTD.SignedString())
+	fmt.Fprintf(&b, "| %s | %s |\n", s.Date.Month().String(), s.MTD.SignedString())
 	quarter := (s.Date.Month()-1)/3 + 1
+	fmt.Fprintf(&b, "| Q%d | %s |\n", quarter, s.QTD.SignedString())
+	fmt.Fprintf(&b, "| %d | %s |\n", s.Date.Year(), s.YTD.SignedString())
+	fmt.Fprintf(&b, "| Inception | %s |\n", s.Inception.SignedString())
 
-	dayLabel := fmt.Sprintf("Day %d", s.Date.Day())
-	weekLabel := fmt.Sprintf("Week %d", week)
-	monthLabel := s.Date.Month().String()
-	quarterLabel := fmt.Sprintf("Q%d", quarter)
-	yearLabel := fmt.Sprintf("%d", s.Date.Year())
-
-	formatPerf := func(p portfolio.Performance) string {
-		return fmt.Sprintf("%+.2f%%", p.Return*100)
-	}
-
-	table := md.TableSet{
-		Header: []string{"Period", "Return"},
-		Rows: [][]string{
-			{dayLabel, formatPerf(s.Daily)},
-			{weekLabel, formatPerf(s.WTD)},
-			{monthLabel, formatPerf(s.MTD)},
-			{quarterLabel, formatPerf(s.QTD)},
-			{yearLabel, formatPerf(s.YTD)},
-			{"Inception", formatPerf(s.Inception)},
-		},
-	}
-	doc.Table(table)
-
-	return doc.String()
+	return b.String()
 }

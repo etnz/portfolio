@@ -55,13 +55,48 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		// }
 	}
 
-	summary, err := portfolio.NewSummary(ledger, on)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error calculating portfolio summary: %v\n", err)
+	// Helper to create a review for a period and calculate TWR
+	calculateTWR := func(period portfolio.Range) (portfolio.Percent, error) {
+		review, err := ledger.NewReview(period)
+		if err != nil {
+			return 0, err
+		}
+		// TWR for the whole portfolio is calculated on a virtual asset with an empty ticker.
+		return review.TimeWeightedReturn(""), nil
+	}
+
+	// Calculate TWR for all periods
+	daily, errD := calculateTWR(portfolio.Daily.Range(on))
+	wtd, errW := calculateTWR(portfolio.Weekly.Range(on))
+	mtd, errM := calculateTWR(portfolio.Monthly.Range(on))
+	qtd, errQ := calculateTWR(portfolio.Quarterly.Range(on))
+	ytd, errY := calculateTWR(portfolio.Yearly.Range(on))
+	inception, errI := calculateTWR(portfolio.NewRange(ledger.OldestTransactionDate(), on))
+
+	if errD != nil || errW != nil || errM != nil || errQ != nil || errY != nil || errI != nil {
+		// Handle or log errors as needed
+		fmt.Fprintln(os.Stderr, "Error calculating performance metrics.")
 		return subcommands.ExitFailure
 	}
 
-	md := renderer.SummaryMarkdown(summary)
+	endSnapshot, err := ledger.NewSnapshot(on)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating end snapshot: %v\n", err)
+		return subcommands.ExitFailure
+	}
+
+	summaryData := &renderer.SummaryData{
+		Date:             on,
+		TotalMarketValue: endSnapshot.TotalPortfolio(),
+		Daily:            daily,
+		WTD:              wtd,
+		MTD:              mtd,
+		QTD:              qtd,
+		YTD:              ytd,
+		Inception:        inception,
+	}
+
+	md := renderer.SummaryMarkdown(summaryData)
 	printMarkdown(md)
 
 	return subcommands.ExitSuccess

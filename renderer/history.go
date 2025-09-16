@@ -1,60 +1,38 @@
 package renderer
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/etnz/portfolio"
-	md "github.com/nao1215/markdown"
 )
 
-func HistoryMarkdown(r *portfolio.HistoryReport) string {
-	var buf bytes.Buffer
-	doc := md.NewMarkdown(&buf)
+func HistoryMarkdown(snapshots []*portfolio.Snapshot, security, currency string) string {
+	var b strings.Builder
 
-	if r.Security != "" {
-		doc.H1(fmt.Sprintf("History for %s", r.Security))
+	if security != "" {
+		fmt.Fprintf(&b, "# History for %s\n\n", security)
+		fmt.Fprintln(&b, "| Date | Position | Price | Value |")
+		fmt.Fprintln(&b, "|:---|---:|---:|---:|")
+		for _, s := range snapshots {
+			fmt.Fprintf(&b, "| %s | %s | %s | %s |\n",
+				s.On().String(),
+				s.Position(security).String(),
+				s.Price(security).String(),
+				s.Convert(s.MarketValue(security)).String(),
+			)
+		}
 	} else {
-		doc.H1(fmt.Sprintf("History for %s", r.Currency))
+		fmt.Fprintf(&b, "# History for %s\n\n", currency)
+		fmt.Fprintln(&b, "| Date | Value |")
+		fmt.Fprintln(&b, "|:---|---:|")
+		for _, s := range snapshots {
+			fmt.Fprintf(&b, "| %s | %s |\n",
+				s.On().String(),
+				s.Convert(s.Cash(currency)).String(),
+			)
+		}
 	}
 
-	if r.Security != "" {
-		table := md.TableSet{
-			Alignment: []md.TableAlignment{
-				md.AlignLeft,
-				md.AlignRight,
-				md.AlignRight,
-				md.AlignRight,
-			},
-			Header: []string{"Date", "Position", "Price", "Value"},
-			Rows:   [][]string{},
-		}
-		for _, entry := range r.Entries {
-			table.Rows = append(table.Rows, []string{
-				entry.Date.String(),
-				entry.Position.String(),
-				entry.Price.String(),
-				entry.Value.String(),
-			})
-		}
-		doc.Table(table)
-	} else {
-		table := md.TableSet{
-			Alignment: []md.TableAlignment{
-				md.AlignLeft,
-				md.AlignRight,
-			},
-			Header: []string{"Date", "Value"},
-			Rows:   [][]string{},
-		}
-		for _, entry := range r.Entries {
-			table.Rows = append(table.Rows, []string{
-				entry.Date.String(),
-				entry.Value.String(),
-			})
-		}
-		doc.Table(table)
-	}
-
-	return doc.String()
+	return b.String()
 }

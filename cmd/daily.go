@@ -60,13 +60,13 @@ func (c *dailyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		}
 
 		// TODO: handle report currency
-		report, err := portfolio.NewDailyReport(ledger, on)
+		review, err := ledger.NewReview(portfolio.NewRange(on, on))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error calculating daily report: %v\n", err)
 			return subcommands.ExitFailure
 		}
 
-		md := renderer.DailyMarkdown(report)
+		md := renderer.DailyMarkdown(review, portfolio.AverageCost)
 
 		if c.watch > 0 {
 			fmt.Println("\033[2J")

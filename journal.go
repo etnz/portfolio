@@ -17,6 +17,7 @@ type event interface {
 type Journal struct {
 	cur    string  // the reporting currency.
 	events []event // sorted by date
+	txs    []Transaction
 }
 
 type baseEvent struct {
@@ -140,7 +141,8 @@ type updateForex struct {
 func (ledger *Ledger) newJournal() error {
 	ledger.stableSort()
 	journal := &Journal{
-		events: make([]event, 0, len(ledger.transactions)*2), // Pre-allocate with a guess
+		events: make([]event, 0, len(ledger.transactions)*2), // Pre-allocate
+		txs:    ledger.transactions,
 		cur:    ledger.currency,
 	}
 
@@ -313,4 +315,8 @@ func (j *Journal) Position(ticker string, on Date) Quantity {
 		}
 	}
 	return holding
+}
+
+func (j *Journal) transactionFromEvent(e event) Transaction {
+	return j.txs[e.source()]
 }

@@ -1,7 +1,6 @@
 package portfolio
 
 import (
-	"fmt"
 	"math"
 )
 
@@ -13,28 +12,19 @@ type Review struct {
 	end   *Snapshot // Snapshot at period.To
 }
 
-// NewReview creates a new portfolio review for a given period.
-// It initializes the start and end snapshots needed for period calculations.
-func NewReview(journal *Journal, period Range) (*Review, error) {
-	if journal == nil {
-		return nil, fmt.Errorf("cannot create review with a nil journal")
-	}
+// Start returns the snapshot at the beginning of the review period (taken on `period.From - 1`).
+func (r *Review) Start() *Snapshot {
+	return r.start
+}
 
-	startSnapshot, err := NewSnapshot(journal, period.From.Add(-1))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create start snapshot: %w", err)
-	}
+// End returns the snapshot at the end of the review period (taken on `period.To`).
+func (r *Review) End() *Snapshot {
+	return r.end
+}
 
-	endSnapshot, err := NewSnapshot(journal, period.To)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create end snapshot: %w", err)
-	}
-
-	r := &Review{
-		start: startSnapshot,
-		end:   endSnapshot,
-	}
-	return r, nil
+// Range returns the period range of the review.
+func (r *Review) Range() Range {
+	return NewRange(r.start.On().Add(1), r.end.On())
 }
 
 // CashFlow calculates the total net cash that has moved into or out of the
@@ -86,4 +76,71 @@ func (r *Review) TotalReturn() Money {
 	marketGainLoss := r.MarketGainLoss()
 	dividends := r.Dividends()
 	return marketGainLoss.Add(dividends)
+}
+
+// PortfolioChange calculates the net change in total portfolio value during the review period.
+func (r *Review) PortfolioChange() Money {
+	return r.end.TotalPortfolio().Sub(r.start.TotalPortfolio())
+}
+
+// CashChange calculates the net change in the total cash balance during the review period.
+func (r *Review) CashChange() Money {
+	return r.end.TotalCash().Sub(r.start.TotalCash())
+}
+
+// CounterpartyChange calculates the net change in the total counterparty balance during the review period.
+func (r *Review) CounterpartyChange() Money {
+	return r.end.TotalCounterparty().Sub(r.start.TotalCounterparty())
+}
+
+// Transactions returns a slice of all transactions that occurred within the review period.
+func (r *Review) Transactions() []Transaction {
+	var periodTxs []Transaction
+	periodRange := r.Range()
+	// This assumes the journal is accessible via the snapshot.
+	for _, e := range r.end.journal.events {
+		if periodRange.Contains(e.date()) {
+			// This is inefficient as it might add the same transaction multiple times
+			// if it generated multiple events. We need a way to get the source transaction
+			// and add it only once.
+			// TODO: This needs a more efficient implementation, likely by iterating transactions directly.
+			// For now, this provides a basic, albeit slow, implementation.
+			tx := r.end.journal.transactionFromEvent(e)
+			if len(periodTxs) == 0 || !periodTxs[len(periodTxs)-1].Equal(tx) {
+				periodTxs = append(periodTxs, tx)
+			}
+		}
+	}
+	return periodTxs
+}
+
+// AssetNetTradingFlow calculates the net cash invested into or divested from a single security during the period.
+func (r *Review) AssetNetTradingFlow(ticker string) (Money, error) {
+	endFlow := r.end.NetTradingFlow(ticker)
+	startFlow := r.start.NetTradingFlow(ticker)
+	return endFlow.Sub(startFlow), nil
+}
+
+// AssetRealizedGains calculates the realized gains for a single security during the period.
+func (r *Review) AssetRealizedGains(ticker string, method CostBasisMethod) (Money, error) {
+	endGains := r.end.RealizedGains(ticker, method)
+	startGains := r.start.RealizedGains(ticker, method)
+	return endGains.Sub(startGains), nil
+}
+
+// AssetDividends calculates the dividends received for a single security during the period.
+func (r *Review) AssetDividends(ticker string) (Money, error) {
+	endDividends := r.end.Dividends(ticker)
+	startDividends := r.start.Dividends(ticker)
+	return endDividends.Sub(startDividends), nil
+}
+
+// AssetMarketGainLoss calculates the change in a security's value due to price movements during the period.
+func (r *Review) AssetMarketGainLoss(ticker string) (Money, error) {
+	valueChange := r.end.MarketValue(ticker).Sub(r.start.MarketValue(ticker))
+	tradingFlow, err := r.AssetNetTradingFlow(ticker)
+	if err != nil {
+		return Money{}, err
+	}
+	return valueChange.Sub(tradingFlow), nil
 }

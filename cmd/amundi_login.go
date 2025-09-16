@@ -31,8 +31,10 @@ type amundiLoginCmd struct {
 	body string
 }
 
-func (*amundiLoginCmd) Name() string     { return "amundi-login" }
-func (*amundiLoginCmd) Synopsis() string { return "stores Amundi session credentials from a curl command" }
+func (*amundiLoginCmd) Name() string { return "amundi-login" }
+func (*amundiLoginCmd) Synopsis() string {
+	return "stores Amundi session credentials from a curl command"
+}
 func (*amundiLoginCmd) Usage() string {
 	return `pcs amundi-login -H <header1> -H <header2> ...
 

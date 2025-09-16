@@ -30,7 +30,7 @@ func TestReview_PeriodWithInvestmentAndGains(t *testing.T) {
 	}
 
 	period := NewRange(NewDate(2025, 1, 5), NewDate(2025, 1, 7))
-	review, err := NewReview(ledger.journal, period)
+	review, err := ledger.NewReview(period)
 	if err != nil {
 		t.Fatalf("NewReview() error = %v", err)
 	}

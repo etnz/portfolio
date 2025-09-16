@@ -1,7 +1,6 @@
 package portfolio
 
 import (
-	"fmt"
 	"iter"
 )
 
@@ -13,18 +12,9 @@ type Snapshot struct {
 	on      Date
 }
 
-// NewSnapshot creates a new portfolio snapshot for a given date.
-// It does not perform any calculations itself but prepares a Snapshot
-// object that can perform calculations on demand.
-func NewSnapshot(journal *Journal, on Date) (*Snapshot, error) {
-	if journal == nil {
-		return nil, fmt.Errorf("cannot create snapshot with a nil journal")
-	}
-	s := &Snapshot{
-		journal: journal,
-		on:      on,
-	}
-	return s, nil
+// On returns the date of the snapshot.
+func (s *Snapshot) On() Date {
+	return s.on
 }
 
 // --- private calculation helpers ---
@@ -532,4 +522,18 @@ func (s *Snapshot) TotalRealizedGains(method CostBasisMethod) Money {
 // TotalDividends returns the total dividends received across all securities, converted to the reporting currency.
 func (s *Snapshot) TotalDividends() Money {
 	return s.sum(s.Securities(), s.Dividends)
+}
+
+// TotalUnrealizedGains calculates the total unrealized gains across all securities.
+func (s *Snapshot) TotalUnrealizedGains(method CostBasisMethod) Money {
+	return s.sum(s.Securities(), func(ticker string) Money {
+		return s.UnrealizedGains(ticker, method)
+	})
+}
+
+// TotalCostBasis calculates the total cost basis of all securities.
+func (s *Snapshot) TotalCostBasis(method CostBasisMethod) Money {
+	return s.sum(s.Securities(), func(ticker string) Money {
+		return s.CostBasis(ticker, method)
+	})
 }

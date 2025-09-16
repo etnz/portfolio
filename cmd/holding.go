@@ -55,13 +55,13 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		}
 	}
 
-	report, err := portfolio.NewHoldingReport(ledger, on)
+	snapshot, err := ledger.NewSnapshot(on)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating holding report: %v\n", err)
 		return subcommands.ExitFailure
 	}
 
-	printMarkdown(renderer.HoldingMarkdown(report))
+	printMarkdown(renderer.HoldingMarkdown(snapshot))
 
 	return subcommands.ExitSuccess
 }

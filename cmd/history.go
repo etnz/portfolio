@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/renderer"
@@ -45,14 +46,42 @@ func (c *historyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitFailure
 	}
 
-	// The reporting currency for history is based on the asset's own currency.
-	report, err := portfolio.NewHistory(ledger, c.security, c.currency, *defaultCurrency)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error generating history report: %v\n", err)
-		return subcommands.ExitFailure
+	var predicate func(portfolio.Transaction) bool
+	if c.security != "" {
+		predicate = portfolio.BySecurity(c.security)
+	} else {
+		predicate = ledger.ByCurrency(c.currency)
 	}
 
-	md := renderer.HistoryMarkdown(report)
+	// Build a list of all unique days where there was a significant transaction.
+	dates := make(map[portfolio.Date]struct{})
+	for _, tx := range ledger.Transactions(predicate) {
+		dates[tx.When()] = struct{}{}
+	}
+
+	// Convert map keys to a slice and sort them.
+	sortedDates := make([]portfolio.Date, 0, len(dates))
+	for d := range dates {
+		sortedDates = append(sortedDates, d)
+	}
+	slices.SortFunc(sortedDates, func(a, b portfolio.Date) int {
+		if a.Before(b) {
+			return -1
+		}
+		return 1
+	})
+
+	snapshots := make([]*portfolio.Snapshot, 0, len(sortedDates))
+	for _, on := range sortedDates {
+		s, err := ledger.NewSnapshot(on)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating snapshot for %s: %v\n", on, err)
+			return subcommands.ExitFailure
+		}
+		snapshots = append(snapshots, s)
+	}
+
+	md := renderer.HistoryMarkdown(snapshots, c.security, c.currency)
 	printMarkdown(md)
 
 	return subcommands.ExitSuccess

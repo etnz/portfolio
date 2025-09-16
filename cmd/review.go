@@ -87,14 +87,14 @@ func (c *reviewCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 	}
 
 	// 3. Generate the report
-	report, err := portfolio.NewReviewReport(ledger, *defaultCurrency, r)
+	review, err := ledger.NewReview(r)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating review report: %v\n", err)
 		return subcommands.ExitFailure
 	}
 
 	// 4. Render the report
-	md := renderer.ReviewMarkdown(report)
+	md := renderer.ReviewMarkdown(review, portfolio.AverageCost)
 	printMarkdown(md)
 
 	return subcommands.ExitSuccess
