@@ -125,6 +125,17 @@ func (r *Review) Transactions() []Transaction {
 	return periodTxs
 }
 
+
+//AssetTimeWeightedReturn calculates the time-weighted return for a single security over the review period.
+func (r *Review) AssetTimeWeightedReturn(ticker string) Percent {
+	startValue := r.start.VirtualAssetValue(ticker)
+	endValue := r.end.VirtualAssetValue(ticker)
+	if startValue.IsZero() {
+		return Percent(math.NaN())
+	}
+	return Percent(100 * (endValue.AsFloat()/startValue.AsFloat() - 1))
+}
+
 // AssetNetTradingFlow calculates the net cash invested into or divested from a single security during the period.
 func (r *Review) AssetNetTradingFlow(ticker string) Money {
 	endFlow := r.end.NetTradingFlow(ticker)

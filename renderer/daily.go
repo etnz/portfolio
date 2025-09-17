@@ -73,7 +73,7 @@ func DailyMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) s
 			continue
 		}
 		activeAssetsSection.PrintHeader(&b)
-		twr := review.TimeWeightedReturn()
+		twr := review.AssetTimeWeightedReturn(ticker)
 		fmt.Fprintf(&b, "| %s | %s | %s |\n",
 			ticker,
 			gain.String(),
