@@ -66,7 +66,7 @@ func (s *Snapshot) VirtualAssetValue(ticker string) Money {
 		case declareSecurity:
 			if v.ticker == ticker {
 				lastPrice = M(0, v.currency)
-				virtualCash = M(0, v.currency)
+				virtualCash = M(1, v.currency)
 			}
 		case acquireLot:
 			if v.security == ticker {
@@ -74,7 +74,7 @@ func (s *Snapshot) VirtualAssetValue(ticker string) Money {
 					// First buy. The virtual portfolio uses its cash to buy virtual shares.
 					lastPrice = v.cost.Div(v.quantity)
 					virtualPosition = virtualCash.Mul(v.quantity).DivPrice(v.cost)
-					virtualCash = M(0, s.journal.cur) // All cash is now invested.
+					virtualCash = M(0, virtualCash.Currency()) // All cash is now invested.
 				}
 				actualPosition = actualPosition.Add(v.quantity)
 			}
@@ -82,11 +82,8 @@ func (s *Snapshot) VirtualAssetValue(ticker string) Money {
 			if v.security == ticker {
 				actualPosition = actualPosition.Sub(v.quantity)
 				if actualPosition.IsZero() {
-					// Actual position is zero. "Sell" the virtual position.
-					if !virtualPosition.IsZero() && !lastPrice.IsZero() {
-						valueInSecCurrency := lastPrice.Mul(virtualPosition)
-						virtualCash = s.Convert(valueInSecCurrency)
-					}
+					// Actual position is down to zero. "Sell all" the virtual position.
+					virtualCash = lastPrice.Mul(virtualPosition)
 					virtualPosition = Q(0)
 				}
 			}
@@ -105,9 +102,6 @@ func (s *Snapshot) VirtualAssetValue(ticker string) Money {
 	}
 
 	// Calculate the final value of the virtual portfolio.
-	if virtualCash.IsZero() {
-		return M(0, s.journal.cur) // Never invested, no value.
-	}
 	return virtualCash.Add(lastPrice.Mul(virtualPosition))
 }
 
