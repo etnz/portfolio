@@ -64,13 +64,17 @@ type fetcher struct {
 }
 
 func (f fetcher) Start() portfolio.Date {
-	oldest := portfolio.Today() // today is the oldest possible.
+	// The way amundi fetcher works is to scan the accounts for each day, and
+	// set the price for the assets held that day.
+	// There is no way to get anything outside of those assets, therefore we only
+	// need to scan from the latest know date forward. That is the latest From.
+	var newest portfolio.Date
 	for _, r := range f.request {
-		if r.From.Before(oldest) {
-			oldest = r.From
+		if r.From.After(newest) {
+			newest = r.From
 		}
 	}
-	return oldest
+	return newest
 }
 
 func (f fetcher) End() portfolio.Date {
