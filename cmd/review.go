@@ -80,10 +80,10 @@ func (c *reviewCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 	}
 
 	if c.update {
-		// if err := as.MarketData.UpdateIntraday(); err != nil {
-		// 	fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
-		// 	// We can continue with stale prices, so this is not a fatal error.
-		// }
+		if err := ledger.UpdateIntraday(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
+			// We can continue with stale prices, so this is not a fatal error.
+		}
 	}
 
 	// 3. Generate the report
