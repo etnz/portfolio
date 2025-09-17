@@ -26,7 +26,7 @@ func ReviewMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) 
 	fmt.Fprintln(&b, "|---:|---:|")
 	fmt.Fprintf(&b, "| %s | %s |\n", "Previous Value", start.TotalPortfolio().String())
 	fmt.Fprintf(&b, "| %s | %s |\n", "Cash Flow", review.CashFlow().SignedString())
-	fmt.Fprintf(&b, "| %s | %s |\n", "Market Gains", review.MarketGainLoss().SignedString())
+	fmt.Fprintf(&b, "| %s | %s |\n", "Market Gains", review.MarketGain().SignedString())
 	if !review.Dividends().IsZero() {
 		fmt.Fprintf(&b, "| %s | %s |\n", "Dividends", review.Dividends().SignedString())
 		fmt.Fprintln(&b, "|   |   |")
@@ -76,8 +76,8 @@ func ReviewMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) 
 	for ticker := range end.Securities() {
 		startValue := start.MarketValue(ticker)
 		endValue := end.MarketValue(ticker)
-		flow, _ := review.AssetNetTradingFlow(ticker)
-		gain, _ := review.AssetMarketGainLoss(ticker)
+		flow := review.AssetNetTradingFlow(ticker)
+		gain := review.AssetMarketGain(ticker)
 
 		if startValue.IsZero() && endValue.IsZero() && flow.IsZero() && gain.IsZero() {
 			continue
@@ -95,7 +95,7 @@ func ReviewMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) 
 		"Total",
 		start.TotalMarket().String(),
 		review.NetTradingFlow().SignedString(),
-		review.MarketGainLoss().SignedString(),
+		review.MarketGain().SignedString(),
 		end.TotalMarket().String(),
 	)
 
@@ -104,9 +104,9 @@ func ReviewMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) 
 	fmt.Fprintln(&b, "| Asset | Gain | Dividends | Total Return |")
 	fmt.Fprintln(&b, "|:---|---:|---:|---:|")
 	for ticker := range end.Securities() {
-		gain, _ := review.AssetMarketGainLoss(ticker)
-		dividends, _ := review.AssetDividends(ticker)
-		totalReturn := gain.Add(dividends)
+		gain := review.AssetMarketGain(ticker)
+		dividends := review.AssetDividends(ticker)
+		totalReturn := review.AssetTotalReturn(ticker)
 		if gain.IsZero() && dividends.IsZero() {
 			continue
 		}
@@ -119,7 +119,7 @@ func ReviewMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) 
 	}
 	fmt.Fprintf(&b, "| **%s** | **%s** | **%s** | **%s** |\n",
 		"Total",
-		review.MarketGainLoss().SignedString(),
+		review.MarketGain().SignedString(),
 		review.Dividends().SignedString(),
 		review.TotalReturn().SignedString(),
 	)
@@ -130,11 +130,11 @@ func ReviewMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) 
 	fmt.Fprintln(&b, "|:---|---:|---:|---:|---:|")
 	for ticker := range end.Securities() {
 		invested := end.NetTradingFlow(ticker) // This is total invested since inception
-		dividends, _ := review.AssetDividends(ticker)
-		realized, _ := review.AssetRealizedGains(ticker, method)
+		dividends := review.AssetDividends(ticker)
+		realized := review.AssetRealizedGains(ticker, method)
 		unrealized := end.UnrealizedGains(ticker, method)
 
-		if invested.IsZero() && dividends.IsZero() && realized.IsZero() && unrealized.IsZero() && start.Position(ticker).IsZero() {
+		if dividends.IsZero() && realized.IsZero() && unrealized.IsZero() {
 			continue
 		}
 

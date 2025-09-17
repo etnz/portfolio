@@ -220,6 +220,11 @@ func (s *Snapshot) CostBasis(ticker string, method CostBasisMethod) Money {
 					totalQuantity = totalQuantity.Add(v.quantity)
 					totalCost = totalCost.Add(v.cost)
 				}
+			case splitShare:
+				if v.security == ticker {
+					num, den := Q(v.numerator), Q(v.denominator)
+					totalQuantity = totalQuantity.Mul(num).Div(den)
+				}
 			case disposeLot:
 				if v.security == ticker {
 					if !totalQuantity.IsZero() {
@@ -239,6 +244,14 @@ func (s *Snapshot) CostBasis(ticker string, method CostBasisMethod) Money {
 				if v.security == ticker {
 					newLot := lot{Date: v.on, Quantity: v.quantity, Cost: v.cost}
 					securityLots = append(securityLots, newLot)
+				}
+			case splitShare:
+				if v.security == ticker {
+					num, den := Q(v.numerator), Q(v.denominator)
+					// we need to split shares in all lots
+					for i := range securityLots {
+						securityLots[i].Quantity = securityLots[i].Quantity.Mul(num).Div(den)
+					}
 				}
 			case disposeLot:
 				if v.security == ticker {
@@ -271,6 +284,11 @@ func (s *Snapshot) RealizedGains(ticker string, method CostBasisMethod) Money {
 					totalQuantity = totalQuantity.Add(v.quantity)
 					totalCost = totalCost.Add(v.cost)
 				}
+			case splitShare:
+				if v.security == ticker {
+					num, den := Q(v.numerator), Q(v.denominator)
+					totalQuantity = totalQuantity.Mul(num).Div(den)
+				}
 			case disposeLot:
 				if v.security == ticker {
 					costOfSale := totalCost.Mul(v.quantity).Div(totalQuantity)
@@ -292,11 +310,21 @@ func (s *Snapshot) RealizedGains(ticker string, method CostBasisMethod) Money {
 					newLot := lot{Date: v.on, Quantity: v.quantity, Cost: v.cost}
 					securityLots = append(securityLots, newLot)
 				}
+			case splitShare:
+				if v.security == ticker {
+					num, den := Q(v.numerator), Q(v.denominator)
+					// we need to split shares in all lots
+					for i := range securityLots {
+						securityLots[i].Quantity = securityLots[i].Quantity.Mul(num).Div(den)
+					}
+				}
 			case disposeLot:
-				costOfSale := securityLots.fifoCostOfSelling(v.quantity)
-				gain := v.proceeds.Sub(costOfSale)
-				realizedGain = realizedGain.Add(gain)
-				securityLots = securityLots.sell(v.quantity)
+				if v.security == ticker {
+					costOfSale := securityLots.fifoCostOfSelling(v.quantity)
+					gain := v.proceeds.Sub(costOfSale)
+					realizedGain = realizedGain.Add(gain)
+					securityLots = securityLots.sell(v.quantity)
+				}
 			}
 		}
 		return realizedGain

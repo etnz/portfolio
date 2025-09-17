@@ -28,7 +28,7 @@ func DailyMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) s
 	fmt.Fprintf(&b, "| Value at Prev. Close | %s |\n", start.TotalPortfolio().String())
 
 	totalGain := review.PortfolioChange()
-	marketGains := review.MarketGainLoss()
+	marketGains := review.MarketGain()
 	realizedGains := review.RealizedGains(method)
 	dividends := review.Dividends()
 	netCashFlow := review.CashFlow()
@@ -68,7 +68,7 @@ func DailyMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) s
 	})
 
 	for ticker := range end.Securities() {
-		gain, _ := review.AssetMarketGainLoss(ticker)
+		gain := review.AssetMarketGain(ticker)
 		if gain.IsZero() {
 			continue
 		}

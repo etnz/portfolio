@@ -91,7 +91,7 @@ func TestReview_PeriodWithInvestmentAndGains(t *testing.T) {
 			t.Errorf("NetTradingFlow() = %v, want %v", got, want) // Buys are positive flow, Sells are negative.
 		}
 
-		if got, want := review.MarketGainLoss(), EUR(200); !got.Equal(want) {
+		if got, want := review.MarketGain(), EUR(200); !got.Equal(want) {
 			t.Errorf("MarketGainLoss() = %v, want %v", got, want)
 		}
 

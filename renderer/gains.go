@@ -19,7 +19,7 @@ func GainsMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) s
 	fmt.Fprintln(&b, "|:---|---:|---:|")
 
 	for ticker := range end.Securities() {
-		realized, _ := review.AssetRealizedGains(ticker, method)
+		realized := review.AssetRealizedGains(ticker, method)
 		unrealized := end.UnrealizedGains(ticker, method)
 
 		if realized.IsZero() && unrealized.IsZero() && end.Position(ticker).IsZero() {

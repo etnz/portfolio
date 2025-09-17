@@ -42,12 +42,12 @@
             "cwd": "/tmp/",
         },
         {
-            "name": "pcs review",
+            "name": "pcs review -v",
             "type": "go",
             "request": "launch",
             "mode": "debug",
             "program": "pcs/main.go",
-            "args": ["review", "-period=week"],
+            "args": ["-v", "review", "-period=year"],
             "cwd": "/tmp/",
         },
         {

@@ -62,9 +62,9 @@ func (r *Review) TimeWeightedReturn(ticker string) Percent {
 	return Percent(100 * (endVAV.AsFloat()/startVAV.AsFloat() - 1))
 }
 
-// MarketGainLoss calculates the change in security value due to price movements,
+// MarketGain calculates the change in security value due to price movements,
 // isolated from the impact of buying or selling.
-func (r *Review) MarketGainLoss() Money {
+func (r *Review) MarketGain() Money {
 	tmvChange := r.end.TotalMarket().Sub(r.start.TotalMarket())
 	netTradingFlow := r.NetTradingFlow()
 	return tmvChange.Sub(netTradingFlow)
@@ -73,7 +73,7 @@ func (r *Review) MarketGainLoss() Money {
 // TotalReturn calculates the total economic benefit from the portfolio over a period,
 // combining market gains/losses and dividend income.
 func (r *Review) TotalReturn() Money {
-	marketGainLoss := r.MarketGainLoss()
+	marketGainLoss := r.MarketGain()
 	dividends := r.Dividends()
 	return marketGainLoss.Add(dividends)
 }
@@ -115,32 +115,37 @@ func (r *Review) Transactions() []Transaction {
 }
 
 // AssetNetTradingFlow calculates the net cash invested into or divested from a single security during the period.
-func (r *Review) AssetNetTradingFlow(ticker string) (Money, error) {
+func (r *Review) AssetNetTradingFlow(ticker string) Money {
 	endFlow := r.end.NetTradingFlow(ticker)
 	startFlow := r.start.NetTradingFlow(ticker)
-	return endFlow.Sub(startFlow), nil
+	return endFlow.Sub(startFlow)
 }
 
 // AssetRealizedGains calculates the realized gains for a single security during the period.
-func (r *Review) AssetRealizedGains(ticker string, method CostBasisMethod) (Money, error) {
+func (r *Review) AssetRealizedGains(ticker string, method CostBasisMethod) Money {
 	endGains := r.end.RealizedGains(ticker, method)
 	startGains := r.start.RealizedGains(ticker, method)
-	return endGains.Sub(startGains), nil
+	return endGains.Sub(startGains)
 }
 
 // AssetDividends calculates the dividends received for a single security during the period.
-func (r *Review) AssetDividends(ticker string) (Money, error) {
+func (r *Review) AssetDividends(ticker string) Money {
 	endDividends := r.end.Dividends(ticker)
 	startDividends := r.start.Dividends(ticker)
-	return endDividends.Sub(startDividends), nil
+	return endDividends.Sub(startDividends)
 }
 
-// AssetMarketGainLoss calculates the change in a security's value due to price movements during the period.
-func (r *Review) AssetMarketGainLoss(ticker string) (Money, error) {
+// AssetMarketGain calculates the change in a security's value due to price movements during the period.
+func (r *Review) AssetMarketGain(ticker string) Money {
 	valueChange := r.end.MarketValue(ticker).Sub(r.start.MarketValue(ticker))
-	tradingFlow, err := r.AssetNetTradingFlow(ticker)
-	if err != nil {
-		return Money{}, err
-	}
-	return valueChange.Sub(tradingFlow), nil
+	tradingFlow := r.AssetNetTradingFlow(ticker)
+	return valueChange.Sub(tradingFlow)
+}
+
+// AssetTotalReturn calculates the total return for a single security during the period,
+// combining market gains/losses and dividend income.
+func (r *Review) AssetTotalReturn(ticker string) Money {
+	marketGain := r.AssetMarketGain(ticker)
+	dividends := r.AssetDividends(ticker)
+	return marketGain.Add(dividends)
 }

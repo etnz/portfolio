@@ -94,7 +94,7 @@ func (c *reviewCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 	}
 
 	// 4. Render the report
-	md := renderer.ReviewMarkdown(review, portfolio.AverageCost)
+	md := renderer.ReviewMarkdown(review, portfolio.FIFO)
 	printMarkdown(md)
 
 	return subcommands.ExitSuccess
