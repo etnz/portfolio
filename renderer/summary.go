@@ -25,7 +25,7 @@ func SummaryMarkdown(s *SummaryData) string {
 	fmt.Fprintf(&b, "# Portfolio Summary on %s\n\n", s.Date)
 	fmt.Fprintf(&b, "Total Market Value: %s\n\n", s.TotalMarketValue.String())
 
-	fmt.Fprintln(&b, "## Performance\n")
+	fmt.Fprint(&b, "## Performance\n\n")
 	fmt.Fprintln(&b, "| Period | Return |")
 	fmt.Fprintln(&b, "|:---|---:|")
 	fmt.Fprintf(&b, "| Day %d | %s |\n", s.Date.Day(), s.Daily.SignedString())

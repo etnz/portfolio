@@ -34,7 +34,7 @@ func DailyMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) s
 	netCashFlow := review.CashFlow()
 
 	fmt.Fprintf(&b, "\n## Breakdown of Change\n\n")
-	fmt.Fprintf(&b, "| **%s** | **%s** |\n", "Total Day's Gain", totalGain.SignedString())
+	fmt.Fprintf(&b, "| **%s** | **%s** |\n", "Total Day's Gain", totalGain.SignedString()) //nolint:all
 	fmt.Fprintln(&b, "|:---|---:|")
 
 	if !marketGains.IsZero() {
@@ -73,7 +73,7 @@ func DailyMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) s
 			continue
 		}
 		activeAssetsSection.PrintHeader(&b)
-		twr := review.TimeWeightedReturn(ticker)
+		twr := review.TimeWeightedReturn()
 		fmt.Fprintf(&b, "| %s | %s | %s |\n",
 			ticker,
 			gain.String(),

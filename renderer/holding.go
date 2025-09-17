@@ -23,7 +23,7 @@ func HoldingMarkdown(s *portfolio.Snapshot) string {
 
 	// --- Securities Section ---
 	securitiesSection := Header(func(w io.Writer) {
-		fmt.Fprintln(w, "## Securities\n")
+		fmt.Fprint(w, "## Securities\n\n")
 		fmt.Fprintln(w, "| Ticker | Quantity | Price | Market Value |")
 		fmt.Fprintln(w, "|:---|---:|---:|---:|")
 	})
@@ -44,7 +44,7 @@ func HoldingMarkdown(s *portfolio.Snapshot) string {
 
 	// --- Cash Section ---
 	cashSection := Header(func(w io.Writer) {
-		fmt.Fprintln(w, "\n## Cash\n")
+		fmt.Fprint(w, "\n## Cash\n\n")
 		fmt.Fprintln(w, "| Currency | Balance | Value |")
 		fmt.Fprintln(w, "|:---|---:|---:|")
 	})
@@ -65,7 +65,7 @@ func HoldingMarkdown(s *portfolio.Snapshot) string {
 	// --- Counterparties Section ---
 	if !s.TotalCounterparty().IsZero() {
 		counterpartiesSection := Header(func(w io.Writer) {
-			fmt.Fprintln(w, "\n## Counterparties\n")
+			fmt.Fprint(w, "\n## Counterparties\n\n")
 			fmt.Fprintln(w, "| Name | Balance | Value |")
 			fmt.Fprintln(w, "|:---|---:|---:|")
 		})

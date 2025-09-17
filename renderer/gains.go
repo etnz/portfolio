@@ -14,7 +14,7 @@ func GainsMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) s
 	fmt.Fprintf(&b, "# Capital Gains Report from %s to %s\n\n", review.Range().From.String(), review.Range().To.String())
 	fmt.Fprintf(&b, "Method: %s\n\n", method)
 
-	fmt.Fprintln(&b, "## Gains per Security\n")
+	fmt.Fprint(&b, "## Gains per Security\n\n")
 	fmt.Fprintln(&b, "| Security | Realized (Period) | Unrealized (at End) |")
 	fmt.Fprintln(&b, "|:---|---:|---:|")
 

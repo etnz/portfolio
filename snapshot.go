@@ -53,14 +53,13 @@ func (s *Snapshot) sum(iterator iter.Seq[string], metricFunc func(string) Money)
 // non-zero, and sells out when the actual position returns to zero.
 func (s *Snapshot) VirtualAssetValue(ticker string) Money {
 	// This simulates a virtual portfolio for the given ticker.
-	// It starts with 1 unit of the reporting currency.
+	// It starts with 1 unit of the security's currency.
 	virtualCash := M(1, "")
 	var virtualPosition Quantity // The number of virtual shares held.
 
 	// These track the state of the *actual* portfolio.
 	var actualPosition Quantity
 	var lastPrice Money
-
 	for e := range s.events() {
 		switch v := e.(type) {
 		case declareSecurity:
@@ -103,6 +102,13 @@ func (s *Snapshot) VirtualAssetValue(ticker string) Money {
 
 	// Calculate the final value of the virtual portfolio.
 	return virtualCash.Add(lastPrice.Mul(virtualPosition))
+}
+
+// VirtualTotalValue simulates the growth of a 1-unit investment in the entire portfolio.
+// This is the core of the portfolio-wide Time-Weighted Return calculation. It tracks
+// the portfolio's value and adjusts for external cash flows.
+func (s *Snapshot) VirtualTotalValue() Money {
+	return s.TotalPortfolio().Sub(s.TotalCashFlow())
 }
 
 // Price finds the last known price for a security on or before the snapshot's date.
@@ -192,6 +198,11 @@ func (s *Snapshot) Dividends(ticker string) Money {
 		case acquireLot:
 			if v.security == ticker {
 				position = position.Add(v.quantity)
+			}
+		case splitShare:
+			if v.security == ticker {
+				num, den := Q(v.numerator), Q(v.denominator)
+				position = position.Mul(num).Div(den)
 			}
 		case disposeLot:
 			if v.security == ticker {

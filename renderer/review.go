@@ -129,7 +129,7 @@ func ReviewMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) 
 	fmt.Fprintln(&b, "| Asset | Invested | Dividends | Realized | Unrealized |")
 	fmt.Fprintln(&b, "|:---|---:|---:|---:|---:|")
 	for ticker := range end.Securities() {
-		invested := end.NetTradingFlow(ticker) // This is total invested since inception
+		invested := review.AssetCostBasis(ticker, method)
 		dividends := review.AssetDividends(ticker)
 		realized := review.AssetRealizedGains(ticker, method)
 		unrealized := end.UnrealizedGains(ticker, method)
@@ -148,7 +148,7 @@ func ReviewMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) 
 	}
 	fmt.Fprintf(&b, "| **%s** | **%s** | **%s** | **%s** | **%s** |\n",
 		"Total",
-		end.TotalNetTradingFlow().String(),
+		review.TotalCostBasis(method).String(),
 		review.Dividends().SignedString(),
 		review.RealizedGains(method).SignedString(),
 		end.TotalUnrealizedGains(method).SignedString(),
@@ -156,7 +156,7 @@ func ReviewMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) 
 
 	// --- Transactions ---
 	transactionsSection := Header(func(w io.Writer) {
-		fmt.Fprintf(w, "\n## Transactions\n\n")
+		fmt.Fprint(w, "\n## Transactions\n\n")
 		fmt.Fprintln(w, "| Date | Type | Description |")
 		fmt.Fprintln(w, "|:---|:---|:---|")
 	})

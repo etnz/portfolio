@@ -62,8 +62,10 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 			return 0, err
 		}
 		// TWR for the whole portfolio is calculated on a virtual asset with an empty ticker.
-		return review.TimeWeightedReturn(""), nil
+		return review.TimeWeightedReturn(), nil
 	}
+
+	inceptionDate := ledger.GlobalInceptionDate()
 
 	// Calculate TWR for all periods
 	daily, errD := calculateTWR(portfolio.Daily.Range(on))
@@ -71,7 +73,7 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	mtd, errM := calculateTWR(portfolio.Monthly.Range(on))
 	qtd, errQ := calculateTWR(portfolio.Quarterly.Range(on))
 	ytd, errY := calculateTWR(portfolio.Yearly.Range(on))
-	inception, errI := calculateTWR(portfolio.NewRange(ledger.OldestTransactionDate(), on))
+	inception, errI := calculateTWR(portfolio.NewRange(inceptionDate.Add(1), on))
 
 	if errD != nil || errW != nil || errM != nil || errQ != nil || errY != nil || errI != nil {
 		// Handle or log errors as needed

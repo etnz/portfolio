@@ -66,7 +66,7 @@ func TestReview_PeriodWithInvestmentAndGains(t *testing.T) {
 		// Jan 6: Dividend. VAV is unaffected.
 		// Jan 7: Price 120 -> 130. Factor = 130/120. VAV = 1.2 * (130/120) = 1.3
 		// Total return = (1.3 / 1.1) - 1 = 0.1818... or 18.18%
-		if got, want := review.TimeWeightedReturn("AAPL"), Percent(18.181818); !got.Equal(want) {
+		if got, want := review.TimeWeightedReturn(), Percent(18.181818); !got.Equal(want) {
 			t.Errorf("TimeWeightedReturn() = %v, want %v", got, want)
 		}
 	})

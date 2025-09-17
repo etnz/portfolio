@@ -42,24 +42,35 @@ func (r *Review) NetTradingFlow() Money {
 // RealizedGains calculates the sum of all profits and losses 'locked in'
 // through the sale of securities during the review period.
 func (r *Review) RealizedGains(method CostBasisMethod) Money {
-	return r.end.TotalRealizedGains(method).Sub(r.start.TotalRealizedGains(method))
+	total := M(0, r.end.journal.cur)
+	for ticker := range r.end.Securities() {
+		gain := r.AssetRealizedGains(ticker, method)
+		total = total.Add(r.end.Convert(gain))
+	}
+	return total
 }
 
 // Dividends calculates the total income received from dividends
 // during the review period.
 func (r *Review) Dividends() Money {
-	return r.end.TotalDividends().Sub(r.start.TotalDividends())
+	total := M(0, r.end.journal.cur)
+	for ticker := range r.end.Securities() {
+		dividend := r.AssetDividends(ticker)
+		total = total.Add(r.end.Convert(dividend))
+	}
+	return total
 }
 
 // TimeWeightedReturn calculates the compound rate of growth for a security
 // over the review period, eliminating the distorting effects of cash flows.
-func (r *Review) TimeWeightedReturn(ticker string) Percent {
-	startVAV := r.start.VirtualAssetValue(ticker)
-	endVAV := r.end.VirtualAssetValue(ticker)
-	if startVAV.IsZero() {
+func (r *Review) TimeWeightedReturn() Percent {
+
+	den := r.end.TotalPortfolio().Sub(r.CashFlow())
+	num := r.start.TotalPortfolio()
+	if num.IsZero() {
 		return Percent(math.NaN())
 	}
-	return Percent(100 * (endVAV.AsFloat()/startVAV.AsFloat() - 1))
+	return Percent(100 * (den.AsFloat()/num.AsFloat() - 1))
 }
 
 // MarketGain calculates the change in security value due to price movements,
@@ -148,4 +159,31 @@ func (r *Review) AssetTotalReturn(ticker string) Money {
 	marketGain := r.AssetMarketGain(ticker)
 	dividends := r.AssetDividends(ticker)
 	return marketGain.Add(dividends)
+}
+
+// UnrealizedGains calculates the change in unrealized gains for a single security during the period.
+func (r *Review) UnrealizedGains(method CostBasisMethod) Money {
+	total := M(0, r.end.journal.cur)
+	for ticker := range r.end.Securities() {
+		gain := r.end.UnrealizedGains(ticker, method).Sub(r.start.UnrealizedGains(ticker, method))
+		total = total.Add(r.end.Convert(gain))
+	}
+	return total
+}
+
+// AssetCostBasis calculates the cost basis of a single security at the end of the review period.
+// This is used for the "Invested" column in reports.
+func (r *Review) AssetCostBasis(ticker string, method CostBasisMethod) Money {
+	return r.end.CostBasis(ticker, method)
+}
+
+// TotalCostBasis calculates the total cost basis of all securities held at the end of the review period.
+// This is used for the "Invested" total in reports.
+func (r *Review) TotalCostBasis(method CostBasisMethod) Money {
+	total := M(0, r.end.journal.cur)
+	for ticker := range r.end.Securities() {
+		cost := r.AssetCostBasis(ticker, method)
+		total = total.Add(r.end.Convert(cost))
+	}
+	return total
 }

@@ -444,6 +444,23 @@ func (l *Ledger) stableSort() {
 
 }
 
+// Inceptiondate returns the date of the earliest deposit.
+func (l *Ledger) GlobalInceptionDate() Date {
+	// Find the date of the first external deposit to use as the inception date.
+	var inceptionDate Date
+	for _, tx := range l.transactions {
+		if _, ok := tx.(Deposit); ok {
+			inceptionDate = tx.When()
+			break
+		}
+		// if acc, ok := tx.(portfolio.Accrue); ok && acc.Amount.IsPositive() {
+		// 	inceptionDate = tx.When()
+		// 	break
+		// }
+	}
+	return inceptionDate
+}
+
 // OldestTransactionDate returns the date of the earliest transaction in the ledger.
 // It returns false if the ledger has no transactions.
 func (l *Ledger) OldestTransactionDate() Date {
