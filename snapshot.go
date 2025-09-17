@@ -54,7 +54,7 @@ func (s *Snapshot) sum(iterator iter.Seq[string], metricFunc func(string) Money)
 func (s *Snapshot) VirtualAssetValue(ticker string) Money {
 	// This simulates a virtual portfolio for the given ticker.
 	// It starts with 1 unit of the reporting currency.
-	var virtualCash Money
+	virtualCash := M(1, "")
 	var virtualPosition Quantity // The number of virtual shares held.
 
 	// These track the state of the *actual* portfolio.

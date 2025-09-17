@@ -74,7 +74,7 @@ func TestSnapshot_EmptyPortfolio(t *testing.T) {
 
 	t.Run("VirtualAssetValue starts at 1", func(t *testing.T) {
 		// The virtual asset value of a 1-unit investment that is never made is still 1.
-		want := EUR(1)
+		want := NO(1)
 		got := s.VirtualAssetValue("ANY")
 		if !got.Equal(want) {
 			t.Errorf("VirtualAssetValue() = %v, want %v", got, want)

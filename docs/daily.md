@@ -62,8 +62,8 @@ pcs daily -d 2025-01-03
   
    Ticker    | Gain / Loss |     Change 
   -----------|-------------|------------
-   MSFT      |      €45.50 |     +5.00% 
-   **Total** | **+€45.50** | **+0.38%** 
+   MSFT      |      $50.00 |     +5.00% 
+   **Total** | **+€45.50** | **+5.00%** 
   
   ## Intraday's Transactions
   
@@ -120,8 +120,8 @@ pcs daily -d 2025-01-03
   
    Ticker    | Gain / Loss |     Change 
   -----------|-------------|------------
-   MSFT      |     -€45.45 |     -5.00% 
-   **Total** | **-€45.45** | **+3.85%** 
+   MSFT      |     -$50.00 |     -5.00% 
+   **Total** | **-€45.45** | **-5.00%** 
   
   ## Intraday's Transactions
   

@@ -49,10 +49,11 @@ pcs gains --period month -d 2025-03-31
   
   ## Gains per Security
   
-   Security  |     Realized |   Unrealized 
-  -----------|--------------|--------------
-   MSFT      |     +$250.00 |     +$250.00 
-   **Total** | **+€227.27** | **+€227.27** 
+   Security  | Realized (Period) | Unrealized (at End) 
+  -----------|-------------------|---------------------
+   MSFT      |          +$250.00 |            +$250.00 
+   **Total** |      **+€227.27** |        **+€227.27**
+
 ```
 
 ### Impact of a Sale on Unrealized Gains
@@ -90,10 +91,10 @@ pcs gains --period month -d 2025-03-31
   
   ## Gains per Security
   
-   Security  |    Realized | Unrealized 
-  -----------|-------------|------------
-   GOOG      |    +$100.00 |      $0.00 
-   **Total** | **+€90.90** |  **€0.00** 
+   Security  | Realized (Period) | Unrealized (at End) 
+  -----------|-------------------|---------------------
+   GOOG      |          +$100.00 |               $0.00 
+   **Total** |       **+€90.90** |           **€0.00**
 ```
 
 **Explanation:**
