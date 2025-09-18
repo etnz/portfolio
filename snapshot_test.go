@@ -330,8 +330,8 @@ func TestSnapshot_CounterpartyAccounts(t *testing.T) {
 			t.Errorf("Cash() = %v, want %v", got, want)
 		}
 		// The deposit from the client was internal (settling a receivable),
-		// so the only external cash flow is the initial 10000 deposit.
-		if got, want := s.CashFlow("EUR"), EUR(10000); !got.Equal(want) {
+		// so the only external cash flow is the initial 10000 deposit + the accrued balance +500.
+		if got, want := s.CashFlow("EUR"), EUR(10500); !got.Equal(want) {
 			t.Errorf("CashFlow() = %v, want %v", got, want)
 		}
 	})

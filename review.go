@@ -1,6 +1,7 @@
 package portfolio
 
 import (
+	"maps"
 	"math"
 )
 
@@ -30,13 +31,54 @@ func (r *Review) Range() Range {
 // CashFlow calculates the total net cash that has moved into or out of the
 // portfolio from external sources during the review period.
 func (r *Review) CashFlow() Money {
-	return r.end.TotalCashFlow().Sub(r.start.TotalCashFlow())
+	periodRange := r.Range()
+	flowsByCurrency := make(map[string]Money)
+
+	for _, e := range r.end.journal.events {
+		eventDate := e.date()
+		if eventDate.Before(periodRange.From) {
+			continue
+		}
+		if eventDate.After(periodRange.To) {
+			break
+		}
+
+		switch v := e.(type) {
+		case creditCash:
+			if v.external {
+				cur := v.currency()
+				flowsByCurrency[cur] = flowsByCurrency[cur].Add(v.amount)
+			}
+		case debitCash:
+			if v.external {
+				cur := v.currency()
+				flowsByCurrency[cur] = flowsByCurrency[cur].Sub(v.amount)
+			}
+		case creditCounterparty:
+			if v.external {
+				cur := v.currency()
+				flowsByCurrency[cur] = flowsByCurrency[cur].Add(v.amount)
+			}
+		case debitCounterparty:
+			if v.external {
+				cur := v.currency()
+				flowsByCurrency[cur] = flowsByCurrency[cur].Sub(v.amount)
+			}
+		}
+	}
+
+	return r.end.sum(maps.Keys(flowsByCurrency), func(cur string) Money { return flowsByCurrency[cur] })
 }
 
 // NetTradingFlow calculates the total net cash invested into or divested from
 // all securities during the review period.
 func (r *Review) NetTradingFlow() Money {
-	return r.end.TotalNetTradingFlow().Sub(r.start.TotalNetTradingFlow())
+	total := M(0, r.end.journal.cur)
+	for ticker := range r.end.Securities() {
+		flow := r.AssetNetTradingFlow(ticker)
+		total = total.Add(r.end.Convert(flow))
+	}
+	return total
 }
 
 // RealizedGains calculates the sum of all profits and losses 'locked in'
@@ -76,9 +118,12 @@ func (r *Review) TimeWeightedReturn() Percent {
 // MarketGain calculates the change in security value due to price movements,
 // isolated from the impact of buying or selling.
 func (r *Review) MarketGain() Money {
-	tmvChange := r.end.TotalMarket().Sub(r.start.TotalMarket())
-	netTradingFlow := r.NetTradingFlow()
-	return tmvChange.Sub(netTradingFlow)
+	total := M(0, r.end.journal.cur)
+	for ticker := range r.end.Securities() {
+		gain := r.AssetMarketGain(ticker)
+		total = total.Add(r.end.Convert(gain))
+	}
+	return total
 }
 
 // TotalReturn calculates the total economic benefit from the portfolio over a period,
@@ -87,6 +132,16 @@ func (r *Review) TotalReturn() Money {
 	marketGainLoss := r.MarketGain()
 	dividends := r.Dividends()
 	return marketGainLoss.Add(dividends)
+}
+
+// DividendReturn calculates the return from dividends as a percentage of the starting portfolio value.
+func (r *Review) DividendReturn() Percent {
+	dividends := r.Dividends()
+	startValue := r.start.TotalPortfolio()
+	if startValue.IsZero() {
+		return Percent(0)
+	}
+	return Percent(100 * dividends.AsFloat() / startValue.AsFloat())
 }
 
 // PortfolioChange calculates the net change in total portfolio value during the review period.
@@ -102,6 +157,11 @@ func (r *Review) CashChange() Money {
 // CounterpartyChange calculates the net change in the total counterparty balance during the review period.
 func (r *Review) CounterpartyChange() Money {
 	return r.end.TotalCounterparty().Sub(r.start.TotalCounterparty())
+}
+
+// TotalMarketChange calculates the net change in the total market value of all securities during the review period.
+func (r *Review) TotalMarketChange() Money {
+	return r.end.TotalMarket().Sub(r.start.TotalMarket())
 }
 
 // Transactions returns a slice of all transactions that occurred within the review period.
@@ -125,8 +185,7 @@ func (r *Review) Transactions() []Transaction {
 	return periodTxs
 }
 
-
-//AssetTimeWeightedReturn calculates the time-weighted return for a single security over the review period.
+// AssetTimeWeightedReturn calculates the time-weighted return for a single security over the review period.
 func (r *Review) AssetTimeWeightedReturn(ticker string) Percent {
 	startValue := r.start.VirtualAssetValue(ticker)
 	endValue := r.end.VirtualAssetValue(ticker)
@@ -134,6 +193,17 @@ func (r *Review) AssetTimeWeightedReturn(ticker string) Percent {
 		return Percent(math.NaN())
 	}
 	return Percent(100 * (endValue.AsFloat()/startValue.AsFloat() - 1))
+}
+
+// CurrencyTimeWeightedReturn calculates the time-weighted return for a currency's exchange rate over the review period.
+func (r *Review) CurrencyTimeWeightedReturn(currency string) Percent {
+	startRate := r.start.ExchangeRate(currency)
+	endRate := r.end.ExchangeRate(currency)
+	if startRate.IsZero() {
+		return Percent(math.NaN())
+	}
+	// rate is value of 1 unit of foreign currency in reporting currency.
+	return Percent(100 * (endRate.AsFloat()/startRate.AsFloat() - 1))
 }
 
 // AssetNetTradingFlow calculates the net cash invested into or divested from a single security during the period.
@@ -170,6 +240,18 @@ func (r *Review) AssetTotalReturn(ticker string) Money {
 	marketGain := r.AssetMarketGain(ticker)
 	dividends := r.AssetDividends(ticker)
 	return marketGain.Add(dividends)
+}
+
+// AssetDividendReturn calculates the return from dividends for a single asset as a percentage of its starting value.
+// If the asset was not held at the start of the period, the return is considered not applicable (NaN).
+func (r *Review) AssetDividendReturn(ticker string) Percent {
+	dividends := r.AssetDividends(ticker)
+	startValue := r.start.MarketValue(ticker)
+
+	if startValue.IsZero() {
+		return Percent(math.NaN()) // Return is not applicable if starting value is zero.
+	}
+	return Percent(100 * r.end.Convert(dividends).AsFloat() / r.end.Convert(startValue).AsFloat())
 }
 
 // UnrealizedGains calculates the change in unrealized gains for a single security during the period.

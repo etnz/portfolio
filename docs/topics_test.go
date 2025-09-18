@@ -257,13 +257,14 @@ func (r *blockRunner) runBlock(t *testing.T, block *Block) {
 // markdown file.
 func runBlocks(t *testing.T, file string) {
 	t.Helper()
+	// override the Now function in renderer to have a stable fake date.
 
 	globalTmp := t.TempDir()
 	pcsPath := buildPcs(t, globalTmp)
 	pcsDir := filepath.Dir(pcsPath)
 
 	newPath := fmt.Sprintf("PATH=%s%c%s", pcsDir, os.PathListSeparator, os.Getenv("PATH"))
-	baseEnv := append(os.Environ(), newPath)
+	baseEnv := append(os.Environ(), newPath, "PORTFOLIO_TESTING_NOW=2006-01-02 15:04:05")
 
 	blocks := parseMarkdown(t, file)
 	if len(blocks) == 0 {

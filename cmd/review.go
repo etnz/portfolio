@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/etnz/portfolio"
@@ -16,86 +17,100 @@ type reviewCmd struct {
 	period string
 	date   string
 	start  string
+	method string
 	update bool
+	// processed
+	parsedMethod portfolio.CostBasisMethod
+	rng          portfolio.Range
+	ledger       *portfolio.Ledger
 }
 
-func (*reviewCmd) Name() string     { return "review" }
+func (*reviewCmd) Name() string { return "review" }
+
 func (*reviewCmd) Synopsis() string { return "review a portfolio performance" }
 func (*reviewCmd) Usage() string {
-	return `pcs review [-period <period>| -s <date>] [-d <date>]
+	return `pcs review [-period <p>| -start <date>] [-d <date>]
 	
-  Review the portfolio transactions for a given period.
+  Review the portfolio for a given period.
 `
 }
 
 func (c *reviewCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", portfolio.Today().String(), "Date for the report. See the user manual for supported date formats.")
-	f.StringVar(&c.period, "period", portfolio.Daily.String(), "period for the review (day, week, month, quarter, year)")
-	f.StringVar(&c.start, "s", "", "Start date of the reporting period. Overrides -period.")
-	f.BoolVar(&c.update, "u", false, "update with latest intraday prices before generating the report")
+	f.StringVar(&c.date, "d", "", "Date for the report. See the user manual for supported date formats.")
+	f.StringVar(&c.period, "p", portfolio.Daily.String(), "period for the review (day, week, month, quarter, year)")
+	f.StringVar(&c.start, "start", "", "Start date of the reporting period. Overrides -p.")
+	f.StringVar(&c.method, "method", "fifo", "Cost basis method (average, fifo)")
 }
 
 func (c *reviewCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	// 1. Parse the date range for the report
-	var r portfolio.Range
-	endDate, err := portfolio.ParseDate(c.date)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
+	if err := c.init(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return subcommands.ExitUsageError
 	}
 
+	review, err := c.generateReview()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return subcommands.ExitFailure
+	}
+
+	c.render(review, c.parsedMethod)
+
+	return subcommands.ExitSuccess
+}
+
+func (c *reviewCmd) init() error {
+	if c.date == "" {
+		c.date = portfolio.Today().String()
+	}
+	endDate, err := portfolio.ParseDate(c.date)
+	if err != nil {
+		return fmt.Errorf("parsing end date: %w", err)
+	}
 	if c.start != "" {
 		// Custom range using start and end dates
 		startDate, err := portfolio.ParseDate(c.start)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing start date: %v\n", err)
-			return subcommands.ExitUsageError
+			return fmt.Errorf("parsing start date: %w", err)
 		}
-		r = portfolio.Range{From: startDate, To: endDate}
+		c.rng = portfolio.NewRange(startDate, endDate)
 	} else {
 		// Predefined period
 		p, err := portfolio.ParsePeriod(c.period)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Invalid period: %v\n", err)
-			return subcommands.ExitUsageError
+			return fmt.Errorf("parsing period: %w", err)
 		}
-		r = p.Range(endDate)
+		c.rng = p.Range(endDate)
 	}
 
-	// Truncate the range if it goes beyond the present day.
-	today := portfolio.Today()
-	if r.To.After(today) {
-		r.To = today
-	}
-
-	if r.To.IsToday() {
+	if !c.rng.To.Before(portfolio.Today()) {
 		c.update = true
 	}
 
-	// 2. Decode the ledger
-	ledger, err := DecodeLedger()
+	method, err := portfolio.ParseCostBasisMethod(c.method)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error decoding ledger: %v\n", err)
-		return subcommands.ExitFailure
+		return fmt.Errorf("parsing cost basis method: %w", err)
 	}
+	c.parsedMethod = method
+
+	c.ledger, err = DecodeLedger()
+	if err != nil {
+		return fmt.Errorf("decoding ledger: %w", err)
+	}
+	return nil
+}
+
+func (c *reviewCmd) generateReview() (*portfolio.Review, error) {
 
 	if c.update {
-		if err := ledger.UpdateIntraday(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
-			// We can continue with stale prices, so this is not a fatal error.
+		if err := c.ledger.UpdateIntraday(); err != nil {
+			log.Printf("Warning: could not update some intraday prices: %v\n", err)
 		}
 	}
+	return c.ledger.NewReview(c.rng)
+}
 
-	// 3. Generate the report
-	review, err := ledger.NewReview(r)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating review report: %v\n", err)
-		return subcommands.ExitFailure
-	}
-
-	// 4. Render the report
-	md := renderer.ReviewMarkdown(review, portfolio.FIFO)
+func (c *reviewCmd) render(review *portfolio.Review, method portfolio.CostBasisMethod) {
+	md := renderer.ReviewMarkdown(review, method)
 	printMarkdown(md)
-
-	return subcommands.ExitSuccess
 }

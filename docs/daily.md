@@ -44,31 +44,25 @@ pcs daily -d 2025-01-03
 ```
 
 ```console check
-# Daily Report
+# Daily Review for 2025-01-03
   
-  Report for 2025-01-03
+  *As of 2006-01-02 15:04:05*
   
-   **Value**            | **€11,865.50** 
-  ----------------------|----------------
-   Value at Prev. Close |     €11,820.00 
+   **Total Portfolio Value** | **€11,865.50** 
+  ---------------------------|----------------
+              Previous Value |     €11,820.00 
+                             |                
+                   Cash Flow |          €0.00 
+              + Market Gains |        +€45.50 
+               + Forex Gains |          €0.00 
+            **= Net Change** |     **€45.50** 
   
-  ## Breakdown of Change
+  ## Performance View
   
-   **Total Day's Gain** | **+€45.50** 
-  ----------------------|-------------
-   Unrealized Market    |     +€45.50 
-  
-  ## Active Assets
-  
-   Ticker    | Gain / Loss |     Change 
-  -----------|-------------|------------
-   MSFT      |      $50.00 |     +5.00% 
-   **Total** | **+€45.50** | **+5.00%** 
-  
-  ## Intraday's Transactions
-  
-  1. update-price
-  2. update-price
+   Asset     |       Value |        Gain |        TWR 
+  -----------|-------------|-------------|------------
+   MSFT      |   $1,050.00 |     +$50.00 |     +5.00% 
+   **Total** | **€955.50** | **+€45.50** | **+0.38%**
 ```
 
 ### Cash Flow Impact on Daily Gains
@@ -101,31 +95,28 @@ pcs daily -d 2025-01-03
 ```
 
 ```console check
-# Daily Report
+# Daily Review for 2025-01-03
   
-  Report for 2025-01-03
+  *As of 2006-01-02 15:04:05*
   
-   **Value**            | **€12,272.72** 
-  ----------------------|----------------
-   Value at Prev. Close |     €11,818.18 
+   **Total Portfolio Value** | **€12,272.72** 
+  ---------------------------|----------------
+              Previous Value |     €11,818.18 
+                             |                
+                   Cash Flow |       +€500.00 
+              + Market Gains |        -€45.45 
+               + Forex Gains |          €0.00 
+            **= Net Change** |    **€454.54** 
+                             |                
+                 Cash Change |       +€500.00 
+     + Counterparties Change |          €0.00 
+       + Market Value Change |        -€45.45 
+            **= Net Change** |    **€454.54** 
   
-  ## Breakdown of Change
+  ## Performance View
   
-   **Total Day's Gain** | **+€454.54** 
-  ----------------------|--------------
-   Unrealized Market    |      -€45.45 
-   Net Cash Flow        |     +€500.00 
-  
-  ## Active Assets
-  
-   Ticker    | Gain / Loss |     Change 
-  -----------|-------------|------------
-   MSFT      |     -$50.00 |     -5.00% 
-   **Total** | **-€45.45** | **-5.00%** 
-  
-  ## Intraday's Transactions
-  
-  1. update-price
-  2. update-price
-  3. Deposited €500.00
+   Asset     |       Value |        Gain |        TWR 
+  -----------|-------------|-------------|------------
+   MSFT      |     $950.00 |     -$50.00 |     -5.00% 
+   **Total** | **€863.63** | **-€45.45** | **-0.38%**
 ```

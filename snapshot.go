@@ -2,6 +2,7 @@ package portfolio
 
 import (
 	"iter"
+	"log"
 )
 
 // Snapshot represents a view of the portfolio at a single point in time.
@@ -177,10 +178,12 @@ func (s *Snapshot) Cash(currency string) Money {
 		case creditCash:
 			if v.currency() == currency {
 				balance = balance.Add(v.amount)
+				log.Printf("%s New Balance: %s", v.on, balance.value.String())
 			}
 		case debitCash:
 			if v.currency() == currency {
 				balance = balance.Sub(v.amount)
+				log.Printf("%s New Balance: %s", v.on, balance.value.String())
 			}
 		}
 	}
@@ -378,6 +381,14 @@ func (s *Snapshot) CashFlow(currency string) Money {
 			if v.external && v.currency() == currency {
 				flow = flow.Sub(v.amount)
 			}
+		case creditCounterparty:
+			if v.external && v.currency() == currency {
+				flow = flow.Add(v.amount)
+			}
+		case debitCounterparty:
+			if v.external && v.currency() == currency {
+				flow = flow.Sub(v.amount)
+			}
 		}
 	}
 	return flow
@@ -518,6 +529,36 @@ func (s *Snapshot) TotalMarket() Money {
 	return s.sum(s.Securities(), s.MarketValue)
 }
 
+// TotalMarketIn returns the total market value of all securities denominated in a specific currency.
+// The returned value is in that currency, not the reporting currency.
+func (s *Snapshot) TotalMarketIn(currency string) Money {
+	total := M(0, currency)
+	for ticker := range s.Securities() {
+		details, ok := s.SecurityDetails(ticker)
+		if !ok || details.Currency() != currency {
+			continue
+		}
+		total = total.Add(s.MarketValue(ticker))
+	}
+	return total
+}
+
+// TotalCounterpartyIn returns the total balance across all counterparty accounts in a specific currency.
+// The returned value is in that currency, not the reporting currency.
+func (s *Snapshot) TotalCounterpartyIn(currency string) Money {
+	m := s.sum(s.Counterparties(), func(account string) Money {
+		bal := s.Counterparty(account)
+		if bal.Currency() == currency {
+			return bal
+		}
+		return M(0, currency)
+	})
+	if m.Currency() != currency {
+		return M(0, currency)
+	}
+	return m
+}
+
 // TotalCash returns the total cash balance across all currencies, converted to the reporting currency.
 func (s *Snapshot) TotalCash() Money {
 	return s.sum(s.Currencies(), s.Cash)
@@ -577,4 +618,9 @@ func (s *Snapshot) TotalCostBasis(method CostBasisMethod) Money {
 	return s.sum(s.Securities(), func(ticker string) Money {
 		return s.CostBasis(ticker, method)
 	})
+}
+
+// ReportingCurrency returns the reporting currency of the journal associated with the snapshot.
+func (s *Snapshot) ReportingCurrency() string {
+	return s.journal.cur
 }

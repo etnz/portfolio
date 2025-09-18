@@ -14,8 +14,7 @@ import (
 
 // dailyCmd holds the flags for the 'daily' subcommand.
 type dailyCmd struct {
-	date   string
-	update bool
+	review reviewCmd
 	watch  int
 }
 
@@ -29,53 +28,41 @@ func (*dailyCmd) Usage() string {
 }
 
 func (c *dailyCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.date, "d", portfolio.Today().String(), "Date for the report. See the user manual for supported date formats.")
+	c.review.period = "day"
+	f.StringVar(&c.review.date, "d", "", "Date for the report (defaults to today)")
+	f.StringVar(&c.review.method, "method", "fifo", "Cost basis method (average, fifo)")
 	f.IntVar(&c.watch, "w", 0, "run every n seconds")
 }
 
-func (c *dailyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	on, err := portfolio.ParseDate(c.date)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
+func (c *dailyCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
+	if err := c.review.init(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-
-	if on.IsToday() {
-		c.update = true
-	}
-
 	for {
-		ledger, err := DecodeLedger()
+		review, err := c.review.generateReview()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading ledger: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			return subcommands.ExitFailure
-		}
 
-		if c.update {
-			err := ledger.UpdateIntraday()
-			if err != nil {
-				// This is not a fatal error, we can continue with stale prices.
-				//fmt.Fprintf(os.Stderr, "Warning: could not update some intraday prices: %v\n", err)
-			}
 		}
+		
+		c.render(review, c.review.parsedMethod)
 
-		// TODO: handle report currency
-		review, err := ledger.NewReview(portfolio.NewRange(on, on))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error calculating daily report: %v\n", err)
-			return subcommands.ExitFailure
-		}
-
-		md := renderer.DailyMarkdown(review, portfolio.AverageCost)
-
-		if c.watch > 0 {
-			fmt.Println("\033[2J")
-		}
-		printMarkdown(md)
 		if c.watch > 0 {
 			time.Sleep(time.Duration(c.watch) * time.Second)
 		} else {
-			return subcommands.ExitSuccess
+			break
 		}
 	}
+	return subcommands.ExitSuccess
+}
+
+func (c *dailyCmd) render(review *portfolio.Review, method portfolio.CostBasisMethod) {
+	md := renderer.DailyMarkdown(review, method)
+	if c.watch > 0 {
+		fmt.Println("\033[2J")
+	}
+	printMarkdown(md)
+
 }

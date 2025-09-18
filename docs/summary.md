@@ -52,12 +52,12 @@ pcs summary -d 2025-01-31
   
   ## Performance
   
-   Period    | Return 
-  -----------|--------
-   Day 31    | +0.00% 
-   Week 5    | +0.00% 
-   January   | +0.00% 
-   Q1        | +0.00% 
-   2025      | +0.00% 
-   Inception | +0.00%
+   Period    |  Return 
+  -----------|---------
+   Day 31    |  +0.38% 
+   Week 5    |  +0.38% 
+   January   |   +NaN% 
+   Q1        |   +NaN% 
+   2025      |   +NaN% 
+   Inception | +19.55%
 ```

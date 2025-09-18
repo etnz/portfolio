@@ -1,6 +1,7 @@
 package renderer
 
 import (
+	"bytes"
 	"io"
 )
 
@@ -13,6 +14,7 @@ type SectionPrinter struct {
 }
 
 // Header creates a new SectionPrinter and sets the function that will be called to print the section header.
+// Deprecated: use ConditionalBlock instead.
 func Header(f func(io.Writer)) *SectionPrinter {
 	return &SectionPrinter{headerFunc: f}
 }
@@ -40,5 +42,14 @@ func (p *SectionPrinter) PrintHeader(w io.Writer) {
 func (p *SectionPrinter) PrintFooter(w io.Writer) {
 	if p.hasPrintedHeader && p.footerFunc != nil {
 		p.footerFunc(w)
+	}
+}
+
+// ConditionalBlock let you fully write a block and decide at the end to print it or not.
+// If the block function returns true, the content is printed to w, otherwise it is discarded.
+func ConditionalBlock(w io.Writer, block func(io.Writer) bool) {
+	bw := &bytes.Buffer{}
+	if block(bw) {
+		io.Copy(w, bw)
 	}
 }

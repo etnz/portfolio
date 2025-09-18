@@ -7,9 +7,9 @@ import (
 	"github.com/etnz/portfolio"
 )
 
-func GainsMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) string {
+func WeeklyMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) string {
 	var b strings.Builder
 	ConditionalBlock(&b, func(w io.Writer) bool { return renderReviewSummary(w, review) })
-	ConditionalBlock(&b, func(w io.Writer) bool { return renderTaxView(w, review, method) })
+	ConditionalBlock(&b, func(w io.Writer) bool { return renderPerformanceView(w, review) })
 	return b.String()
 }

@@ -43,17 +43,30 @@ pcs gains --period month -d 2025-03-31
 ```
 
 ```console check
-# Capital Gains Report from 2025-03-01 to 2025-03-31
+# Monthly Review for March 2025
   
-  Method: average
+  *As of 2006-01-02 15:04:05*
   
-  ## Gains per Security
+   **Total Portfolio Value** | **€14,999.99** 
+  ---------------------------|----------------
+              Previous Value |     €14,545.45 
+                             |                
+                   Cash Flow |          €0.00 
+              + Market Gains |       +€454.54 
+               + Forex Gains |          €0.00 
+            **= Net Change** |    **€454.54** 
+                             |                
+                 Cash Change |     +€2,045.45 
+     + Counterparties Change |          €0.00 
+       + Market Value Change |     -€1,590.90 
+            **= Net Change** |    **€454.54** 
   
-   Security  | Realized (Period) | Unrealized (at End) 
-  -----------|-------------------|---------------------
-   MSFT      |          +$250.00 |            +$250.00 
-   **Total** |      **+€227.27** |        **+€227.27**
-
+  ## Tax View
+  
+   Asset     | Cost Basis (average) | Dividends |     Realized |   Unrealized 
+  -----------|----------------------|-----------|--------------|--------------
+   MSFT      |            $2,000.00 |      0.00 |     +$250.00 |     +$250.00 
+   **Total** |        **€1,818.18** | **€0.00** | **+€227.27** | **+€227.27**
 ```
 
 ### Impact of a Sale on Unrealized Gains
@@ -85,16 +98,30 @@ pcs gains --period month -d 2025-03-31
 ```
 
 ```console check
-# Capital Gains Report from 2025-03-01 to 2025-03-31
+# Monthly Review for March 2025
   
-  Method: average
+  *As of 2006-01-02 15:04:05*
   
-  ## Gains per Security
+   **Total Portfolio Value** | **€11,909.08** 
+  ---------------------------|----------------
+              Previous Value |     €11,999.99 
+                             |                
+                   Cash Flow |          €0.00 
+              + Market Gains |        -€90.90 
+               + Forex Gains |          €0.00 
+            **= Net Change** |    **-€90.90** 
+                             |                
+                 Cash Change |       +€999.99 
+     + Counterparties Change |          €0.00 
+       + Market Value Change |     -€1,090.90 
+            **= Net Change** |    **-€90.90** 
   
-   Security  | Realized (Period) | Unrealized (at End) 
-  -----------|-------------------|---------------------
-   GOOG      |          +$100.00 |               $0.00 
-   **Total** |       **+€90.90** |           **€0.00**
+  ## Tax View
+  
+   Asset     | Cost Basis (average) | Dividends |    Realized | Unrealized 
+  -----------|----------------------|-----------|-------------|------------
+   GOOG      |                $0.00 |      0.00 |    +$100.00 |      $0.00 
+   **Total** |            **€0.00** | **€0.00** | **+€90.90** |  **€0.00**
 ```
 
 **Explanation:**

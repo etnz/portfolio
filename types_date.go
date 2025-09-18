@@ -318,7 +318,7 @@ func (r Range) Identifier() string {
 		_, week := r.From.ISOWeek()
 		return fmt.Sprintf("%d-W%02d", r.From.Year(), week)
 	case Monthly:
-		return r.From.Format("2006-01")
+		return r.From.Format("January 2006")
 	case Quarterly:
 		return fmt.Sprintf("%d-Q%d", r.From.Year(), (r.From.Month()-1)/3+1)
 	case Yearly:
@@ -343,6 +343,43 @@ func (p Period) String() string {
 		return "quarterly"
 	case Yearly:
 		return "yearly"
+	default:
+		panic(fmt.Sprintf("unknown period %d", p))
+	}
+}
+
+// ToDateName returns the "-to-Date" name for the period (e.g., "Month-to-Date").
+func (p Period) ToDateName() string {
+	switch p {
+	case Daily:
+		return "Today's" // A "Day-to-Date" doesn't make much sense.
+	case Weekly:
+		return "Week-to-Date"
+	case Monthly:
+		return "Month-to-Date"
+	case Quarterly:
+		return "Quarter-to-Date"
+	case Yearly:
+		return "Year-to-Date"
+	default:
+		// This should be unreachable
+		return p.Name() + "-to-Date"
+	}
+}
+
+// Name returns the singular noun for the period (e.g., "day", "week", "month").
+func (p Period) Name() string {
+	switch p {
+	case Daily:
+		return "day"
+	case Weekly:
+		return "week"
+	case Monthly:
+		return "month"
+	case Quarterly:
+		return "quarter"
+	case Yearly:
+		return "year"
 	default:
 		panic(fmt.Sprintf("unknown period %d", p))
 	}

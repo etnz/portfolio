@@ -147,26 +147,32 @@ pcs review -d 2025-08-27
 ```
 
 ```console check
-# Review Report
+# Daily Review for 2025-08-27
   
-  Daily Report for 2025-08-27
+  *As of 2006-01-02 15:04:05*
   
    **Total Portfolio Value** | **€10,355.00** 
   ---------------------------|----------------
               Previous Value |          €0.00 
-                   Cash Flow |    +€10,000.00 
-                Market Gains |       +€355.00 
                              |                
-              **Net Change** | **€10,355.00** 
-                        Cash |     +€7,300.00 
-              Counterparties |          €0.00 
-                Market Value |     +€3,055.00 
+                   Cash Flow |    +€10,000.00 
+              + Market Gains |       +€355.00 
+               + Forex Gains |          €0.00 
+            **= Net Change** | **€10,355.00** 
+                             |                
+                 Cash Change |     +€7,300.00 
+     + Counterparties Change |          €0.00 
+       + Market Value Change |     +€3,055.00 
+            **= Net Change** | **€10,355.00** 
   
-  ## Cash Accounts
+  ## Accounts
   
-   **Cash Accounts** |     Value | Forex Return % 
-  -------------------|-----------|----------------
-                 EUR | €7,300.00 |         +0.00% 
+   **Cash Accounts** |     Value | Forex % 
+  -------------------|-----------|---------
+                 EUR | €7,300.00 |         
+  
+   **Counterparty Accounts** | Value 
+  ---------------------------|-------
   
   ## Holding View
   
@@ -178,19 +184,19 @@ pcs review -d 2025-08-27
   
   ## Performance View
   
-   Asset     |         Gain | Dividends | Total Return 
-  -----------|--------------|-----------|--------------
-   AAPL      |     +€432.00 |      0.00 |     +€432.00 
-   BankFund1 |      -€77.00 |      0.00 |      -€77.00 
-   **Total** | **+€355.00** | **€0.00** | **+€355.00** 
+   Asset     |         Value |         Gain |       TWR 
+  -----------|---------------|--------------|-----------
+   AAPL      |     €1,932.00 |     +€432.00 |    +0.00% 
+   BankFund1 |     €1,123.00 |      -€77.00 |    -0.00% 
+   **Total** | **€3,055.00** | **+€355.00** | **+NaN%** 
   
   ## Tax View
   
-   Asset     |      Invested | Dividends |  Realized |   Unrealized 
-  -----------|---------------|-----------|-----------|--------------
-   AAPL      |     €1,500.00 |      0.00 |      0.00 |     +€432.00 
-   BankFund1 |     €1,200.00 |      0.00 |      0.00 |      -€77.00 
-   **Total** | **€2,700.00** | **€0.00** | **€0.00** | **+€355.00** 
+   Asset     | Cost Basis (fifo) | Dividends |  Realized |   Unrealized 
+  -----------|-------------------|-----------|-----------|--------------
+   AAPL      |         €1,500.00 |      0.00 |      0.00 |     +€432.00 
+   BankFund1 |         €1,200.00 |      0.00 |      0.00 |      -€77.00 
+   **Total** |     **€2,700.00** | **€0.00** | **€0.00** | **+€355.00** 
   
   ## Transactions
   
