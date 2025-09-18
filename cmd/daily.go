@@ -46,7 +46,7 @@ func (c *dailyCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...interfa
 			return subcommands.ExitFailure
 
 		}
-		
+
 		c.render(review, c.review.parsedMethod)
 
 		if c.watch > 0 {

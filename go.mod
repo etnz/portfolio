@@ -5,12 +5,14 @@ go 1.24.5
 require (
 	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/Rhymond/go-money v1.0.15
+	github.com/charmbracelet/glamour v0.10.0
 	github.com/google/subcommands v1.2.0
 	github.com/shopspring/decimal v1.4.0
 	github.com/yuin/goldmark v1.7.13
 )
 
 require (
+	github.com/PaesslerAG/gval v1.0.0 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
@@ -35,9 +37,4 @@ require (
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/term v0.31.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
-)
-
-require (
-	github.com/PaesslerAG/gval v1.0.0 // indirect
-	github.com/charmbracelet/glamour v0.10.0
 )
