@@ -81,11 +81,7 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitFailure
 	}
 
-	endSnapshot, err := ledger.NewSnapshot(on)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating end snapshot: %v\n", err)
-		return subcommands.ExitFailure
-	}
+	endSnapshot := ledger.NewSnapshot(on)
 
 	summaryData := &renderer.SummaryData{
 		Date:             on,

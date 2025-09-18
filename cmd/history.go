@@ -73,11 +73,7 @@ func (c *historyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 
 	snapshots := make([]*portfolio.Snapshot, 0, len(sortedDates))
 	for _, on := range sortedDates {
-		s, err := ledger.NewSnapshot(on)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating snapshot for %s: %v\n", on, err)
-			return subcommands.ExitFailure
-		}
+		s := ledger.NewSnapshot(on)
 		snapshots = append(snapshots, s)
 	}
 

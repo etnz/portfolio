@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/etnz/portfolio"
@@ -56,26 +57,38 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 	// Build fetch requests based on ledger analysis.
 	requests := make(map[portfolio.ID]portfolio.Range)
 	securities := make(map[portfolio.ID][]portfolio.Security)
+
+	for cur := range ledger.Currencies() {
+		if cur != ledger.Currency() {
+			id, err := portfolio.NewCurrencyPair(cur, ledger.Currency())
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error creating currency pair for %s: %v\n", cur, err)
+				return subcommands.ExitFailure
+			}
+			from := ledger.LastKnownMarketDataDate(id.String())
+			requests[id] = portfolio.NewRange(from, portfolio.Today())
+		}
+
+	}
+
 	for security := range ledger.AllSecurities() {
 		id := security.ID()
 		securities[id] = append(securities[id], security)
 
 		var from portfolio.Date
-		var ok bool
 
 		if c.inception { // --inception flag is set
-			from, ok = ledger.InceptionDate(security.Ticker())
+			from = ledger.InceptionDate(security.Ticker())
 		} else {
-			// Default behavior: start from the last known data point.
-			from, ok = ledger.LastKnownMarketDataDate(security.Ticker())
-			if !ok {
-				// Fallback to inception date if no market data is known.
-				from, ok = ledger.InceptionDate(security.Ticker())
+			// find the latest operation on this ticker
+			lastOp := ledger.LastOperationDate(security.Ticker())
+			if ledger.Position(lastOp, security.Ticker()).IsZero() {
+				// No data is needed for this security.
+				continue
 			}
-		}
 
-		if !ok { // If no valid start date could be found, skip this security.
-			continue
+			// and the last market data date.
+			from = ledger.LastKnownMarketDataDate(security.Ticker())
 		}
 
 		to := portfolio.Today()
@@ -84,10 +97,7 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		}
 
 		// If a range for this ID already exists, expand it to cover the new 'from' date if it's earlier.
-		if existing, ok := requests[id]; !ok {
-			requests[id] = portfolio.NewRange(from, to)
-		} else if from.Before(existing.From) {
-			// expand the range
+		if existing, ok := requests[id]; !ok || from.Before(existing.From) {
 			requests[id] = portfolio.NewRange(from, to)
 		}
 	}
@@ -129,6 +139,9 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 				allResponses[id] = resp
 			}
 		case "eodhd":
+			for id, val := range requests {
+				log.Printf("eodhd requested with %s from %s to %s\n", id, val.From, val.To)
+			}
 			eodhdResponses, err := eodhd.Fetch(requests)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error fetching from EODHD: %v\n", err)
@@ -139,6 +152,7 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 					continue
 				}
 				allResponses[id] = resp
+				log.Println("eodhd responded ", id, resp.Prices)
 			}
 		default:
 			fmt.Fprintf(os.Stderr, "Warning: unsupported provider %q, skipping.\n", provider)
@@ -151,6 +165,19 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 	// updatePrices will contain one UpdatePrice transaction per day
 	updatePrices := make(map[portfolio.Date]portfolio.UpdatePrice)
 	for id, resp := range allResponses {
+		// Handle currency pairs separately as they don't have a user-defined ticker.
+		if _, _, err := id.CurrencyPair(); err == nil {
+			for date, price := range resp.Prices {
+				upd, exist := updatePrices[date]
+				if !exist {
+					upd = portfolio.NewUpdatePrices(date, make(map[string]decimal.Decimal))
+				}
+				upd.Prices[id.String()] = decimal.NewFromFloat(price)
+				updatePrices[date] = upd
+			}
+			continue // Move to the next response.
+		}
+
 		// Do not trust the provider. Only process data for securities that were
 		// actually requested.
 		reqRange, requested := requests[id]

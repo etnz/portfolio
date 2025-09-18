@@ -23,6 +23,13 @@ type Ledger struct {
 	journal        *Journal
 }
 
+// Currencies returns a sequence of all currencies used in the ledger as of today.
+func (ledger *Ledger) Currencies() iter.Seq[string] {
+	return ledger.NewSnapshot(Today()).Currencies()
+}
+
+func (ledger *Ledger) Currency() string { return ledger.currency }
+
 // NewLedger creates an empty ledger.
 func NewLedger() *Ledger {
 	return &Ledger{
@@ -268,10 +275,12 @@ func (l *Ledger) UpdateMarketData(txs ...Transaction) (MarketDataUpdate, error) 
 	for _, nup := range updates {
 		// remove updates relative to non held
 		for t := range nup.PricesIter() {
-			if l.Position(nup.Date, t).IsZero() {
-				// remove it from the updates
+			// remove it from the updates // unless it's a forex rate
+			if _, exists := l.securities[t]; !exists {
+				// delete a prices not related to an existing security, or a forex rate
 				delete(nup.Prices, t)
 			}
+
 		}
 		if len(nup.Prices) == 0 {
 			continue
@@ -302,8 +311,11 @@ func (l *Ledger) UpdateMarketData(txs ...Transaction) (MarketDataUpdate, error) 
 		} else {
 			// clean existing from updates relative to non held assets
 			for t := range updatePrice.PricesIter() {
-				if l.Position(updatePrice.Date, t).IsZero() {
-					// remove it from the updates
+				// remove it from the updates // unless it's a forex rate
+				sec, exists := l.securities[t]
+				_, _, curerr := sec.ID().CurrencyPair()
+				if !exists || (l.Position(updatePrice.Date, t).IsZero() && curerr != nil) {
+					// delete a prices not related to an existing security, or a forex rate
 					delete(updatePrice.Prices, t)
 				}
 			}
@@ -313,7 +325,6 @@ func (l *Ledger) UpdateMarketData(txs ...Transaction) (MarketDataUpdate, error) 
 			// we want to merge all prices (new, and old), new having priority.
 			onlyNew, all := mergePrices(nup.Prices, updatePrice.Prices)
 
-			addedPrices += len(onlyNew)
 			nup.Prices = all
 
 			if len(onlyNew) > 0 {
@@ -652,10 +663,30 @@ func (l *Ledger) ByCurrency(currency string) func(Transaction) bool {
 	}
 }
 
+// LastOperationDate returns the date of the last operation for a given security ticker.
+func (ledger *Ledger) LastOperationDate(s string) Date {
+	// Iterate backwards for efficiency, as we want the most recent date.
+	for i := len(ledger.transactions) - 1; i >= 0; i-- {
+		tx := ledger.transactions[i]
+
+		switch v := tx.(type) {
+		case Buy:
+			if v.Security == s {
+				return v.Date
+			}
+		case Sell:
+			if v.Security == s {
+				return v.Date
+			}
+		}
+	}
+	return Date{}
+}
+
 // LastKnownMarketDataDate scans the ledger in reverse and returns the date of the most
 // recent `update-price` or `split` transaction for the given security ticker.
 // The boolean will be true if a date was found, otherwise false.
-func (l *Ledger) LastKnownMarketDataDate(security string) (Date, bool) {
+func (l *Ledger) LastKnownMarketDataDate(security string) Date {
 	// Iterate backwards for efficiency, as we want the most recent date.
 	for i := len(l.transactions) - 1; i >= 0; i-- {
 		tx := l.transactions[i]
@@ -663,22 +694,22 @@ func (l *Ledger) LastKnownMarketDataDate(security string) (Date, bool) {
 		switch v := tx.(type) {
 		case UpdatePrice:
 			if _, ok := v.Prices[security]; ok {
-				return v.Date, true
+				return v.Date
 			}
 		case Split:
 			if v.Security == security {
-				return v.When(), true
+				return v.When()
 			}
 		default:
 			// to avoid lint warning
 		}
 	}
-	return Date{}, false
+	return Date{}
 }
 
 // InceptionDate scans the ledger and returns the date of the very first
 // transaction of any kind for the given security ticker.
-func (l *Ledger) InceptionDate(security string) (Date, bool) {
+func (l *Ledger) InceptionDate(security string) Date {
 	for _, tx := range l.transactions {
 		var ticker string
 		switch v := tx.(type) {
@@ -694,7 +725,7 @@ func (l *Ledger) InceptionDate(security string) (Date, bool) {
 			// An UpdatePrice can have multiple tickers, so we need to check them all.
 			for t := range v.Prices {
 				if t == security {
-					return tx.When(), true
+					return tx.When()
 				}
 			}
 			continue // Skip to next transaction
@@ -705,22 +736,18 @@ func (l *Ledger) InceptionDate(security string) (Date, bool) {
 		}
 
 		if ticker == security {
-			return tx.When(), true
+			return tx.When()
 		}
 	}
-	return Date{}, false
+	return Date{}
 }
 
 // NewSnapshot creates a new portfolio snapshot for a given date.
-func (l *Ledger) NewSnapshot(on Date) (*Snapshot, error) {
-	if l.journal == nil {
-		return nil, fmt.Errorf("cannot create snapshot with a nil journal")
-	}
-	s := &Snapshot{
+func (l *Ledger) NewSnapshot(on Date) *Snapshot {
+	return &Snapshot{
 		journal: l.journal,
 		on:      on,
 	}
-	return s, nil
 }
 
 // NewReview creates a new portfolio review for a given period.
@@ -729,15 +756,9 @@ func (l *Ledger) NewReview(period Range) (*Review, error) {
 		return nil, fmt.Errorf("cannot create review with a nil journal")
 	}
 
-	startSnapshot, err := l.NewSnapshot(period.From.Add(-1))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create start snapshot: %w", err)
-	}
+	startSnapshot := l.NewSnapshot(period.From.Add(-1))
 
-	endSnapshot, err := l.NewSnapshot(period.To)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create end snapshot: %w", err)
-	}
+	endSnapshot := l.NewSnapshot(period.To)
 
 	return &Review{
 		start: startSnapshot,

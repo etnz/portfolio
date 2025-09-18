@@ -13,10 +13,7 @@ func TestSnapshot_EmptyPortfolio(t *testing.T) {
 	}
 
 	date := NewDate(2025, 1, 1)
-	s, err := ledger.NewSnapshot(date)
-	if err != nil {
-		t.Fatalf("NewSnapshot() error = %v", err)
-	}
+	s := ledger.NewSnapshot(date)
 
 	t.Run("Point-in-time metrics are zero", func(t *testing.T) {
 		if !s.Position("ANY").IsZero() {
@@ -96,10 +93,7 @@ func TestSnapshot_BasicSingleSecurity(t *testing.T) {
 		t.Fatalf("ledger.Append() error = %v", err)
 	}
 
-	s, err := ledger.NewSnapshot(NewDate(2025, 1, 4))
-	if err != nil {
-		t.Fatalf("NewSnapshot() error = %v", err)
-	}
+	s := ledger.NewSnapshot(NewDate(2025, 1, 4))
 
 	if got, want := s.Position("AAPL"), Q(10); !got.Equal(want) {
 		t.Errorf("Position() = %v, want %v", got, want)
@@ -147,10 +141,7 @@ func TestSnapshot_MultiCurrency(t *testing.T) {
 		t.Fatalf("ledger.Append() error = %v", err)
 	}
 
-	s, err := ledger.NewSnapshot(NewDate(2025, 1, 4))
-	if err != nil {
-		t.Fatalf("NewSnapshot() error = %v", err)
-	}
+	s := ledger.NewSnapshot(NewDate(2025, 1, 4))
 
 	// Per-currency metrics
 	if got, want := s.Cash("EUR"), EUR(10000); !got.Equal(want) {
@@ -223,10 +214,7 @@ func TestSnapshot_RealizedGains(t *testing.T) {
 				t.Fatalf("ledger.Append() error = %v", err)
 			}
 
-			s, err := ledger.NewSnapshot(NewDate(2025, 1, 5))
-			if err != nil {
-				t.Fatalf("NewSnapshot() error = %v", err)
-			}
+			s := ledger.NewSnapshot(NewDate(2025, 1, 5))
 
 			if got, want := s.Position("AAPL"), Q(10); !got.Equal(want) {
 				t.Errorf("Position() = %v, want %v", got, want)
@@ -258,10 +246,7 @@ func TestSnapshot_CorporateActions(t *testing.T) {
 		t.Fatalf("ledger.Append() error = %v", err)
 	}
 
-	s, err := ledger.NewSnapshot(NewDate(2025, 1, 5))
-	if err != nil {
-		t.Fatalf("NewSnapshot() error = %v", err)
-	}
+	s := ledger.NewSnapshot(NewDate(2025, 1, 5))
 
 	t.Run("Dividends", func(t *testing.T) {
 		// Dividend is per-share, so 10 shares * 5 EUR/share = 50 EUR
@@ -304,10 +289,7 @@ func TestSnapshot_CounterpartyAccounts(t *testing.T) {
 		t.Fatalf("ledger.Append() error = %v", err)
 	}
 
-	s, err := ledger.NewSnapshot(NewDate(2025, 1, 5))
-	if err != nil {
-		t.Fatalf("NewSnapshot() error = %v", err)
-	}
+	s := ledger.NewSnapshot(NewDate(2025, 1, 5))
 
 	t.Run("Counterparty Balances", func(t *testing.T) {
 		// Liability: we owe 500
@@ -354,7 +336,7 @@ func TestSnapshot_TimeWeightedReturn_VirtualAssetValue(t *testing.T) {
 			NewUpdatePrice(NewDate(2025, 1, 3), "AAPL", EUR(110)),
 		}
 		ledger.Append(txs...)
-		s, _ := ledger.NewSnapshot(NewDate(2025, 1, 3))
+		s := ledger.NewSnapshot(NewDate(2025, 1, 3))
 
 		// Virtual portfolio buys 1 EUR worth of stock at 100 EUR/share, gets 0.01 shares.
 		// Value at end is 0.01 shares * 110 EUR/share = 1.1 EUR.
@@ -375,7 +357,7 @@ func TestSnapshot_TimeWeightedReturn_VirtualAssetValue(t *testing.T) {
 			NewUpdatePrice(NewDate(2025, 1, 4), "AAPL", EUR(121)),     // Up another 10%
 		}
 		ledger.Append(txs...)
-		s, _ := ledger.NewSnapshot(NewDate(2025, 1, 4))
+		s := ledger.NewSnapshot(NewDate(2025, 1, 4))
 
 		// Virtual portfolio buys 1 EUR of stock -> 0.01 shares.
 		// Value becomes 0.01 * 110 = 1.1 EUR.
@@ -398,7 +380,7 @@ func TestSnapshot_TimeWeightedReturn_VirtualAssetValue(t *testing.T) {
 			NewUpdatePrice(NewDate(2025, 1, 6), "AAPL", EUR(132)),      // Up 10% again
 		}
 		ledger.Append(txs...)
-		s, _ := ledger.NewSnapshot(NewDate(2025, 1, 6))
+		s := ledger.NewSnapshot(NewDate(2025, 1, 6))
 
 		// Virtual portfolio:
 		// 1. Buys 1 EUR of stock -> 0.01 shares @ 100.
@@ -421,7 +403,7 @@ func TestSnapshot_TimeWeightedReturn_VirtualAssetValue(t *testing.T) {
 			NewUpdatePrice(NewDate(2025, 1, 3), "AAPL", EUR(110)),
 		}
 		ledger.Append(txs...)
-		s, _ := ledger.NewSnapshot(NewDate(2025, 1, 3))
+		s := ledger.NewSnapshot(NewDate(2025, 1, 3))
 
 		// Virtual portfolio starts with 1 EUR and never invests it.
 		if got, want := s.VirtualAssetValue("AAPL"), EUR(1); !got.Equal(want) {
@@ -439,7 +421,7 @@ func TestSnapshot_TimeWeightedReturn_VirtualAssetValue(t *testing.T) {
 			NewUpdatePrice(NewDate(2025, 1, 3), "MSFT", EUR(110)),
 		}
 		ledger.Append(txs...)
-		s, _ := ledger.NewSnapshot(NewDate(2025, 1, 3))
+		s := ledger.NewSnapshot(NewDate(2025, 1, 3))
 
 		// Virtual portfolio for AAPL starts with 1 EUR and never invests it.
 		if got, want := s.VirtualAssetValue("AAPL"), EUR(1); !got.Equal(want) {
