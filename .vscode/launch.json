@@ -78,6 +78,16 @@
             "cwd": "/tmp/",
         },
         {
+            "name": "pcs complete",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "pcs/main.go",
+            "env": { "COMP_LINE": "pcs -v dai", "COMP_POINT": "100" },
+            "args": [ ],
+            "cwd": "/tmp/",
+        },
+        {
             "name": "pcs history",
             "type": "go",
             "request": "launch",
