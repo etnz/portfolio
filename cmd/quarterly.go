@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/etnz/portfolio"
+	"github.com/etnz/portfolio/renderer"
 	"github.com/google/subcommands"
 )
 
@@ -38,6 +40,11 @@ func (c *quarterlyCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...int
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return subcommands.ExitFailure
 	}
-	c.review.render(review, c.review.parsedMethod)
+	c.render(review, c.review.parsedMethod)
 	return subcommands.ExitSuccess
+}
+
+func (c *quarterlyCmd) render(review *portfolio.Review, method portfolio.CostBasisMethod) {
+	md := renderer.PeriodicMarkdown(review, method)
+	printMarkdown(md)
 }

@@ -4,10 +4,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/etnz/portfolio"
-	"github.com/etnz/portfolio/renderer"
 	"os"
 	"time"
+
+	"github.com/etnz/portfolio"
+	"github.com/etnz/portfolio/renderer"
 
 	"github.com/google/subcommands"
 )
@@ -59,7 +60,7 @@ func (c *weeklyCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...interf
 }
 
 func (c *weeklyCmd) render(review *portfolio.Review, method portfolio.CostBasisMethod) {
-	md := renderer.WeeklyMarkdown(review, method)
+	md := renderer.PeriodicMarkdown(review, method)
 	if c.watch > 0 {
 		fmt.Println("\033[2J")
 	}

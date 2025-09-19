@@ -59,7 +59,7 @@ func (c *dailyCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...interfa
 }
 
 func (c *dailyCmd) render(review *portfolio.Review, method portfolio.CostBasisMethod) {
-	md := renderer.DailyMarkdown(review, method)
+	md := renderer.PeriodicMarkdown(review, method)
 	if c.watch > 0 {
 		fmt.Println("\033[2J")
 	}
