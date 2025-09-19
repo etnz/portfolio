@@ -169,17 +169,9 @@ func (r *Review) Transactions() []Transaction {
 	var periodTxs []Transaction
 	periodRange := r.Range()
 	// This assumes the journal is accessible via the snapshot.
-	for _, e := range r.end.journal.events {
-		if periodRange.Contains(e.date()) {
-			// This is inefficient as it might add the same transaction multiple times
-			// if it generated multiple events. We need a way to get the source transaction
-			// and add it only once.
-			// TODO: This needs a more efficient implementation, likely by iterating transactions directly.
-			// For now, this provides a basic, albeit slow, implementation.
-			tx := r.end.journal.transactionFromEvent(e)
-			if len(periodTxs) == 0 || !periodTxs[len(periodTxs)-1].Equal(tx) {
-				periodTxs = append(periodTxs, tx)
-			}
+	for _, tx := range r.end.journal.txs {
+		if periodRange.Contains(tx.When()) {
+			periodTxs = append(periodTxs, tx)
 		}
 	}
 	return periodTxs

@@ -30,7 +30,6 @@ var (
 
 // Fetch retrieves market data from Amundi for the requested securities and date ranges.
 // implementation always filled the response with updates from all existing securities.
-// TODO: filter the received data to provide only the relevant one to conform with the spec.
 func Fetch(requests map[portfolio.ID]portfolio.Range) (map[portfolio.ID]portfolio.ProviderResponse, error) {
 	sessionPath := filepath.Join(os.TempDir(), amundiSessionFile)
 	headerData, err := os.ReadFile(sessionPath)

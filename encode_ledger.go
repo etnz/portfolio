@@ -10,8 +10,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// TODO: move the indivdual transaction persistence logic to the object themselves.
-
 func init() {
 	decimal.MarshalJSONWithoutQuotes = true
 }
@@ -110,172 +108,11 @@ func decodeLedger(r io.Reader) (*Ledger, error) {
 			return nil, fmt.Errorf("could not identify command in line %q: %w", string(lineBytes), err)
 		}
 
-		var decodedTx Transaction
-		var err error
-
-		switch identifier.Command {
-		// TODO: unmarshal like buy and sell for all transaction with Money
-		case CmdBuy:
-			// Use a temporary type that has all possible fields.
-			var temp struct {
-				secCmd
-				amountCmd
-				Quantity Quantity `json:"quantity"`
-			}
-			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
-			}
-
-			// Create the final transaction struct
-			buy := Buy{
-				secCmd:   temp.secCmd,
-				Quantity: temp.Quantity,
-				Amount:   temp.Money(),
-			}
-			decodedTx = buy
-		case CmdSell:
-			// Use a temporary type that has all possible fields.
-			var temp struct {
-				secCmd
-				amountCmd
-				Quantity Quantity `json:"quantity"`
-			}
-			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
-			}
-
-			// Create the final transaction struct
-			decodedTx = Sell{
-				secCmd:   temp.secCmd,
-				Quantity: temp.Quantity,
-				Amount:   temp.Money(),
-			}
-		case CmdDividend:
-			// Use a temporary type that has all possible fields.
-			var temp struct {
-				secCmd
-				amountCmd
-			}
-			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
-			}
-			// Create the final transaction struct
-			decodedTx = Dividend{
-				secCmd: temp.secCmd,
-				Amount: temp.Money(),
-			}
-		case CmdDeposit:
-			// Use a temporary type that has all possible fields.
-			var temp struct {
-				baseCmd
-				amountCmd
-				Settles string `json:"settles,omitempty"`
-			}
-			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
-			}
-
-			// Create the final transaction struct
-			decodedTx = Deposit{
-				baseCmd: temp.baseCmd,
-				Amount:  temp.Money(),
-				Settles: temp.Settles,
-			}
-		case CmdWithdraw:
-			// Use a temporary type that has all possible fields.
-			var temp struct {
-				baseCmd
-				amountCmd
-				Settles string `json:"settles,omitempty"`
-			}
-			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
-			}
-
-			// Create the final transaction struct
-			decodedTx = Withdraw{
-				baseCmd: temp.baseCmd,
-				Amount:  temp.Money(),
-				Settles: temp.Settles,
-			}
-		case CmdConvert:
-			// Use a temporary type that has all possible fields.
-			temp := convertCmd{}
-			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
-			}
-
-			// Create the final transaction struct
-			decodedTx = Convert{
-				baseCmd:    temp.baseCmd,
-				FromAmount: temp.FromMoney(),
-				ToAmount:   temp.ToMoney(),
-			}
-		case CmdDeclare:
-			var tx Declare
-			err = json.Unmarshal(lineBytes, &tx)
-			decodedTx = tx
-		case CmdAccrue:
-			// Use a temporary type that has all possible fields.
-			var temp struct {
-				baseCmd
-				amountCmd
-				Counterparty string `json:"counterparty"`
-				Create       bool   `json:"create,omitempty"`
-			}
-			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
-			}
-
-			// Create the final transaction struct
-			decodedTx = Accrue{
-				baseCmd:      temp.baseCmd,
-				Amount:       temp.Money(),
-				Counterparty: temp.Counterparty,
-				Create:       temp.Create,
-			}
-		case CmdUpdatePrice:
-			var temp struct {
-				baseCmd
-				Prices map[string]decimal.Decimal `json:"prices"`
-			}
-			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
-			}
-			decodedTx = UpdatePrice{
-				baseCmd: temp.baseCmd,
-				Prices:  temp.Prices,
-			}
-		case CmdSplit:
-			var temp struct {
-				secCmd
-				Numerator   int64 `json:"num"`
-				Denominator int64 `json:"den"`
-			}
-			if err := json.Unmarshal(lineBytes, &temp); err != nil {
-				return nil, err
-			}
-			// default Numerator and Denominator to 1
-			if temp.Denominator == 0 {
-				// Default to 1 if not present, which is a common case for JSON unmarshaling of optional int fields.
-				temp.Denominator = 1
-			}
-			if temp.Numerator == 0 {
-				temp.Numerator = 1
-			}
-
-			decodedTx = Split{
-				secCmd:      temp.secCmd,
-				Numerator:   temp.Numerator,
-				Denominator: temp.Denominator,
-			}
-		default:
-			err = fmt.Errorf("unknown transaction command: %q", identifier.Command)
-		}
-
+		decodedTx, err := decodeTransaction(identifier.Command, lineBytes)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error decoding transaction: %w", err)
 		}
+
 		// Raw append in this function.
 		ledger.transactions = append(ledger.transactions, decodedTx)
 	}
@@ -284,6 +121,41 @@ func decodeLedger(r io.Reader) (*Ledger, error) {
 		return nil, fmt.Errorf("error reading from input: %w", err)
 	}
 	return ledger, nil
+}
+
+// decodeTx is a generic function to decode a transaction of type T from JSON bytes.
+func decodeTx[T any](lineBytes []byte, a *T) (t T, err error) {
+	if err = json.Unmarshal(lineBytes, a); err != nil {
+		return t, err
+	}
+	return *a, nil
+}
+
+func decodeTransaction(command CommandType, lineBytes []byte) (Transaction, error) {
+	switch command {
+	case CmdBuy:
+		return decodeTx(lineBytes, &Buy{})
+	case CmdSell:
+		return decodeTx(lineBytes, &Sell{})
+	case CmdDividend:
+		return decodeTx(lineBytes, &Dividend{})
+	case CmdDeposit:
+		return decodeTx(lineBytes, &Deposit{})
+	case CmdWithdraw:
+		return decodeTx(lineBytes, &Withdraw{})
+	case CmdConvert:
+		return decodeTx(lineBytes, &Convert{})
+	case CmdDeclare:
+		return decodeTx(lineBytes, &Declare{})
+	case CmdAccrue:
+		return decodeTx(lineBytes, &Accrue{})
+	case CmdUpdatePrice:
+		return decodeTx(lineBytes, &UpdatePrice{})
+	case CmdSplit:
+		return decodeTx(lineBytes, &Split{})
+	default:
+		return nil, fmt.Errorf("unknown transaction command: %q", command)
+	}
 }
 
 // EncodeTransaction marshals a single transaction to JSON and writes it to the

@@ -79,6 +79,7 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 
 		if c.inception { // --inception flag is set
 			from = ledger.InceptionDate(security.Ticker())
+			from = from.Add(-3) // Start a bit earlier since there might not be prices on that exact date.
 		} else {
 			// find the latest operation on this ticker
 			lastOp := ledger.LastOperationDate(security.Ticker())

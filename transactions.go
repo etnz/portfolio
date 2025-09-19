@@ -1,6 +1,7 @@
 package portfolio
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"iter"
@@ -12,8 +13,6 @@ import (
 
 // CommandType is a typed string for identifying transaction commands.
 type CommandType string
-
-func (c CommandType) IsCashFlow() bool { return c == CmdDeposit || c == CmdWithdraw }
 
 // Command types used for identifying transactions.
 const (
@@ -35,6 +34,7 @@ type Transaction interface {
 	What() CommandType // What returns the command type of the transaction (e.g., "buy", "sell").
 	When() Date        // When returns the date on which the transaction occurred.
 	Equal(Transaction) bool
+	Validate(ledger *Ledger) (Transaction, error)
 }
 
 type baseCmd struct {
@@ -135,6 +135,25 @@ func (t Buy) MarshalJSON() ([]byte, error) {
 	return w.MarshalJSON()
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface for Buy.
+// It handles the custom structure where amount and currency are separate fields.
+func (t *Buy) UnmarshalJSON(data []byte) error {
+	// Use a temporary type that has all possible fields.
+	var temp struct {
+		secCmd
+		amountCmd
+		Quantity Quantity `json:"quantity"`
+	}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+
+	t.secCmd = temp.secCmd
+	t.Quantity = temp.Quantity
+	t.Amount = temp.Money()
+	return nil
+}
+
 func (t Buy) Equal(other Transaction) bool {
 	o, ok := other.(Buy)
 	return ok && t.secCmd == o.secCmd && t.Quantity.Equal(o.Quantity) && t.Amount.Equal(o.Amount)
@@ -146,16 +165,16 @@ func (t *Buy) Currency() string { return t.Amount.Currency() }
 // and price are positive. It also verifies that there is enough cash in the
 // corresponding currency account to cover the cost of the purchase on the
 // transaction date. It now accepts a Ledger object.
-func (t *Buy) Validate(ledger *Ledger) error {
+func (t Buy) Validate(ledger *Ledger) (Transaction, error) {
 	if err := t.secCmd.Validate(ledger); err != nil {
-		return err
+		return t, err
 	}
 
 	if t.Quantity.IsNegative() || t.Quantity.IsZero() {
-		return fmt.Errorf("buy transaction quantity must be positive, got %s", t.Quantity.String())
+		return t, fmt.Errorf("buy transaction quantity must be positive, got %s", t.Quantity.String())
 	}
 	if t.Amount.IsNegative() || t.Amount.IsZero() {
-		return fmt.Errorf("buy transaction amount must be positive, got %s", t.Amount.String())
+		return t, fmt.Errorf("buy transaction amount must be positive, got %s", t.Amount.String())
 	}
 
 	ledgerSec := ledger.Security(t.Security) // We know this is not nil from secCmd.Validate
@@ -164,14 +183,14 @@ func (t *Buy) Validate(ledger *Ledger) error {
 	if t.Currency() == "" {
 		t.Amount = M(t.Amount.value, currency)
 	} else if currency != t.Currency() {
-		return fmt.Errorf("buy transaction currency %s does not match security currency %s", t.Currency(), currency)
+		return t, fmt.Errorf("buy transaction currency %s does not match security currency %s", t.Currency(), currency)
 	}
 
 	cash, cost := ledger.CashBalance(t.Currency(), t.Date), t.Amount
 	if cash.LessThan(cost) {
-		return fmt.Errorf("cannot buy for %s cash balance is %s", cost, cash)
+		return t, fmt.Errorf("cannot buy for %s cash balance is %s", cost, cash)
 	}
-	return nil
+	return t, nil
 }
 
 // Sell represents a sell transaction.
@@ -190,6 +209,25 @@ func (t Sell) MarshalJSON() ([]byte, error) {
 	w.Append("quantity", t.Quantity)
 	w.EmbedFrom(t.Amount)
 	return w.MarshalJSON()
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface for Sell.
+// It handles the custom structure where amount and currency are separate fields.
+func (t *Sell) UnmarshalJSON(data []byte) error {
+	// Use a temporary type that has all possible fields.
+	var temp struct {
+		secCmd
+		amountCmd
+		Quantity Quantity `json:"quantity"`
+	}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+
+	t.secCmd = temp.secCmd
+	t.Quantity = temp.Quantity
+	t.Amount = temp.Money()
+	return nil
 }
 
 func (t Sell) Equal(other Transaction) bool {
@@ -215,10 +253,10 @@ func (t *Sell) Currency() string { return t.Amount.Currency() }
 // It handles the "sell all" case by resolving a quantity of 0 to the total
 // position size on the transaction date. It ensures the final quantity and
 // price are positive and that the position is sufficient to cover the sale. It
-// now accepts a Ledger and a Balance object.
-func (t *Sell) Validate(ledger *Ledger) error {
+// now accepts a Ledger object.
+func (t Sell) Validate(ledger *Ledger) (Transaction, error) {
 	if err := t.secCmd.Validate(ledger); err != nil {
-		return err
+		return t, err
 	}
 
 	// Quick fix currency and check
@@ -226,12 +264,12 @@ func (t *Sell) Validate(ledger *Ledger) error {
 	currency := ledgerSec.Currency()
 	// first the quick fix
 	if t.Currency() == "" {
-		t.Amount = M(t.Amount.value, currency)
+		t.Amount.cur = currency
 	} else if currency != t.Currency() {
-		return fmt.Errorf("sell transaction currency %s does not match security currency %s", t.Currency(), currency)
+		return t, fmt.Errorf("sell transaction currency %s does not match security currency %s", t.Currency(), currency)
 	}
 	if !t.Amount.IsPositive() {
-		return fmt.Errorf("sell transaction amount must be positive, got %v", t.Amount)
+		return t, fmt.Errorf("sell transaction amount must be positive, got %v", t.Amount)
 	}
 
 	pos := ledger.Position(t.When(), t.Security)
@@ -241,14 +279,14 @@ func (t *Sell) Validate(ledger *Ledger) error {
 	}
 
 	if !t.Quantity.IsPositive() {
-		return fmt.Errorf("sell transaction quantity must be positive, got %s", t.Quantity.String())
+		return t, fmt.Errorf("sell transaction quantity must be positive, got %s", t.Quantity.String())
 	}
 
 	if pos.LessThan(t.Quantity) {
-		return fmt.Errorf("cannot sell %v of %s, position is only %v", t.Quantity, t.Security, pos)
+		return t, fmt.Errorf("cannot sell %v of %s, position is only %v", t.Quantity, t.Security, pos)
 	}
 
-	return nil
+	return t, nil
 }
 
 // --- Declare Command ---
@@ -291,27 +329,27 @@ func NewDeclare(day Date, memo, ticker string, id ID, currency string) Declare {
 
 // Validate checks the Declare transaction's fields.
 // It ensures the ticker is not already declared and that the ID and currency are valid.
-func (t *Declare) Validate(ledger *Ledger) error {
+func (t Declare) Validate(ledger *Ledger) (Transaction, error) {
 	t.baseCmd.Validate()
 	if t.Ticker == "" {
-		return errors.New("declaration ticker is missing")
+		return t, errors.New("declaration ticker is missing")
 	}
 	if t.ID == "" {
-		return errors.New("declaration security ID is missing")
+		return t, errors.New("declaration security ID is missing")
 	}
 	if _, err := ParseID(t.ID.String()); err != nil {
-		return fmt.Errorf("invalid security ID '%s' for declaration: %w", t.ID, err)
+		return t, fmt.Errorf("invalid security ID '%s' for declaration: %w", t.ID, err)
 	}
 	if err := ValidateCurrency(t.Currency); err != nil {
-		return fmt.Errorf("invalid currency for declaration: %w", err)
+		return t, fmt.Errorf("invalid currency for declaration: %w", err)
 	}
 
 	ledgerSec := ledger.Security(t.Ticker)
 	if ledgerSec != nil {
-		return fmt.Errorf("security %q already declared in ledger", t.Ticker)
+		return t, fmt.Errorf("security %q already declared in ledger", t.Ticker)
 	}
 
-	return nil
+	return t, nil
 }
 
 // Dividend represents a dividend payment.
@@ -340,6 +378,22 @@ func (t Dividend) MarshalJSON() ([]byte, error) {
 	return w.MarshalJSON()
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface for Dividend.
+func (t *Dividend) UnmarshalJSON(data []byte) error {
+	// Use a temporary type that has all possible fields.
+	var temp struct {
+		secCmd
+		amountCmd
+	}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+	// Create the final transaction struct
+	t.secCmd = temp.secCmd
+	t.Amount = temp.Money()
+	return nil
+}
+
 func (t Dividend) Equal(other Transaction) bool {
 	o, ok := other.(Dividend)
 	return ok && t.secCmd == o.secCmd && t.Amount.Equal(o.Amount)
@@ -347,15 +401,15 @@ func (t Dividend) Equal(other Transaction) bool {
 
 // Validate checks the Dividend transaction's fields. It ensures the dividend
 // amount is positive.
-func (t *Dividend) Validate(ledger *Ledger) error {
+func (t Dividend) Validate(ledger *Ledger) (Transaction, error) {
 	if err := t.secCmd.Validate(ledger); err != nil {
-		return err
+		return t, err
 	}
 
 	if !t.Amount.IsPositive() {
-		return errors.New("dividend must have a positive amount per share")
+		return t, errors.New("dividend must have a positive amount per share")
 	}
-	return nil
+	return t, nil
 }
 
 // Deposit represents a cash deposit.
@@ -380,6 +434,23 @@ func (t Deposit) MarshalJSON() ([]byte, error) {
 	return w.MarshalJSON()
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface for Deposit.
+func (t *Deposit) UnmarshalJSON(data []byte) error {
+	// Use a temporary type that has all possible fields.
+	var temp struct {
+		baseCmd
+		amountCmd
+		Settles string `json:"settles,omitempty"`
+	}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+	t.baseCmd = temp.baseCmd
+	t.Amount = temp.Money()
+	t.Settles = temp.Settles
+	return nil
+}
+
 func (t Deposit) Equal(other Transaction) bool {
 	o, ok := other.(Deposit)
 	return ok && t.baseCmd == o.baseCmd && t.Amount.Equal(o.Amount) && t.Settles == o.Settles
@@ -396,26 +467,26 @@ func NewDeposit(day Date, memo string, amount Money, settles string) Deposit {
 
 // Validate checks the Deposit transaction's fields. It ensures the deposit
 // amount is positive and the currency code is valid.
-func (t *Deposit) Validate(ledger *Ledger) error {
+func (t Deposit) Validate(ledger *Ledger) (Transaction, error) {
 	t.baseCmd.Validate()
 
 	if !t.Amount.IsPositive() {
-		return fmt.Errorf("deposit amount must be positive, got %v", t.Amount)
+		return t, fmt.Errorf("deposit amount must be positive, got %v", t.Amount)
 	}
 	if err := ValidateCurrency(t.Amount.Currency()); err != nil {
-		return fmt.Errorf("invalid currency for deposit: %w", err)
+		return t, fmt.Errorf("invalid currency for deposit: %w", err)
 	}
 
 	if t.Settles != "" {
 		cur, exists := ledger.CounterPartyCurrency(t.Settles)
 		if !exists {
-			return fmt.Errorf("counterparty account %q not found", t.Settles)
+			return t, fmt.Errorf("counterparty account %q not found", t.Settles)
 		}
 		if cur != t.Amount.Currency() {
-			return fmt.Errorf("settlement currency %s does not match counterparty account currency %s", t.Amount.Currency(), cur)
+			return t, fmt.Errorf("settlement currency %s does not match counterparty account currency %s", t.Amount.Currency(), cur)
 		}
 	}
-	return nil
+	return t, nil
 }
 
 // Withdraw represents a cash withdrawal.
@@ -436,6 +507,23 @@ func (t Withdraw) MarshalJSON() ([]byte, error) {
 	return w.MarshalJSON()
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface for Withdraw.
+func (t *Withdraw) UnmarshalJSON(data []byte) error {
+	// Use a temporary type that has all possible fields.
+	var temp struct {
+		baseCmd
+		amountCmd
+		Settles string `json:"settles,omitempty"`
+	}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+	t.baseCmd = temp.baseCmd
+	t.Amount = temp.Money()
+	t.Settles = temp.Settles
+	return nil
+}
+
 func (t Withdraw) Equal(other Transaction) bool {
 	o, ok := other.(Withdraw)
 	return ok && t.baseCmd == o.baseCmd && t.Amount.Equal(o.Amount) && t.Settles == o.Settles
@@ -454,11 +542,11 @@ func NewWithdraw(day Date, memo string, amount Money) Withdraw {
 // Validate checks the Withdraw transaction's fields.
 // It handles a "withdraw all" case if the amount is 0, ensures the final
 // amount is positive, and verifies there is sufficient cash to cover the withdrawal
-func (t *Withdraw) Validate(ledger *Ledger) error {
+func (t Withdraw) Validate(ledger *Ledger) (Transaction, error) {
 	t.baseCmd.Validate()
 
 	if err := ValidateCurrency(t.Amount.Currency()); err != nil {
-		return fmt.Errorf("invalid currency for withdraw: %w", err)
+		return t, fmt.Errorf("invalid currency for withdraw: %w", err)
 	}
 
 	if t.Amount.IsZero() {
@@ -466,25 +554,25 @@ func (t *Withdraw) Validate(ledger *Ledger) error {
 	}
 
 	if !t.Amount.IsPositive() {
-		return fmt.Errorf("withdraw amount must be positive, got %s", t.Amount.String())
+		return t, fmt.Errorf("withdraw amount must be positive, got %s", t.Amount.String())
 	}
 
 	cash := ledger.CashBalance(t.Amount.Currency(), t.Date)
 	if cash.LessThan(t.Amount) {
-		return fmt.Errorf("cannot withdraw for %s cash balance is %s", t.Amount.String(), cash.String())
+		return t, fmt.Errorf("cannot withdraw for %s cash balance is %s", t.Amount.String(), cash.String())
 	}
 	if t.Settles != "" {
 		accounts := slices.Collect(ledger.AllCounterpartyAccounts())
 		if !slices.Contains(accounts, t.Settles) {
-			return fmt.Errorf("counterparty account %q not found", t.Settles)
+			return t, fmt.Errorf("counterparty account %q not found", t.Settles)
 		}
 
 		balance := ledger.CounterpartyAccountBalance(t.Settles, t.Date)
 		if balance.Currency() != t.Currency() {
-			return fmt.Errorf("settlement currency %s does not match counterparty account currency %s", t.Currency(), balance.Currency())
+			return t, fmt.Errorf("settlement currency %s does not match counterparty account currency %s", t.Currency(), balance.Currency())
 		}
 	}
-	return nil
+	return t, nil
 }
 
 func (t *Withdraw) Currency() string { return t.Amount.Currency() }
@@ -507,6 +595,25 @@ func (t Accrue) MarshalJSON() ([]byte, error) {
 	w.Optional("create", t.Create)
 	w.EmbedFrom(t.Amount)
 	return w.MarshalJSON()
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface for Accrue.
+func (t *Accrue) UnmarshalJSON(data []byte) error {
+	// Use a temporary type that has all possible fields.
+	var temp struct {
+		baseCmd
+		amountCmd
+		Counterparty string `json:"counterparty"`
+		Create       bool   `json:"create,omitempty"`
+	}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+	t.baseCmd = temp.baseCmd
+	t.Amount = temp.Money()
+	t.Counterparty = temp.Counterparty
+	t.Create = temp.Create
+	return nil
 }
 
 func (t Accrue) Equal(other Transaction) bool {
@@ -541,16 +648,16 @@ func NewCreatedAccrue(day Date, memo, counterparty string, amount Money) Accrue 
 func (t *Accrue) Currency() string { return t.Amount.Currency() }
 
 // Validate checks the Accrue transaction's fields.
-func (t *Accrue) Validate(ledger *Ledger) error {
+func (t Accrue) Validate(ledger *Ledger) (Transaction, error) {
 	t.baseCmd.Validate()
 	if t.Counterparty == "" {
-		return errors.New("accrue transaction counterparty is missing")
+		return t, errors.New("accrue transaction counterparty is missing")
 	}
 	if t.Amount.IsZero() {
-		return errors.New("accrue transaction amount cannot be zero")
+		return t, errors.New("accrue transaction amount cannot be zero")
 	}
 	if err := ValidateCurrency(t.Currency()); err != nil {
-		return fmt.Errorf("invalid currency for accrue: %w", err)
+		return t, fmt.Errorf("invalid currency for accrue: %w", err)
 	}
 
 	// Check if the account already exists in the ledger at any point in time
@@ -561,9 +668,9 @@ func (t *Accrue) Validate(ledger *Ledger) error {
 	}
 
 	if !t.Create && currency != t.Currency() {
-		return fmt.Errorf("new accrue currency %s does not match counterparty account currency %s", t.Currency(), currency)
+		return t, fmt.Errorf("new accrue currency %s does not match counterparty account currency %s", t.Currency(), currency)
 	}
-	return nil
+	return t, nil
 }
 
 // Convert represents an internal currency conversion.
@@ -581,6 +688,21 @@ func (t Convert) MarshalJSON() ([]byte, error) {
 	w.PrefixFrom("from", t.FromAmount)
 	w.PrefixFrom("to", t.ToAmount)
 	return w.MarshalJSON()
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface for Convert.
+func (t *Convert) UnmarshalJSON(data []byte) error {
+	// Use a temporary type that has all possible fields.
+	temp := convertCmd{}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+
+	// Create the final transaction struct
+	t.baseCmd = temp.baseCmd
+	t.FromAmount = temp.FromMoney()
+	t.ToAmount = temp.ToMoney()
+	return nil
 }
 
 func (t Convert) Equal(other Transaction) bool {
@@ -604,21 +726,21 @@ func (t *Convert) ToCurrency() string   { return t.ToAmount.Currency() }
 // It handles a "convert all" case if the from-amount is 0. It ensures both
 // amounts are positive, currencies are valid, and there is sufficient cash in
 // the source currency account to cover the conversion.
-func (t *Convert) Validate(ledger *Ledger) error {
+func (t Convert) Validate(ledger *Ledger) (Transaction, error) {
 	t.baseCmd.Validate()
 
 	if err := ValidateCurrency(t.FromCurrency()); err != nil {
-		return fmt.Errorf("invalid 'from' currency: %w", err)
+		return t, fmt.Errorf("invalid 'from' currency: %w", err)
 	}
 	if err := ValidateCurrency(t.ToCurrency()); err != nil {
-		return fmt.Errorf("invalid 'to' currency: %w", err)
+		return t, fmt.Errorf("invalid 'to' currency: %w", err)
 	}
 	if t.FromCurrency() == t.ToCurrency() {
-		return fmt.Errorf("cannot convert to the same currency: %s", t.FromCurrency())
+		return t, fmt.Errorf("cannot convert to the same currency: %s", t.FromCurrency())
 	}
 
 	if !t.ToAmount.IsPositive() {
-		return fmt.Errorf("convert 'to' amount must be positive, got %v", t.ToAmount)
+		return t, fmt.Errorf("convert 'to' amount must be positive, got %v", t.ToAmount)
 	}
 
 	if t.FromAmount.IsZero() && t.FromAmount.Currency() != "" {
@@ -626,15 +748,15 @@ func (t *Convert) Validate(ledger *Ledger) error {
 	}
 	if !t.FromAmount.IsPositive() {
 		// fromAmount == 0 is interpreted as "convert all".
-		return fmt.Errorf("convert 'from' amount must be positive, got %v", t.FromAmount)
+		return t, fmt.Errorf("convert 'from' amount must be positive, got %v", t.FromAmount)
 	}
 
 	cash, cost := ledger.CashBalance(t.FromCurrency(), t.Date), t.FromAmount
 	if cash.LessThan(cost) {
-		return fmt.Errorf("cannot withdraw for %v cash balance is %v", cost, cash)
+		return t, fmt.Errorf("cannot withdraw for %v cash balance is %v", cost, cash)
 	}
 
-	return nil
+	return t, nil
 }
 
 // --- UpdatePrice Command ---
@@ -685,6 +807,20 @@ func (t UpdatePrice) MarshalJSON() ([]byte, error) {
 	return w.MarshalJSON()
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface for UpdatePrice.
+func (t *UpdatePrice) UnmarshalJSON(data []byte) error {
+	var temp struct {
+		baseCmd
+		Prices map[string]decimal.Decimal `json:"prices"`
+	}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+	t.baseCmd = temp.baseCmd
+	t.Prices = temp.Prices
+	return nil
+}
+
 // PricesIter returns an iterator that yields ticker and price pairs in a stable, sorted order.
 func (t UpdatePrice) PricesIter() iter.Seq2[string, decimal.Decimal] {
 	keys := slices.Collect(maps.Keys(t.Prices))
@@ -713,17 +849,17 @@ func (t UpdatePrice) Equal(other Transaction) bool {
 }
 
 // Validate checks the UpdatePrice transaction's fields.
-func (t *UpdatePrice) Validate(ledger *Ledger) error {
+func (t UpdatePrice) Validate(ledger *Ledger) (Transaction, error) {
 	t.baseCmd.Validate()
 	for ticker, price := range t.Prices {
 		if ledger.Security(ticker) == nil {
-			return fmt.Errorf("security %q not declared in ledger", ticker)
+			return t, fmt.Errorf("security %q not declared in ledger", ticker)
 		}
 		if !price.IsPositive() {
-			return fmt.Errorf("price for %s must be positive, got %v", ticker, price)
+			return t, fmt.Errorf("price for %s must be positive, got %v", ticker, price)
 		}
 	}
-	return nil
+	return t, nil
 }
 
 // --- Split Command ---
@@ -753,17 +889,17 @@ func (t Split) Equal(other Transaction) bool {
 }
 
 // Validate checks the Split transaction's fields.
-func (t *Split) Validate(ledger *Ledger) error {
+func (t Split) Validate(ledger *Ledger) (Transaction, error) {
 	if err := t.secCmd.Validate(ledger); err != nil {
-		return err
+		return t, err
 	}
 	if t.Numerator <= 0 {
-		return fmt.Errorf("split numerator must be positive, got %d", t.Numerator)
+		return t, fmt.Errorf("split numerator must be positive, got %d", t.Numerator)
 	}
 	if t.Denominator <= 0 {
-		return fmt.Errorf("split denominator must be positive, got %d", t.Denominator)
+		return t, fmt.Errorf("split denominator must be positive, got %d", t.Denominator)
 	}
-	return nil
+	return t, nil
 }
 
 // MarshalJSON implements the json.Marshaler interface for Split.
@@ -773,4 +909,25 @@ func (t Split) MarshalJSON() ([]byte, error) {
 	w.Append("num", t.Numerator)
 	w.Append("den", t.Denominator)
 	return w.MarshalJSON()
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface for Split.
+func (t *Split) UnmarshalJSON(data []byte) error {
+	var temp struct {
+		secCmd
+		Numerator   int64 `json:"num"`
+		Denominator int64 `json:"den"`
+	}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+	// default Numerator and Denominator to 1
+	if temp.Denominator == 0 {
+		// Default to 1 if not present, which is a common case for JSON unmarshaling of optional int fields.
+		temp.Denominator = 1
+	}
+	t.secCmd = temp.secCmd
+	t.Numerator = temp.Numerator
+	t.Denominator = temp.Denominator
+	return nil
 }
