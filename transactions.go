@@ -16,6 +16,7 @@ type CommandType string
 
 // Command types used for identifying transactions.
 const (
+	CmdInit        CommandType = "init"
 	CmdAccrue      CommandType = "accrue"
 	CmdBuy         CommandType = "buy"
 	CmdSell        CommandType = "sell"
@@ -302,6 +303,16 @@ type Declare struct {
 	Currency string `json:"currency"`
 }
 
+// NewDeclare creates a new Declare transaction.
+func NewDeclare(day Date, memo, ticker string, id ID, currency string) Declare {
+	return Declare{
+		baseCmd:  baseCmd{Command: CmdDeclare, Date: day, Memo: memo},
+		Ticker:   ticker,
+		ID:       ID(id),
+		Currency: currency,
+	}
+}
+
 // MarshalJSON implements the json.Marshaler interface for Declare.
 func (t Declare) MarshalJSON() ([]byte, error) {
 	var w jsonObjectWriter
@@ -315,16 +326,6 @@ func (t Declare) MarshalJSON() ([]byte, error) {
 func (t Declare) Equal(other Transaction) bool {
 	o, ok := other.(Declare)
 	return ok && t.baseCmd == o.baseCmd && t.Ticker == o.Ticker && t.ID == o.ID && t.Currency == o.Currency
-}
-
-// NewDeclare creates a new Declare transaction.
-func NewDeclare(day Date, memo, ticker string, id ID, currency string) Declare {
-	return Declare{
-		baseCmd:  baseCmd{Command: CmdDeclare, Date: day, Memo: memo},
-		Ticker:   ticker,
-		ID:       ID(id),
-		Currency: currency,
-	}
 }
 
 // Validate checks the Declare transaction's fields.
@@ -351,6 +352,76 @@ func (t Declare) Validate(ledger *Ledger) (Transaction, error) {
 
 	return t, nil
 }
+
+// --- Init Command ---
+
+// Init represents the initialization of the ledger.
+// It sets the base currency for the ledger. It has a date and must be the first transaction.
+type Init struct {
+	baseCmd
+	Currency string `json:"currency"`
+}
+
+// NewInit creates a new Init transaction.
+func NewInit(date Date, memo string, currency string) Init {
+	return Init{
+		baseCmd:  baseCmd{Command: CmdInit, Date: date, Memo: memo},
+		Currency: currency,
+	}
+}
+
+func (t Init) Equal(other Transaction) bool {
+	o, ok := other.(Init)
+	return ok && t.baseCmd == o.baseCmd && t.Currency == o.Currency
+}
+
+func (t Init) Validate(ledger *Ledger) (Transaction, error) {
+	if err := ValidateCurrency(t.Currency); err != nil {
+		return t, fmt.Errorf("invalid currency for init: %w", err)
+	}
+
+	if len(ledger.transactions) > 0 {
+		// Case 1: Ledger is not empty.
+		if existingInit, ok := ledger.transactions[0].(Init); ok {
+			// Subcase 1.1: First tx is already Init -> update it idempotently.
+			if !t.Date.IsZero() {
+				existingInit.Date = t.Date
+			}
+			if t.Currency != "" {
+				existingInit.Currency = t.Currency
+			}
+			if t.Memo != "" {
+				existingInit.Memo = t.Memo
+			}
+			return existingInit, nil
+		}
+
+		// Subcase 1.2: First tx is not Init -> create and prepend Init.
+		// Its date must be before the first existing transaction.
+		firstTxDate := ledger.transactions[0].When()
+		if t.Date.IsZero() {
+			t.Date = firstTxDate // Quick fix: set date to one day before.
+		} else if t.Date.After(firstTxDate) {
+			return t, fmt.Errorf("init date %s must be before or equal to the first transaction date %s", t.Date, firstTxDate)
+		}
+	} else if t.Date.IsZero() {
+		// Case 2: Ledger is empty, this is a new creation. Quick-fix date to today.
+		if t.Date.IsZero() {
+			t.Date = Today()
+		}
+	}
+	return t, nil
+}
+
+// MarshalJSON implements the json.Marshaler interface for Init.
+func (t Init) MarshalJSON() ([]byte, error) {
+	var w jsonObjectWriter
+	w.EmbedFrom(t.baseCmd)
+	w.Append("currency", t.Currency)
+	return w.MarshalJSON()
+}
+
+// --- Dividend Command ---
 
 // Dividend represents a dividend payment.
 // Dividend represents a transaction where a dividend payment is received

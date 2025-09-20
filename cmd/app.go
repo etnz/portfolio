@@ -22,6 +22,7 @@ func Register(c *subcommands.Commander) {
 
 	c.Register(&amundiLoginCmd{}, "amundi")
 
+	c.Register(&initCmd{}, "transactions")
 	c.Register(&buyCmd{}, "transactions")
 	c.Register(&sellCmd{}, "transactions")
 	c.Register(&dividendCmd{}, "transactions")

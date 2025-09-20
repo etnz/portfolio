@@ -90,8 +90,6 @@ func DecodeValidateLedger(r io.Reader) (*Ledger, error) {
 // or perform a strict validation.
 func decodeLedger(r io.Reader) (*Ledger, error) {
 	ledger := NewLedger()
-	// TODO: ledger should persist its currency.
-	ledger.currency = "EUR"
 
 	scanner := bufio.NewScanner(r)
 
@@ -133,6 +131,8 @@ func decodeTx[T any](lineBytes []byte, a *T) (t T, err error) {
 
 func decodeTransaction(command CommandType, lineBytes []byte) (Transaction, error) {
 	switch command {
+	case CmdInit:
+		return decodeTx(lineBytes, &Init{})
 	case CmdBuy:
 		return decodeTx(lineBytes, &Buy{})
 	case CmdSell:

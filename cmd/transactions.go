@@ -51,7 +51,7 @@ func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) s
 	}
 
 	tx := portfolio.NewBuy(day, c.memo, c.security, portfolio.Q(c.quantity), portfolio.M(c.amount, ""))
-	_, status := handleTransaction(tx, f)
+	_, status := handleTransaction(tx)
 	return status
 }
 
@@ -93,7 +93,7 @@ func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return subcommands.ExitUsageError
 	}
 	tx := portfolio.NewSell(day, c.memo, c.security, c.quantity, portfolio.M(c.amount, ""))
-	_, status := handleTransaction(tx, f)
+	_, status := handleTransaction(tx)
 	return status
 }
 
@@ -133,7 +133,7 @@ func (c *dividendCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 	}
 
 	tx := portfolio.NewDividend(day, c.memo, c.security, portfolio.M(c.amount, ""))
-	_, status := handleTransaction(tx, f)
+	_, status := handleTransaction(tx)
 	return status
 }
 
@@ -175,7 +175,7 @@ func (c *depositCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...any) subco
 	}
 
 	tx := portfolio.NewDeposit(day, c.memo, portfolio.M(c.amount, c.currency), c.settles)
-	_, status := handleTransaction(tx, f)
+	_, status := handleTransaction(tx)
 	return status
 }
 
@@ -218,7 +218,7 @@ func (c *withdrawCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 
 	tx := portfolio.NewWithdraw(day, c.memo, portfolio.M(c.amount, c.currency))
 	tx.Settles = c.settles
-	_, status := handleTransaction(tx, f)
+	_, status := handleTransaction(tx)
 	return status
 }
 
@@ -267,7 +267,7 @@ func (c *convertCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	}
 
 	tx := portfolio.NewConvert(day, c.memo, portfolio.M(c.fromAmount, c.fromCurrency), portfolio.M(c.toAmount, c.toCurrency))
-	_, status := handleTransaction(tx, f)
+	_, status := handleTransaction(tx)
 	return status
 }
 
@@ -330,7 +330,7 @@ func (c *accrueCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 	tx := portfolio.NewAccrue(day, c.memo, account, portfolio.M(amount, c.currency))
 
 	// Call handleTransaction and receive the validated transaction
-	validatedTx, status := handleTransaction(tx, f)
+	validatedTx, status := handleTransaction(tx)
 	if status != subcommands.ExitSuccess {
 		return status
 	}
@@ -385,7 +385,7 @@ func (c *priceCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 	}
 
 	tx := portfolio.NewUpdatePrice(date, c.ticker, portfolio.M(c.price, ""))
-	_, status := handleTransaction(tx, f)
+	_, status := handleTransaction(tx)
 	return status
 }
 
@@ -433,28 +433,57 @@ func (c *splitCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 	}
 
 	tx := portfolio.NewSplit(date, c.ticker, c.num, c.den)
-	_, status := handleTransaction(tx, f)
+	_, status := handleTransaction(tx)
 	return status
 }
 
-// handleTransaction processes a transaction by validating it against the current
-// accounting system and then encoding it to the ledger file. It also manages
-// the CLI feedback, printing errors or a success message and returning the
-// appropriate exit status.
-//
-// This function also applies "quick fixes" during validation, such as resolving
-// "sell all" quantities. The returned `portfolio.Transaction` is the validated
-// and potentially modified transaction.
-func handleTransaction(tx portfolio.Transaction, f *flag.FlagSet) (portfolio.Transaction, subcommands.ExitStatus) {
-	validatedTx, err := EncodeTransaction(tx)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		f.Usage()
-		return nil, subcommands.ExitUsageError
+// --- Init Command ---
+
+// initCmd holds the flags for the 'init' subcommand.
+type initCmd struct {
+	date     string
+	currency string
+	memo     string
+}
+
+func (*initCmd) Name() string { return "init" }
+func (*initCmd) Synopsis() string {
+	return "initializes the ledger with a base currency and inception date"
+}
+func (*initCmd) Usage() string {
+	return `pcs init -c <currency> [-d <date>] [-m <memo>]
+
+Initializes the ledger. This command should be run first. It sets the
+ledger's reporting currency and its inception date. If run on an existing
+ledger, it will update or create the existing 'init' transaction.
+`
+}
+
+func (c *initCmd) SetFlags(f *flag.FlagSet) {
+	f.StringVar(&c.date, "d", "", "Inception date of the ledger (defaults to today or day before first transaction).")
+	f.StringVar(&c.currency, "c", "", "The reporting currency for the entire ledger (e.g., EUR, USD).")
+	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction.")
+}
+
+func (c *initCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	if c.currency == "" {
+		fmt.Fprintln(os.Stderr, "Error: -c flag for currency is required.")
+		return subcommands.ExitUsageError
+	}
+	var day portfolio.Date
+	var err error
+	if c.date != "" {
+		day, err = portfolio.ParseDate(c.date)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing date: %v\n", err)
+			return subcommands.ExitUsageError
+		}
 	}
 
-	fmt.Printf("Successfully appended transaction to %s\n", *ledgerFile)
-	return validatedTx, subcommands.ExitSuccess
+	tx := portfolio.NewInit(day, c.memo, c.currency)
+
+	_, status := handleTransaction(tx)
+	return status
 }
 
 // declareCmd holds the flags for the 'declare' subcommand.
@@ -470,11 +499,11 @@ func (*declareCmd) Name() string     { return "declare" }
 func (*declareCmd) Synopsis() string { return "declare a new security" }
 func (*declareCmd) Usage() string {
 	return `pcs declare -s <ticker> -id <security-id> -c <currency> [-d <date>] [-m <memo>]
-
+	
 	Declares a security, creating a mapping from a ledger-internal ticker to a
 	globally unique security ID and its currency. This declaration is required
 	before using the ticker in any transaction.
-`
+	`
 }
 
 func (c *declareCmd) SetFlags(f *flag.FlagSet) {
@@ -511,6 +540,25 @@ func (c *declareCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitUsageError
 	}
 	tx := portfolio.NewDeclare(day, c.memo, c.ticker, id, c.currency)
-	_, status := handleTransaction(tx, f)
+	_, status := handleTransaction(tx)
 	return status
+}
+
+// handleTransaction processes a transaction by validating it against the current
+// accounting system and then encoding it to the ledger file. It also manages
+// the CLI feedback, printing errors or a success message and returning the
+// appropriate exit status.
+//
+// This function also applies "quick fixes" during validation, such as resolving
+// "sell all" quantities. The returned `portfolio.Transaction` is the validated
+// and potentially modified transaction.
+func handleTransaction(tx portfolio.Transaction) (portfolio.Transaction, subcommands.ExitStatus) {
+	validatedTx, err := EncodeTransaction(tx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return nil, subcommands.ExitUsageError
+	}
+
+	fmt.Printf("Successfully appended transaction to %s\n", *ledgerFile)
+	return validatedTx, subcommands.ExitSuccess
 }

@@ -33,6 +33,7 @@ func (ledger *Ledger) Currency() string { return ledger.currency }
 // NewLedger creates an empty ledger.
 func NewLedger() *Ledger {
 	return &Ledger{
+		currency:       "EUR",
 		transactions:   make([]Transaction, 0),
 		securities:     make(map[string]Security),
 		counterparties: make(map[string]string),
@@ -351,6 +352,8 @@ func mergePrices(updated, existing map[string]decimal.Decimal) (onlyNew, all map
 func (l *Ledger) processTx(txs ...Transaction) {
 	for _, tx := range txs {
 		switch v := tx.(type) {
+		case Init:
+			l.currency = v.Currency
 		case Declare:
 			sec := NewSecurity(v.ID, v.Ticker, v.Currency)
 			l.securities[sec.Ticker()] = sec
@@ -410,9 +413,11 @@ func (l *Ledger) stableSort() {
 		if dateA.d != dateB.d {
 			return (dateA.d - dateB.d) * classes
 		}
-		const declare, market, ops = 0, 1, 2
+		const init, declare, market, ops = 0, 1, 2, 3
 		classOf := func(t CommandType) int {
 			switch t {
+			case CmdInit:
+				return init
 			case CmdDeclare:
 				return declare
 			case CmdDividend, CmdSplit, CmdUpdatePrice:
@@ -430,21 +435,12 @@ func (l *Ledger) stableSort() {
 
 }
 
-// Inceptiondate returns the date of the earliest deposit.
+// GlobalInceptionDate returns the date of the earliest transaction, which should be the Init transaction.
 func (l *Ledger) GlobalInceptionDate() Date {
-	// Find the date of the first external deposit to use as the inception date.
-	var inceptionDate Date
-	for _, tx := range l.transactions {
-		if _, ok := tx.(Deposit); ok {
-			inceptionDate = tx.When()
-			break
-		}
-		// if acc, ok := tx.(portfolio.Accrue); ok && acc.Amount.IsPositive() {
-		// 	inceptionDate = tx.When()
-		// 	break
-		// }
+	if len(l.transactions) > 0 {
+		return l.transactions[0].When()
 	}
-	return inceptionDate
+	return Date{}
 }
 
 // OldestTransactionDate returns the date of the earliest transaction in the ledger.
