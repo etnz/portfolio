@@ -60,14 +60,19 @@ func DecodeLedger(r io.Reader) (*Ledger, error) {
 // DecodeValidateLedger decode the ledger and validate every transactions.
 // if market is nil, skip all validations.
 func DecodeValidateLedger(r io.Reader) (*Ledger, error) {
-	// Same as DecodeLedger except that it will perform a stricter validation.
 	ledger, err := decodeLedger(r)
 	if err != nil {
 		return nil, err
 	}
+	ledger.stableSort() // make sure that there are correctly sorted before validating.
+
+	// now create a new empty ledger and insert all transactions one by one with validation.
+	// this will ensure that indexes are correctly set, and that all transactions are valid.
+	// if market is nil, skip all validations.
+	newLedger := NewLedger()
 
 	// perform strict validation, and quick fixes.
-	ledger.stableSort()
+
 	// move all transactions out and insert them one by one with strict validation from
 	// the accounting system.
 	// For validation, a reporting currency is not needed. We pass an empty string.
@@ -75,13 +80,15 @@ func DecodeValidateLedger(r io.Reader) (*Ledger, error) {
 	ledger.transactions = make([]Transaction, 0, len(txs))
 	for _, tx := range txs {
 		log.Println("validating", tx)
-		t, err := ledger.Validate(tx)
+		t, err := newLedger.Validate(tx)
 		if err != nil {
 			return nil, err
 		}
-		ledger.Append(t)
+		if err := newLedger.Append(t); err != nil {
+			return nil, err
+		}
 	}
-	return ledger, nil
+	return newLedger, nil
 }
 
 // decodeLedger read transactions from the reader, and simply append them to the ledger.

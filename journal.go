@@ -267,33 +267,14 @@ func (ledger *Ledger) newJournal() error {
 			journal.events = append(journal.events,
 				splitShare{baseEvent: b, security: v.Security, numerator: v.Numerator, denominator: v.Denominator},
 			)
+		case Init:
+			journal.cur = v.Currency
 		default:
-			return fmt.Errorf("unhandled transaction type: %T", tx)
+			return fmt.Errorf("Cannot create the journal entry for transaction of unknown type: %T", tx)
 		}
 	}
 	ledger.journal = journal
 	return nil
-}
-
-// CashBalance computes the total cash in a specific currency on a specific date.
-func (j *Journal) CashBalance(on Date, currency string) Money {
-	balance := M(decimal.Zero, currency)
-	for _, e := range j.events {
-		if e.date().After(on) {
-			break
-		}
-		switch v := e.(type) {
-		case creditCash:
-			if v.currency() == currency {
-				balance = balance.Add(v.amount)
-			}
-		case debitCash:
-			if v.currency() == currency {
-				balance = balance.Sub(v.amount)
-			}
-		}
-	}
-	return balance
 }
 
 func (j *Journal) transactionFromEvent(e event) Transaction {

@@ -130,6 +130,7 @@ func (l *Ledger) Append(txs ...Transaction) error {
 	// process security declarations and counterparty account creation.
 	l.processTx(txs...)
 	// The ledger is not sorted anymore, the journal is.
+	// TODO: if txs are in order, we can append to the existing journal instead of recomputing it.
 	return l.newJournal()
 }
 
@@ -463,10 +464,7 @@ func (l *Ledger) NewestTransactionDate() Date {
 
 // CashBalance computes the total cash in a specific currency on a specific date.
 func (l *Ledger) CashBalance(currency string, on Date) Money {
-	if l.journal == nil {
-		return M(decimal.Zero, currency)
-	}
-	return l.journal.CashBalance(on, currency)
+	return l.NewSnapshot(on).Cash(currency)
 }
 
 // Position computes the current holding for a ticker
