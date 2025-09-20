@@ -189,7 +189,7 @@ func (t Buy) Validate(ledger *Ledger) (Transaction, error) {
 
 	cash, cost := ledger.CashBalance(t.Currency(), t.Date), t.Amount
 	if cash.LessThan(cost) {
-		return t, fmt.Errorf("cannot buy for %s cash balance is %s", cost, cash)
+		return t, fmt.Errorf("on %s, cannot buy for %s cash balance is %s", t.When(), cost, cash)
 	}
 	return t, nil
 }
@@ -284,7 +284,7 @@ func (t Sell) Validate(ledger *Ledger) (Transaction, error) {
 	}
 
 	if pos.LessThan(t.Quantity) {
-		return t, fmt.Errorf("cannot sell %v of %s, position is only %v", t.Quantity, t.Security, pos)
+		return t, fmt.Errorf("on %s, cannot sell %v of %s, position is only %v", t.When(), t.Quantity, t.Security, pos)
 	}
 
 	return t, nil
@@ -630,7 +630,7 @@ func (t Withdraw) Validate(ledger *Ledger) (Transaction, error) {
 
 	cash := ledger.CashBalance(t.Amount.Currency(), t.Date)
 	if cash.LessThan(t.Amount) {
-		return t, fmt.Errorf("cannot withdraw for %s cash balance is %s", t.Amount.String(), cash.String())
+		return t, fmt.Errorf("on %s, cannot withdraw for %s cash balance is %s", t.When(), t.Amount.String(), cash.String())
 	}
 	if t.Settles != "" {
 		accounts := slices.Collect(ledger.AllCounterpartyAccounts())
@@ -824,7 +824,7 @@ func (t Convert) Validate(ledger *Ledger) (Transaction, error) {
 
 	cash, cost := ledger.CashBalance(t.FromCurrency(), t.Date), t.FromAmount
 	if cash.LessThan(cost) {
-		return t, fmt.Errorf("cannot withdraw for %v cash balance is %v", cost, cash)
+		return t, fmt.Errorf("on %s, cannot convert for %v cash balance is %v", t.When(), cost, cash)
 	}
 
 	return t, nil

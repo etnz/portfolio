@@ -474,7 +474,7 @@ func (l *Ledger) Position(on Date, ticker string) Quantity {
 	if l.journal == nil {
 		return Q(decimal.Zero)
 	}
-	return l.journal.Position(ticker, on)
+	return l.NewSnapshot(on).Position(ticker)
 }
 
 // CounterpartyAccountBalance computes the balance of a counterparty account on a specific date.
