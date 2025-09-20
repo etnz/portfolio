@@ -400,7 +400,7 @@ func (t Init) Validate(ledger *Ledger) (Transaction, error) {
 		// Its date must be before the first existing transaction.
 		firstTxDate := ledger.transactions[0].When()
 		if t.Date.IsZero() {
-			t.Date = firstTxDate // Quick fix: set date to one day before.
+			t.Date = firstTxDate // Quick fix: set date to the first day.
 		} else if t.Date.After(firstTxDate) {
 			return t, fmt.Errorf("init date %s must be before or equal to the first transaction date %s", t.Date, firstTxDate)
 		}

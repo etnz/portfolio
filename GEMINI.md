@@ -30,7 +30,8 @@ When I'm asking you to generate a commit message you should:
   7. Use the body to explain what and why vs. how
 - Do not use Conventional Commits style i.e. do not use prefixes like `feat:`, `fix:`, etc.
 - Commit messages must be clear, descriptive and comprehensive.
-- Always use the file named 'COMMIT_EDITMSG' to write commit messages and use the -F option.
+- Provide the content as a diff against '/workspaces/portfolio/COMMIT_EDITMSG'.
+- if you are an agent, commit using the -F option: `git commit -F /workspaces/portfolio/COMMIT_EDITMSG`
 
 ### The Github CLI Rule
 
