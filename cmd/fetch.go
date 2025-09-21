@@ -14,6 +14,7 @@ import (
 	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/amundi"
 	"github.com/etnz/portfolio/eodhd"
+	"github.com/etnz/portfolio/insee"
 	"github.com/google/subcommands"
 	"github.com/shopspring/decimal"
 )
@@ -94,6 +95,9 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 
 			// and the last market data date.
 			from = ledger.LastKnownMarketDataDate(security.Ticker())
+			if from.IsZero() {
+				from = ledger.InceptionDate(security.Ticker())
+			}
 		}
 
 		to := portfolio.Today()
@@ -158,6 +162,18 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 				}
 				allResponses[id] = resp
 				log.Println("eodhd responded ", id, resp.Prices)
+			}
+		case "insee":
+			inseeResponses, err := insee.Fetch(requests)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error fetching from INSEE: %v\n", err)
+				// Don't exit, other providers might succeed.
+			}
+			for id, resp := range inseeResponses {
+				if len(resp.Dividends) == 0 && len(resp.Prices) == 0 && len(resp.Splits) == 0 {
+					continue
+				}
+				allResponses[id] = resp
 			}
 		default:
 			// External provider logic

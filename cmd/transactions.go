@@ -25,7 +25,7 @@ type buyCmd struct {
 func (*buyCmd) Name() string     { return "buy" }
 func (*buyCmd) Synopsis() string { return "record the purchase of a security" }
 func (*buyCmd) Usage() string {
-	return `pcs buy -d <date> -s <security> -q <quantity> -p <price> [-m <memo>]
+	return `pcs buy -d <date> -s <security> -q <quantity> -a <amount> [-m <memo>]
 
 	Purchases shares of a security. The total cost is debited from the cash account in the security's currency.
 `
@@ -69,7 +69,7 @@ type sellCmd struct {
 func (*sellCmd) Name() string     { return "sell" }
 func (*sellCmd) Synopsis() string { return "record the sale of a security" }
 func (*sellCmd) Usage() string {
-	return `pcs sell -d <date> -s <security> -p <price> [-q <quantity>] [-m <memo>]
+	return `pcs sell -d <date> -s <security> -a <amount> [-q <quantity>] [-m <memo>]
 
 	Sells shares of a security. The proceeds are credited to the cash account in the security's currency.
 	If -q is not specified, all shares of the security are sold.
