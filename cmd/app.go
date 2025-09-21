@@ -41,6 +41,7 @@ func Register(c *subcommands.Commander) {
 	c.Register(&holdingCmd{}, "reports")
 	c.Register(&historyCmd{}, "reports")
 	c.Register(&gainsCmd{}, "reports")
+	c.Register(&logCmd{}, "reports")
 	c.Register(&dailyCmd{}, "reports")
 	c.Register(&weeklyCmd{}, "reports")
 	c.Register(&monthlyCmd{}, "reports")

@@ -669,3 +669,30 @@ func (l *Ledger) NewReview(period Range) (*Review, error) {
 		end:   l.NewSnapshot(period.To),
 	}, nil
 }
+
+// GenerateLog creates a structured log of portfolio reviews for a given date range.
+// It returns a list of daily blocks. Each block is a list of reviews for periods
+// ending on that day (daily, weekly, monthly, etc.).
+func (l *Ledger) GenerateLog(period Range) ([][]*Review, error) {
+	var result [][]*Review
+
+	for currentDate := range period.Days() {
+		var dailyBlock []*Review
+
+		// Check for period boundaries and create periodic reviews.
+		// Daily is always first to ensure it's the first review in the block.
+		periods := []Period{Daily, Weekly, Monthly, Quarterly, Yearly}
+		for _, p := range periods {
+			if currentDate == currentDate.EndOf(p) {
+				periodRange := p.Range(currentDate)
+				periodicReview, err := l.NewReview(periodRange)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create %s review for %s: %w", p.Name(), currentDate, err)
+				}
+				dailyBlock = append(dailyBlock, periodicReview)
+			}
+		}
+		result = append(result, dailyBlock)
+	}
+	return result, nil
+}

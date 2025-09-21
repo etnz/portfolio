@@ -39,7 +39,14 @@ func ReviewMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) 
 }
 
 func renderReviewSummary(w io.Writer, review *portfolio.Review) bool {
+	return renderReviewSummarylevel(w, review, 1, true)
+}
+
+// renderReviewSummarylevel renders the summary section of the review.
+// level is the heading level to use for the title.
+func renderReviewSummarylevel(w io.Writer, review *portfolio.Review, level int, asOf bool) bool {
 	start, end := review.Start(), review.End()
+	heading := strings.Repeat("#", level)
 	// --- Main Summary ---
 	if p, ok := review.Range().Period(); ok {
 		var title string
@@ -50,12 +57,14 @@ func renderReviewSummary(w io.Writer, review *portfolio.Review) bool {
 		}
 		identifier := review.Range().Identifier()
 
-		fmt.Fprintf(w, "# %s Review for %s\n\n", strings.Title(title), identifier)
+		fmt.Fprintf(w, "%s %s Review for %s\n\n", heading, strings.Title(title), identifier)
 	} else {
-		fmt.Fprintf(w, "# Review from %s to %s\n\n", review.Range().From, review.Range().To)
+		fmt.Fprintf(w, "%s Review from %s to %s\n\n", heading, review.Range().From, review.Range().To)
 	}
 
-	fmt.Fprintf(w, "*As of %s*\n\n", Now().Format("2006-01-02 15:04:05"))
+	if asOf {
+		fmt.Fprintf(w, "*As of %s*\n\n", Now().Format("2006-01-02 15:04:05"))
+	}
 
 	// Summary Table
 
