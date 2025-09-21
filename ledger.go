@@ -37,7 +37,7 @@ func NewLedger() *Ledger {
 		transactions:   make([]Transaction, 0),
 		securities:     make(map[string]Security),
 		counterparties: make(map[string]string),
-		journal:        nil,
+		journal:        &Journal{},
 	}
 }
 
