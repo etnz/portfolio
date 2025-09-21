@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/renderer"
@@ -74,17 +75,29 @@ func (p *logCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) s
 		return subcommands.ExitFailure
 	}
 
-	reviewBlocks, err := ledger.GenerateLog(periodRange)
+	// TODO: the periodRange and period should work together.
+	reviewBlocks, err := ledger.GenerateLog(periodRange, portfolio.Monthly)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return subcommands.ExitFailure
 	}
 
-	output, err := renderer.LogMarkdown(reviewBlocks, costMethod)
+	output, err := renderer.LogMarkdown(reviewBlocks, slices.Collect(ledger.AllSecurities()), costMethod)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return subcommands.ExitFailure
 	}
+
+	// review, err := ledger.NewReview(periodRange)
+	// if err != nil {
+	// 	fmt.Fprintln(os.Stderr, err)
+	// 	return subcommands.ExitFailure
+	// }
+	// output, err := renderer.LogMarkdown(review, slices.Collect(ledger.HeldSecuritiesInRange(periodRange)), costMethod)
+	// if err != nil {
+	// 	fmt.Fprintln(os.Stderr, err)
+	// 	return subcommands.ExitFailure
+	// }
 
 	printMarkdown(output)
 

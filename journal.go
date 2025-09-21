@@ -120,6 +120,7 @@ type declareSecurity struct {
 	ticker   string
 	id       ID
 	currency string
+	memo     string
 }
 
 // updatePrice sets the price of a security on a given date.
@@ -215,7 +216,7 @@ func (ledger *Ledger) newJournal() error {
 			}
 
 			journal.events = append(journal.events,
-				declareSecurity{baseEvent: b, ticker: v.Ticker, id: v.ID, currency: v.Currency},
+				declareSecurity{baseEvent: b, ticker: v.Ticker, id: v.ID, currency: v.Currency, memo: v.Memo},
 			)
 		case Accrue:
 			if v.Create {

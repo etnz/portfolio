@@ -224,6 +224,50 @@ func renderDividendView(w io.Writer, review *portfolio.Review) bool {
 	return true
 }
 
+func renderConsolidatedAssetReport(w io.Writer, review *portfolio.Review, method portfolio.CostBasisMethod) bool {
+	start, end := review.Start(), review.End()
+
+	// Determine if there's any data to show
+	hasContent := false
+	for ticker := range end.Securities() {
+		if !review.Start().MarketValue(ticker).IsZero() ||
+			!review.End().MarketValue(ticker).IsZero() ||
+			!review.AssetNetTradingFlow(ticker).IsZero() ||
+			!review.AssetMarketGain(ticker).IsZero() ||
+			!review.AssetRealizedGains(ticker, method).IsZero() ||
+			!review.AssetDividends(ticker).IsZero() {
+			hasContent = true
+			break
+		}
+	}
+	if !hasContent {
+		return false
+	}
+
+	fmt.Fprintf(w, "\n**Consolidated Asset Report**\n\n")
+	fmt.Fprintln(w, "| Asset | Start Value | End Value | Net Trading Flow | Market G/L | Realized G/L | Dividends |")
+	fmt.Fprintln(w, "|:---|---:|---:|---:|---:|---:|---:|")
+
+	for ticker := range end.Securities() {
+		startValue := start.MarketValue(ticker)
+		endValue := end.MarketValue(ticker)
+		tradingFlow := review.AssetNetTradingFlow(ticker)
+		marketGain := review.AssetMarketGain(ticker)
+		realizedGain := review.AssetRealizedGains(ticker, method)
+		dividends := review.AssetDividends(ticker)
+
+		if startValue.IsZero() && endValue.IsZero() && tradingFlow.IsZero() && marketGain.IsZero() && realizedGain.IsZero() && dividends.IsZero() {
+			continue
+		}
+
+		fmt.Fprintf(w, "| %s | %s | %s | %s | %s | %s | %s |\n", ticker, startValue.String(), endValue.String(), tradingFlow.SignedString(), marketGain.SignedString(), realizedGain.SignedString(), dividends.SignedString())
+	}
+
+	fmt.Fprintf(w, "| **Total** | **%s** | **%s** | **%s** | **%s** | **%s** | **%s** |\n", start.TotalMarket().String(), end.TotalMarket().String(), review.NetTradingFlow().SignedString(), review.MarketGain().SignedString(), review.RealizedGains(method).SignedString(), review.Dividends().SignedString())
+
+	return true
+}
+
 func renderTaxView(w io.Writer, review *portfolio.Review, method portfolio.CostBasisMethod) bool {
 	start, end := review.Start(), review.End()
 	_ = start

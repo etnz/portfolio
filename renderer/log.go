@@ -10,52 +10,20 @@ import (
 )
 
 // LogMarkdown generates a markdown report from a slice of review blocks.
-func LogMarkdown(reviewBlocks [][]*portfolio.Review, method portfolio.CostBasisMethod) (string, error) {
+func LogMarkdown(reviews []*portfolio.Review, securities []portfolio.Security, method portfolio.CostBasisMethod) (string, error) {
 	r := &logRenderer{
 		Builder: &strings.Builder{},
 		Method:  method,
 	}
 
-	for _, block := range reviewBlocks {
-		if len(block) == 0 {
-			continue
-		}
-		mainReview := block[0]
-		hasVisibleTxs := false
-		for _, tx := range mainReview.Transactions() {
-			if isVisible(tx) {
-				hasVisibleTxs = true
-				break
-			}
-		}
+	if len(securities) > 0 {
+		r.renderSecurities(securities)
+	}
 
-		// Always render the main block if there are periodic summaries for that day.
-		// Otherwise, only render it if there are visible transactions.
-		if hasVisibleTxs {
-			r.renderMain(mainReview)
-		} else if len(block) > 1 {
-			// Print the header only if a review is needed
-			needed := false
-			for _, review := range block[1:] {
-				if !review.Range().From.After(portfolio.Today()) {
-					needed = true
-					break
-				}
-			}
-			if !needed {
-				continue
-			}
-
-			r.Printf("## %s\n\n", mainReview.Range().Identifier())
-		}
-
-		for _, review := range block[1:] { // renderPeriodic has its own logic to not render future periods
-			// Do not render summaries for periods that are entirely in the future.
-			if review.Range().From.After(portfolio.Today()) {
-				continue
-			}
-			renderReviewSummarylevel(r.Builder, review, 3, false)
-		}
+	for _, review := range reviews {
+		renderReviewSummarylevel(r.Builder, review, 2, false)
+		renderConsolidatedAssetReport(r.Builder, review, r.Method)
+		r.Printf("\n")
 	}
 	return r.String(), nil
 }
@@ -79,6 +47,15 @@ func (r *logRenderer) DeferPrintf(key, format string, args ...any) {
 		r.deferred = make(map[string]string)
 	}
 	r.deferred[key] = fmt.Sprintf(format, args...)
+}
+func (r *logRenderer) renderSecurities(securities []portfolio.Security) {
+	r.Printf("## Held Securities\n\n")
+	r.Printf("| Ticker | ID | Currency | Description |\n")
+	r.Printf("|:---|:---|:---|:---|\n")
+	for _, sec := range securities {
+		r.Printf("| %s | %s | %s | %s |\n", sec.Ticker(), sec.ID(), sec.Currency(), sec.Description())
+	}
+	r.Printf("\n")
 }
 
 func (r *logRenderer) renderMain(review *portfolio.Review) {

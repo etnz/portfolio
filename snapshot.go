@@ -157,7 +157,7 @@ func (s *Snapshot) Position(ticker string) Quantity {
 func (s *Snapshot) SecurityDetails(ticker string) (Security, bool) {
 	for e := range s.events() {
 		if d, ok := e.(declareSecurity); ok && d.ticker == ticker {
-			return NewSecurity(d.id, d.ticker, d.currency), true
+			return NewSecurity(d.id, d.ticker, d.currency, d.memo), true
 		}
 	}
 	return Security{}, false

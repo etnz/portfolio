@@ -31,6 +31,23 @@ func (r Range) Days() iter.Seq[Date] {
 	}
 }
 
+// Periods returns an iterator that yields each sequential range of a given
+// period 'p' that contains at least one day within the original range 'r'.
+func (r Range) Periods(p Period) iter.Seq[Range] {
+	return func(yield func(Range) bool) {
+		// Start from the beginning of the original range.
+		for current := r.From; !current.After(r.To); {
+			// Get the full period range containing the current date.
+			periodRange := p.Range(current)
+			if !yield(periodRange) {
+				return
+			}
+			// Move to the day after the end of the yielded period to start the next iteration.
+			current = periodRange.To.Add(1)
+		}
+	}
+}
+
 // return the period of this range if it's a standard one.
 func (r Range) Period() (p Period, ok bool) {
 	switch {

@@ -356,7 +356,7 @@ func (l *Ledger) processTx(txs ...Transaction) {
 		case Init:
 			l.currency = v.Currency
 		case Declare:
-			sec := NewSecurity(v.ID, v.Ticker, v.Currency)
+			sec := NewSecurity(v.ID, v.Ticker, v.Currency, v.Memo)
 			l.securities[sec.Ticker()] = sec
 		case Accrue:
 			if v.Create {
@@ -575,6 +575,43 @@ func (l *Ledger) ByCurrency(currency string) func(Transaction) bool {
 	}
 }
 
+// HeldSecuritiesInRange returns an iterator for all securities that had a non-zero
+// position at any point within the given date range.
+func (l *Ledger) HeldSecuritiesInRange(period Range) iter.Seq[Security] {
+	return func(yield func(Security) bool) {
+		heldTickers := make(map[string]struct{})
+
+		// Get securities held at the start of the period.
+		startSnap := l.NewSnapshot(period.From.Add(-1))
+		for ticker := range l.AllSecurities() {
+			if !startSnap.Position(ticker.Ticker()).IsZero() {
+				heldTickers[ticker.Ticker()] = struct{}{}
+			}
+		}
+
+		// Add securities transacted within the period.
+		for _, tx := range l.transactions {
+			if period.Contains(tx.When()) {
+				switch v := tx.(type) {
+				case Buy:
+					heldTickers[v.Security] = struct{}{}
+				case Sell:
+					heldTickers[v.Security] = struct{}{}
+				}
+			}
+		}
+
+		// Yield the full security info for each held ticker.
+		for ticker := range heldTickers {
+			if sec, ok := l.securities[ticker]; ok {
+				if !yield(sec) {
+					return
+				}
+			}
+		}
+	}
+}
+
 // LastOperationDate returns the date of the last operation for a given security ticker.
 func (ledger *Ledger) LastOperationDate(s string) Date {
 	// Iterate backwards for efficiency, as we want the most recent date.
@@ -670,29 +707,19 @@ func (l *Ledger) NewReview(period Range) (*Review, error) {
 	}, nil
 }
 
-// GenerateLog creates a structured log of portfolio reviews for a given date range.
-// It returns a list of daily blocks. Each block is a list of reviews for periods
-// ending on that day (daily, weekly, monthly, etc.).
-func (l *Ledger) GenerateLog(period Range) ([][]*Review, error) {
-	var result [][]*Review
+// GenerateLog generates a log of reviews for each sub-period within a given date range.
+func (l *Ledger) GenerateLog(r Range, period Period) ([]*Review, error) {
+	var result []*Review
+	if l.journal == nil {
+		return nil, errors.New("empty ledger")
+	}
 
-	for currentDate := range period.Days() {
-		var dailyBlock []*Review
-
-		// Check for period boundaries and create periodic reviews.
-		// Daily is always first to ensure it's the first review in the block.
-		periods := []Period{Daily, Weekly, Monthly, Quarterly, Yearly}
-		for _, p := range periods {
-			if currentDate == currentDate.EndOf(p) {
-				periodRange := p.Range(currentDate)
-				periodicReview, err := l.NewReview(periodRange)
-				if err != nil {
-					return nil, fmt.Errorf("failed to create %s review for %s: %w", p.Name(), currentDate, err)
-				}
-				dailyBlock = append(dailyBlock, periodicReview)
-			}
+	for subRange := range r.Periods(period) {
+		review, err := l.NewReview(subRange)
+		if err != nil {
+			return nil, err
 		}
-		result = append(result, dailyBlock)
+		result = append(result, review)
 	}
 	return result, nil
 }
