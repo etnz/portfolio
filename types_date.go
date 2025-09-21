@@ -243,6 +243,10 @@ func (j *Date) UnmarshalJSON(bytes []byte) error {
 	if err := json.Unmarshal(bytes, &str); err != nil {
 		return err
 	}
+	if str == "" {
+		*j = Date{}
+		return nil
+	}
 	// Keep this parsing strict, as it's for data files.
 	// But not too strict, also supports 2025-7-1
 	on, err := time.Parse(readDateFormat, str)
@@ -253,11 +257,25 @@ func (j *Date) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 func (j Date) MarshalJSON() ([]byte, error) {
+	if j.IsZero() {
+		return json.Marshal("")
+	}
 	str := j.String()
 	return json.Marshal(&str)
+
+}
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface,
+// allowing Date to be used as a map key in JSON.
+func (j *Date) UnmarshalText(text []byte) error {
+	d, err := ParseDate(string(text))
+	if err != nil {
+		return err
+	}
+	*j = d
+	return nil
 }
 
 // check that a Date pointer is a valid json marshall/unmarshaller type.
 var _ json.Marshaler = (*Date)(nil)
 var _ json.Unmarshaler = (*Date)(nil)
-

@@ -1,6 +1,7 @@
 package portfolio
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -65,6 +66,81 @@ func TestParse(t *testing.T) {
 			}
 			if !tt.err && got != tt.expected {
 				t.Errorf("Parse(%q) = %v, want %v", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDate_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		json     string
+		expected Date
+		wantErr  bool
+	}{
+		{
+			name:     "Zero Date from empty string",
+			json:     `""`,
+			expected: Date{},
+			wantErr:  false,
+		},
+		{
+			name:     "Non-Zero Date",
+			json:     `"2024-05-21"`,
+			expected: NewDate(2024, 5, 21),
+			wantErr:  false,
+		},
+		{
+			name:    "Invalid Date",
+			json:    `"not-a-date"`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var d Date
+			err := json.Unmarshal([]byte(tt.json), &d)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("json.Unmarshal() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && d != tt.expected {
+				t.Errorf("json.Unmarshal() got = %v, want %v", d, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDate_MarshalJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		date     Date
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "Zero Date",
+			date:     Date{},
+			expected: `""`,
+			wantErr:  false,
+		},
+		{
+			name:     "Non-Zero Date",
+			date:     NewDate(2024, 5, 21),
+			expected: `"2024-05-21"`,
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := json.Marshal(tt.date)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("json.Marshal() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if string(got) != tt.expected {
+				t.Errorf("json.Marshal() = %s, want %s", got, tt.expected)
 			}
 		})
 	}

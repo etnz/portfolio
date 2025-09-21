@@ -1,11 +1,15 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/amundi"
@@ -156,7 +160,47 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 				log.Println("eodhd responded ", id, resp.Prices)
 			}
 		default:
-			fmt.Fprintf(os.Stderr, "Warning: unsupported provider %q, skipping.\n", provider)
+			// External provider logic
+			executableName := "pcs-fetch-" + provider
+			path, err := exec.LookPath(executableName)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: unsupported internal provider %q and could not find external provider executable %q in PATH. Skipping.\n", provider, executableName)
+				continue
+			}
+
+			fmt.Fprintf(os.Stderr, "INFO: Using external provider %s\n", path)
+
+			cmd := exec.Command(path)
+			cmd.Stderr = os.Stderr // Pipe provider's stderr to ours for visibility
+
+			// Pass configuration via environment variables
+			absLedgerFile, _ := filepath.Abs(*ledgerFile)
+			cmd.Env = os.Environ()
+			cmd.Env = append(cmd.Env, fmt.Sprintf("PCS_LEDGER_FILE=%s", absLedgerFile))
+			cmd.Env = append(cmd.Env, fmt.Sprintf("PCS_DEFAULT_CURRENCY=%s", ledger.Currency()))
+			data, err := json.Marshal(requests)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error encoding requests: %v\n", err)
+				continue
+			}
+			cmd.Stdin = bytes.NewReader(data)
+			log.Println("sending request: ", string(data))
+
+			output, err := cmd.Output()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error running external provider %s: %v\n", executableName, err)
+				continue
+			}
+
+			externalResponses := make(map[portfolio.ID]portfolio.ProviderResponse)
+			if err := json.Unmarshal(output, &externalResponses); err != nil {
+				fmt.Fprintln(os.Stderr, "received json: ", string(output))
+				fmt.Fprintf(os.Stderr, "Error decoding external provider response: %v\n", err)
+				continue
+			}
+			for id, resp := range externalResponses {
+				allResponses[id] = resp
+			}
 		}
 	}
 	// if two providers are providing data for the same security current implementation will ignore the first one.
