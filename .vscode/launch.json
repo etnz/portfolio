@@ -69,12 +69,12 @@
             "cwd": "/tmp/",
         },
         {
-            "name": "pcs fetch eodhd",
+            "name": "pcs fetch insee",
             "type": "go",
             "request": "launch",
             "mode": "debug",
             "program": "pcs/main.go",
-            "args": [ "-v","fetch", "dummy"],
+            "args": [ "-v","fetch","-inception", "insee"],
             "cwd": "/tmp/",
         },
         {

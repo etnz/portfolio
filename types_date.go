@@ -37,6 +37,9 @@ func (d Date) Year() int { return d.y }
 // Month returns the month of the date.
 func (d Date) Month() time.Month { return d.time().Month() }
 
+// Quarter return the quarter 'd' is in in the range [1-4]
+func (d Date) Quarter() int { return int(1 + (d.Month()-1)/3) }
+
 // Day returns current day of the month.
 func (d Date) Day() int { return d.d }
 

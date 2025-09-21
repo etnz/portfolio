@@ -239,12 +239,11 @@ func (l *Ledger) UpdateMarketData(txs ...Transaction) (MarketDataUpdate, error) 
 	for _, nup := range updates {
 		// Ignore prices related to non existing securities.
 		for t := range nup.PricesIter() {
-			// remove it from the updates // unless it's a forex rate
+			//remove it from the updates // unless it's a forex rate
 			if _, exists := l.securities[t]; !exists {
 				// delete a prices not related to an existing security, or a forex rate
 				delete(nup.Prices, t)
 			}
-
 		}
 
 		if len(nup.Prices) == 0 {
@@ -281,12 +280,10 @@ func (l *Ledger) UpdateMarketData(txs ...Transaction) (MarketDataUpdate, error) 
 		} else {
 			// There was an pre-existing UpdatePrice for this date, we have to merge them.
 
-			// Ignore prices related to non existing securities or non held securities (except forex rates).
+			// Ignore prices related to non existing securities.
 			for t := range updatePrice.PricesIter() {
-				sec, exists := l.securities[t]
-				_, _, curerr := sec.ID().CurrencyPair()
-				isForex := curerr == nil
-				if !exists || (!isForex && l.Position(updatePrice.Date, t).IsZero()) {
+				_, exists := l.securities[t]
+				if !exists {
 					delete(updatePrice.Prices, t)
 				}
 			}

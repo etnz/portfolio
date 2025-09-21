@@ -84,7 +84,6 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 
 		if c.inception { // --inception flag is set
 			from = ledger.InceptionDate(security.Ticker())
-			from = from.Add(-3) // Start a bit earlier since there might not be prices on that exact date.
 		} else {
 			// find the latest operation on this ticker
 			lastOp := ledger.LastOperationDate(security.Ticker())
@@ -249,6 +248,15 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		// Create transactions for each ticker associated with this ID.
 		for _, sec := range securities[id] {
 			for date, price := range resp.Prices {
+				// This is a difficult problem. I need to know at least
+				// one price before I declare or actually start using an asset.
+				// So if I am asking for a value on a particular (say reqRange.From)
+				// And there are not value for that day, I should be allowed to
+				// let an earlier value in.
+				// Remove the following block would do that.
+				// but then, the ledger might become invalid (updatePrice of unknown asset).
+				// So there is no simple solution, other than declaring the asset early enough so that
+				// it contains enough update prices.
 				if !reqRange.Contains(date) {
 					continue // Only create transactions for the requested date range.
 				}

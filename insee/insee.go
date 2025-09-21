@@ -44,15 +44,13 @@ func Fetch(requests map[portfolio.ID]portfolio.Range) (map[portfolio.ID]portfoli
 
 // getSeries constructs the URL, downloads, and parses an INSEE time series.
 func getSeries(idBank string, from, to portfolio.Date) (*Series, error) {
-	startQuarter := (from.Month()-1)/3 + 1
-	endQuarter := (to.Month()-1)/3 + 1
+	startYear, startPeriod := from.Year(), from.Quarter()
+	endYear, endPeriod := to.Year(), to.Quarter()
 
 	url := fmt.Sprintf("https://bdm.insee.fr/series/%s/csv?lang=fr&ordre=antechronologique&transposition=donneescolonne&periodeDebut=%d&anneeDebut=%d&periodeFin=%d&anneeFin=%d&revision=sansrevisions",
 		idBank,
-		startQuarter,
-		from.Year(),
-		endQuarter,
-		to.Year(),
+		startPeriod, startYear,
+		endPeriod, endYear,
 	)
 	log.Println("Downloading from INSEE:", url)
 
