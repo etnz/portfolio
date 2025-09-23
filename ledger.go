@@ -7,7 +7,6 @@ import (
 	"log"
 	"maps"
 	"slices"
-	"strings"
 
 	"github.com/shopspring/decimal"
 )
@@ -239,19 +238,18 @@ func (l *Ledger) UpdateMarketData(txs ...Transaction) (MarketDataUpdate, error) 
 	for _, nup := range updates {
 		// Ignore prices related to non existing securities.
 		for t := range nup.PricesIter() {
-			//remove it from the updates // unless it's a forex rate
+			// Remove prices from the update related to unknown securities.
 			if _, exists := l.securities[t]; !exists {
-				// delete a prices not related to an existing security, or a forex rate
 				delete(nup.Prices, t)
 			}
 		}
 
+		// Skip that update if empty.
 		if len(nup.Prices) == 0 {
-			// Little shortcut, nothing left to be updated.
 			continue
 		}
 
-		// Find an UpdatePrice for the same day to merge into it.
+		// Find an UpdatePrice for the same day to merge into.
 		index, updatePrice := -1, UpdatePrice{}
 		for i, tx := range l.transactions {
 			prev, isUpdatePrice := tx.(UpdatePrice)
@@ -262,54 +260,26 @@ func (l *Ledger) UpdateMarketData(txs ...Transaction) (MarketDataUpdate, error) 
 		}
 
 		if index < 0 {
-			// No pre-existing UpdatePrice for this date, append the new one.
-
-			// Create a nice log message.
-			var buf strings.Builder
-			for ticker, price := range nup.PricesIter() {
-				buf.WriteString(ticker)
-				buf.WriteString(":")
-				buf.WriteString(price.String())
-				buf.WriteString(" ")
+			// There were no UpdatePrice for that date. The process is to simply append it.
+			v, err := l.Validate(nup)
+			if err != nil {
+				return MarketDataUpdate{}, fmt.Errorf("invalid update price transactions: %w", err)
 			}
-			log.Printf("%v: add update-price %v", nup.Date, buf.String())
 
-			// Append that new Price update.
-			l.transactions = append(l.transactions, nup)
+			l.transactions = append(l.transactions, v)
 			addedPrices += len(nup.Prices)
 		} else {
 			// There was an pre-existing UpdatePrice for this date, we have to merge them.
 
-			// Ignore prices related to non existing securities.
-			for t := range updatePrice.PricesIter() {
-				_, exists := l.securities[t]
-				if !exists {
-					delete(updatePrice.Prices, t)
-				}
-			}
 			// The goal is to merge new prices into existing ones, overwriting existing prices if needed.
-			// But for logging reasons we want to know what is really new.
+			// But for logging reasons we want to know what was really new.
 			// So we split new prices and existing prices into two sets: the merged set, and the really new set.
 			onlyNew, all := mergePrices(nup.Prices, updatePrice.Prices)
-
 			nup.Prices = all
 
-			if len(onlyNew) > 0 {
-
-				// Create a nice log message.
-				var buf strings.Builder
-				for ticker, price := range onlyNew {
-					buf.WriteString(ticker)
-					buf.WriteString(":")
-					buf.WriteString(price.String())
-					buf.WriteString(" ")
-				}
-				log.Printf("%v: update existing update-price %v", nup.Date, buf.String())
-
-				// Update in place the existing UpdatePrice.
-				l.transactions[index] = nup
-				updatedPrices++
-			}
+			// Update in place the existing UpdatePrice.
+			l.transactions[index] = nup
+			updatedPrices += len(onlyNew)
 		}
 	}
 
@@ -363,21 +333,21 @@ func (l *Ledger) processTx(txs ...Transaction) {
 	}
 }
 
-// Transactions returns an iterator that yields each transaction in its original order.
-func (l Ledger) Transactions(filters ...func(Transaction) bool) iter.Seq2[int, Transaction] {
+// Transactions returns an iterator that yields each transaction in their original order with their original index.
+func (l Ledger) Transactions(accepts ...func(Transaction) bool) iter.Seq2[int, Transaction] {
 	// TODO: there are other function to iterator over transactions, not all use the filter mechanism,
 	// we should probably unify them
 	// The returned iterator preserves the original order of transactions in the ledger.
 	return func(yield func(int, Transaction) bool) {
 		for i, tx := range l.transactions {
-			accept := false
-			for _, filter := range filters {
-				if filter(tx) {
-					accept = true
+			acceptOr := false
+			for _, accept := range accepts {
+				if accept(tx) {
+					acceptOr = true
 					break
 				}
 			}
-			if !accept {
+			if !acceptOr {
 				continue
 			}
 			if !yield(i, tx) {
@@ -396,22 +366,11 @@ func (l Ledger) Transactions(filters ...func(Transaction) bool) iter.Seq2[int, T
 //   - All other transactions come last.
 func (l *Ledger) stableSort() {
 	slices.SortStableFunc(l.transactions, func(a, b Transaction) int {
-		// we want to sort by year, month, day, class of transaction.
-		dateA, dateB := a.When(), b.When()
-		// return -1 or +1 is correct, return a reasonable distance makes it faster.
-		// we'll use 12 month in a year, 30 days in a month, and 2 classes
-		const months, days, classes = 12, 30, 3
+		// we want to sort by Date first, by classes of transaction second.
 
-		if dateA.y != dateB.y {
-			return (dateA.y - dateB.y) * months * days * classes
-		}
-		if dateA.m != dateB.m {
-			return int(dateA.m-dateB.m) * days * classes
-		}
-		if dateA.d != dateB.d {
-			return (dateA.d - dateB.d) * classes
-		}
+		// First compute the transactions classes.
 		const init, declare, market, ops = 0, 1, 2, 3
+		const classes = 4
 		classOf := func(t CommandType) int {
 			switch t {
 			case CmdInit:
@@ -425,10 +384,9 @@ func (l *Ledger) stableSort() {
 			}
 		}
 		classA, classB := classOf(a.What()), classOf(b.What())
-		if classA != classB {
-			return classA - classB
-		}
-		return 0 // they are identical
+		dateA, dateB := a.When(), b.When()
+
+		return dateA.Compare(dateB)*classes + classA - classB
 	})
 
 }
@@ -527,6 +485,9 @@ func (l *Ledger) AllSecurities() iter.Seq[Security] {
 	}
 }
 
+// AcceptAll transactions.
+func AcceptAll(Transaction) bool { return true }
+
 // BySecurity returns a predicate that filters transactions by security ticker.
 func BySecurity(ticker string) func(Transaction) bool {
 	return func(tx Transaction) bool {
@@ -566,6 +527,18 @@ func (l *Ledger) ByCurrency(currency string) func(Transaction) bool {
 			return v.FromCurrency() == currency || v.ToCurrency() == currency
 		case Declare:
 			return v.Currency == currency
+		default:
+			return false
+		}
+	}
+}
+
+// ByUpdatePrice returns a predicate that accept only UpdatePrice transactions
+func ByUpdatePrice() func(Transaction) bool {
+	return func(tx Transaction) bool {
+		switch tx.(type) {
+		case UpdatePrice:
+			return true
 		default:
 			return false
 		}

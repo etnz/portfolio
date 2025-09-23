@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 
 	"github.com/etnz/portfolio"
-	"github.com/etnz/portfolio/amundi"
 	"github.com/etnz/portfolio/eodhd"
 	"github.com/etnz/portfolio/insee"
 	"github.com/google/subcommands"
@@ -133,19 +132,6 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 
 	for _, provider := range providers {
 		switch provider {
-		case "amundi":
-			amundiResponses, err := amundi.Fetch(requests)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error fetching from Amundi: %v\n", err)
-				// Don't exit, other providers might succeed.
-			}
-			// In the future, we would merge responses carefully.
-			for id, resp := range amundiResponses {
-				if len(resp.Dividends) == 0 && len(resp.Prices) == 0 && len(resp.Splits) == 0 {
-					continue
-				}
-				allResponses[id] = resp
-			}
 		case "eodhd":
 			for id, val := range requests {
 				log.Printf("eodhd requested with %s from %s to %s\n", id, val.From, val.To)

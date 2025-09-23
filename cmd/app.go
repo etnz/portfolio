@@ -20,7 +20,7 @@ import (
 func Register(c *subcommands.Commander) {
 	c.Register(&fetchCmd{}, "securities")
 
-	c.Register(&amundiLoginCmd{}, "amundi")
+	c.Register(&amundiCmd{}, "providers")
 
 	c.Register(&initCmd{}, "transactions")
 	c.Register(&buyCmd{}, "transactions")

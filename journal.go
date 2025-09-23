@@ -271,7 +271,7 @@ func (ledger *Ledger) newJournal() error {
 		case Init:
 			journal.cur = v.Currency
 		default:
-			return fmt.Errorf("Cannot create the journal entry for transaction of unknown type: %T", tx)
+			return fmt.Errorf("cannot create the journal entry for transaction of unknown type: %T", tx)
 		}
 	}
 	ledger.journal = journal

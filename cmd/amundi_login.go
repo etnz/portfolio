@@ -31,16 +31,18 @@ type amundiLoginCmd struct {
 	body string
 }
 
-func (*amundiLoginCmd) Name() string { return "amundi-login" }
+func (*amundiLoginCmd) Name() string { return "login" }
 func (*amundiLoginCmd) Synopsis() string {
 	return "stores Amundi session credentials from a curl command"
 }
 func (*amundiLoginCmd) Usage() string {
-	return `pcs amundi-login -H <header1> -H <header2> ...
+	return `pcs amundi login -curl -H <header1> -H <header2> ...
 
 Stores Amundi session credentials for use by the 'fetch amundi' command.
-This command is designed to be user-friendly by accepting a pasted 'curl' command structure.
-It extracts the necessary authentication headers and saves them to a temporary file.
+
+This command works well with the following workflow:
+  - in a browser, copy an authenticated request as 'curl'
+  - in a terminal type 'pcs amundi login -' then paste the curl command.
 `
 }
 

@@ -849,6 +849,9 @@ func NewUpdatePrice(date Date, ticker string, price Money) UpdatePrice {
 
 // NewUpdatePrices creates a new UpdatePrice transaction for multiple securities.
 func NewUpdatePrices(date Date, prices map[string]decimal.Decimal) UpdatePrice {
+	if prices == nil {
+		prices = make(map[string]decimal.Decimal)
+	}
 	return UpdatePrice{
 		baseCmd: baseCmd{Command: CmdUpdatePrice, Date: date},
 		Prices:  prices,

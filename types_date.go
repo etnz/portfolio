@@ -87,6 +87,12 @@ func (d Date) Add(i int) Date { return NewDate(d.y, d.m, d.d+i) }
 // AddMonth returns a new Date with the given number of days added.
 func (d Date) AddMonth(i int) Date { return NewDate(d.y, d.m+time.Month(i), d.d) }
 
+// Compare effectively compare dates for faster sorting.
+func (d Date) Compare(e Date) int {
+	const months, days = 12, 31
+	return ((d.y-e.y)*months+int(d.m-e.m))*days + (d.d - e.d)
+}
+
 // StartOf returns the date of begining of a given period
 func (d Date) StartOf(period Period) Date {
 	switch period {
@@ -241,13 +247,13 @@ func MustParse(str string) Date {
 }
 
 // UnmarshalJSON implements the json specific way to unmarshall a date from a json string.
-func (j *Date) UnmarshalJSON(bytes []byte) error {
+func (d *Date) UnmarshalJSON(bytes []byte) error {
 	var str string
 	if err := json.Unmarshal(bytes, &str); err != nil {
 		return err
 	}
 	if str == "" {
-		*j = Date{}
+		*d = Date{}
 		return nil
 	}
 	// Keep this parsing strict, as it's for data files.
@@ -256,26 +262,26 @@ func (j *Date) UnmarshalJSON(bytes []byte) error {
 	if err != nil {
 		return fmt.Errorf("invalid date %q in data file, want format %q: %w", str, DateFormat, err)
 	}
-	*j = NewDate(on.Date())
+	*d = NewDate(on.Date())
 	return nil
 }
-func (j Date) MarshalJSON() ([]byte, error) {
-	if j.IsZero() {
+func (d Date) MarshalJSON() ([]byte, error) {
+	if d.IsZero() {
 		return json.Marshal("")
 	}
-	str := j.String()
+	str := d.String()
 	return json.Marshal(&str)
 
 }
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface,
 // allowing Date to be used as a map key in JSON.
-func (j *Date) UnmarshalText(text []byte) error {
+func (dd *Date) UnmarshalText(text []byte) error {
 	d, err := ParseDate(string(text))
 	if err != nil {
 		return err
 	}
-	*j = d
+	*dd = d
 	return nil
 }
 
