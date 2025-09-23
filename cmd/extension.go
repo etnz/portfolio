@@ -30,7 +30,12 @@ func RunExtension(subcommand string, args []string) (bool, int) {
 	}
 
 	// Found external command, execute it
-	cmd := exec.Command(lp, args...)
+	var extensionArgs []string
+	if len(args) > 1 {
+		extensionArgs = args[1:]
+	}
+
+	cmd := exec.Command(lp, extensionArgs...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

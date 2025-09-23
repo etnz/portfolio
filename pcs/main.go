@@ -54,7 +54,7 @@ func main() {
 
 		// If it's not a built-in command, attempt to run as an extension
 		if !isBuiltIn {
-			extensionExecuted, exitCode := cmd.RunExtension(subcommand, os.Args[1:])
+			extensionExecuted, exitCode := cmd.RunExtension(subcommand, flag.Args())
 			if extensionExecuted {
 				os.Exit(exitCode)
 			}

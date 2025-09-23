@@ -112,10 +112,14 @@ Successfully appended transaction to transactions.jsonl
 ### Keeping Your Portfolio Up-to-Date
 
 Recording the transaction you have initiated is not enough to compute the value of your portfolio. You also need the latest information from the market.
+`pcs` can automatically fetch market data from providers. Each provider has its own command, for example:
 
-There are two options:
-  - automatically fetch market data using a provider `pcs fetch <provider>
-  - manual set the price using the command `pcs price`.
+```bash
+pcs eodhd fetch
+pcs insee fetch
+```
+
+You can also manually set the price for any asset using the `pcs price` command.
 
 However for the purpose of the tutorial, we are only going to use the manual method. We can read from any financial site Apple's closing price on 2025-08-27:
 
@@ -204,8 +208,8 @@ pcs review -d 2025-08-27
   ------------|--------------|--------------------------------------------
    2025-08-27 | declare      | Declared AAPL as US0378331005.XETR in EUR  
    2025-08-27 | declare      | Declared BankFund1 as My-bank-Fund1 in EUR 
-   2025-08-27 | update-price | update-price                               
-   2025-08-27 | update-price | update-price                               
+   2025-08-27 | update-price | Price update: AAPL 193.2000,               
+   2025-08-27 | update-price | Price update: BankFund1 11.2300,           
    2025-08-27 | deposit      | Deposited €10,000.00                       
    2025-08-27 | buy          | Bought 10 of AAPL for €1,500.00            
    2025-08-27 | buy          | Bought 100 of BankFund1 for €1,200.00

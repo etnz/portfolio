@@ -18,10 +18,9 @@ import (
 // Register registers all the application's subcommands with the provided Commander.
 // A main package will call Register() to set up the CLI.
 func Register(c *subcommands.Commander) {
-	c.Register(&fetchCmd{}, "securities")
-
 	c.Register(&amundiCmd{}, "providers")
 	c.Register(&eodhdCmd{}, "providers")
+	c.Register(&inseeCmd{}, "providers")
 
 	c.Register(&initCmd{}, "transactions")
 	c.Register(&buyCmd{}, "transactions")

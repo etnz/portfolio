@@ -14,32 +14,49 @@ import (
 	"time"
 
 	"github.com/etnz/portfolio"
+	"github.com/shopspring/decimal"
 )
 
 const inseePrefix = "INSEE-"
 
 // Fetch retrieves market data from INSEE for the requested securities and date ranges.
-func Fetch(requests map[portfolio.ID]portfolio.Range) (map[portfolio.ID]portfolio.ProviderResponse, error) {
-	responses := make(map[portfolio.ID]portfolio.ProviderResponse)
+func Fetch(ledger *portfolio.Ledger, inception bool) ([]portfolio.Transaction, error) {
+	var updates []portfolio.Transaction
 	var errs error
 
-	for id, reqRange := range requests {
+	for sec := range ledger.AllSecurities() {
+		id := sec.ID()
 		idStr := string(id)
 		if !strings.HasPrefix(idStr, inseePrefix) {
 			continue
 		}
 
+		var from, to portfolio.Date
+		if inception {
+			from = ledger.InceptionDate(sec.Ticker())
+		} else {
+			from = ledger.LastKnownMarketDataDate(sec.Ticker()).Add(1)
+		}
+		to = portfolio.Today()
+
+		if !to.After(from) {
+			continue
+		}
+
 		idBank := strings.TrimPrefix(idStr, inseePrefix)
 
-		series, err := getSeries(idBank, reqRange.From, reqRange.To)
+		series, err := getSeries(idBank, from, to)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to get series for INSEE ID %s: %w", id, err))
 			continue
 		}
 
-		responses[id] = portfolio.ProviderResponse{Prices: series.Values}
+		for date, price := range series.Values {
+			tx := portfolio.NewUpdatePrice(date, sec.Ticker(), portfolio.M(decimal.NewFromFloat(price), sec.Currency()))
+			updates = append(updates, tx)
+		}
 	}
-	return responses, errs
+	return updates, errs
 }
 
 // getSeries constructs the URL, downloads, and parses an INSEE time series.
