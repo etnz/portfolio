@@ -604,7 +604,6 @@ func (ledger *Ledger) LastOperationDate(s string) Date {
 
 // LastKnownMarketDataDate scans the ledger in reverse and returns the date of the most
 // recent `update-price` or `split` transaction for the given security ticker.
-// The boolean will be true if a date was found, otherwise false.
 func (l *Ledger) LastKnownMarketDataDate(security string) Date {
 	// Iterate backwards for efficiency, as we want the most recent date.
 	for i := len(l.transactions) - 1; i >= 0; i-- {
@@ -630,16 +629,23 @@ func (l *Ledger) LastKnownMarketDataDate(security string) Date {
 // transaction of any kind for the given security ticker.
 func (l *Ledger) InceptionDate(security string) Date {
 	for _, tx := range l.transactions {
-		var ticker string
 		switch v := tx.(type) {
 		case Buy:
-			ticker = v.Security
+			if security == v.Security {
+				return tx.When()
+			}
 		case Sell:
-			ticker = v.Security
+			if security == v.Security {
+				return tx.When()
+			}
 		case Dividend:
-			ticker = v.Security
-		case Declare: // ignore declare the date is meaningless.
-			ticker = v.Ticker
+			if security == v.Security {
+				return tx.When()
+			}
+		case Declare:
+			if security == v.Ticker {
+				return tx.When()
+			}
 		case UpdatePrice:
 			// An UpdatePrice can have multiple tickers, so we need to check them all.
 			for t := range v.Prices {
@@ -649,13 +655,11 @@ func (l *Ledger) InceptionDate(security string) Date {
 			}
 			continue // Skip to next transaction
 		case Split:
-			ticker = v.Security
+			if security == v.Security {
+				return tx.When()
+			}
 		default:
 			continue
-		}
-
-		if ticker == security {
-			return tx.When()
 		}
 	}
 	return Date{}

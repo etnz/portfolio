@@ -88,7 +88,7 @@ func (r Range) Identifier() string {
 		_, week := r.From.ISOWeek()
 		return fmt.Sprintf("%d-W%02d", r.From.Year(), week)
 	case Monthly:
-		return r.From.Format("January 2006")
+		return r.From.Format("2006-January")
 	case Quarterly:
 		return fmt.Sprintf("%d-Q%d", r.From.Year(), (r.From.Month()-1)/3+1)
 	case Yearly:

@@ -14,6 +14,18 @@ func (id ID) IsCurrencyPair() bool {
 	return err == nil
 }
 
+// IsMSSI returns true if the ID represents a MSSI.
+func (id ID) IsMSSI() bool {
+	_, _, err := id.MSSI()
+	return err == nil
+}
+
+// IsISIN returns true if the ID represents a ISIN.
+func (id ID) IsISIN() bool {
+	_, err := id.ISIN()
+	return err == nil
+}
+
 // TODO: all types_xxx should be heavily tested, they are the core functionality.
 
 // isinRegex checks for the basic structure: 2 letters, 9 alphanumeric, 1 digit.

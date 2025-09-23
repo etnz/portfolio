@@ -87,6 +87,16 @@
             "cwd": "/tmp/",
         },
         {
+            "name": "pcs eodhd fetch",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "pcs/main.go",
+            "env": {"EODHD_API_KEY": " 68d27948a31810.06559784"},
+            "args": [ "-v","eodhd","fetch"],
+            "cwd": "/tmp/",
+        },
+        {
             "name": "pcs complete",
             "type": "go",
             "request": "launch",

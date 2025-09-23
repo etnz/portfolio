@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 
 	"github.com/etnz/portfolio"
-	"github.com/etnz/portfolio/eodhd"
 	"github.com/etnz/portfolio/insee"
 	"github.com/google/subcommands"
 	"github.com/shopspring/decimal"
@@ -132,22 +131,6 @@ func (c *fetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 
 	for _, provider := range providers {
 		switch provider {
-		case "eodhd":
-			for id, val := range requests {
-				log.Printf("eodhd requested with %s from %s to %s\n", id, val.From, val.To)
-			}
-			eodhdResponses, err := eodhd.Fetch(requests)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error fetching from EODHD: %v\n", err)
-				// Don't exit, other providers might succeed.
-			}
-			for id, resp := range eodhdResponses {
-				if len(resp.Dividends) == 0 && len(resp.Prices) == 0 && len(resp.Splits) == 0 {
-					continue
-				}
-				allResponses[id] = resp
-				log.Println("eodhd responded ", id, resp.Prices)
-			}
 		case "insee":
 			inseeResponses, err := insee.Fetch(requests)
 			if err != nil {

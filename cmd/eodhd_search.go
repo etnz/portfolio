@@ -12,34 +12,54 @@ import (
 	"github.com/google/subcommands"
 )
 
-type searchSecurityCmd struct {
-	Cmd        *declareCmd
-	showErrors bool
+// eodhdSearchCmd implements the "eodhd search" command.
+type eodhdSearchCmd struct {
+	eodhdApiFlag string
+	Cmd          *declareCmd
+	showErrors   bool
 }
 
-func (*searchSecurityCmd) Name() string     { return "search" }
-func (*searchSecurityCmd) Synopsis() string { return "search for securities using EODHD API" }
-func (*searchSecurityCmd) Usage() string {
-	return `pcs search-security <search term>
+func (*eodhdSearchCmd) Name() string     { return "search" }
+func (*eodhdSearchCmd) Synopsis() string { return "searches for securities on EODHD" }
+func (*eodhdSearchCmd) Usage() string {
+	return `pcs eodhd search <search term>
 
   Searches for securities via EOD Historical Data API and prints
-  ready-to-use 'add-security' commands for the results.
-  Requires the EODHD_API_TOKEN environment variable to be set.
+  ready-to-use 'pcs' commands for the results.
+  
+  Requires the EODHD_API_TOKEN environment variable to be set or passed as a flag.
 `
 }
 
-func (c *searchSecurityCmd) SetFlags(f *flag.FlagSet) {
+func (c *eodhdSearchCmd) SetFlags(f *flag.FlagSet) {
+	flag.StringVar(&c.eodhdApiFlag, "eodhd-api-key", "", "EODHD API key to use for consuming EODHD.com API. This flag takes precedence over the "+eodhd_api_key+" environment variable. You can get one at https://eodhd.com/")
 	f.BoolVar(&c.showErrors, "show-errors", false, "Display entries with invalid ISINs and print error messages")
 }
 
-func (c *searchSecurityCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+// eodhdApiKey retrieves the EODHD API key from the command-line flag or the environment variable.
+// It prioritizes the flag over the environment variable.
+func (c *eodhdSearchCmd) eodhdApiKey() string {
+	// If the flag is not set, we try to read it from the environment variable.
+	if c.eodhdApiFlag == "" {
+		c.eodhdApiFlag = os.Getenv(eodhd_api_key)
+	}
+	return c.eodhdApiFlag
+}
+
+func (c *eodhdSearchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if f.NArg() == 0 {
 		fmt.Fprintln(os.Stderr, "Error: a search term is required.")
 		return subcommands.ExitUsageError
 	}
 	searchTerm := strings.Join(f.Args(), " ")
 
-	results, err := eodhd.Search(searchTerm)
+	key := c.eodhdApiKey()
+	if key == "" {
+		fmt.Fprintf(os.Stderr, "Error: EODHD API key is not set. Use -eodhd-api-key flag or EODHD_API_KEY environment variable\n")
+		return subcommands.ExitFailure
+	}
+
+	results, err := eodhd.Search(key, searchTerm)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error searching securities: %v\n", err)
 		return subcommands.ExitFailure

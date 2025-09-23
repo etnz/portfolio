@@ -21,6 +21,7 @@ func Register(c *subcommands.Commander) {
 	c.Register(&fetchCmd{}, "securities")
 
 	c.Register(&amundiCmd{}, "providers")
+	c.Register(&eodhdCmd{}, "providers")
 
 	c.Register(&initCmd{}, "transactions")
 	c.Register(&buyCmd{}, "transactions")
@@ -35,7 +36,6 @@ func Register(c *subcommands.Commander) {
 	c.Register(&splitCmd{}, "transactions")
 
 	c.Register(&fmtCmd{}, "tools")
-	c.Register(&searchSecurityCmd{Cmd: &declareCmd{}}, "tools")
 
 	c.Register(&summaryCmd{}, "reports")
 	c.Register(&holdingCmd{}, "reports")
