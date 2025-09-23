@@ -2,6 +2,9 @@ package renderer
 
 import (
 	"fmt"
+	"maps"
+	"slices"
+	"strings"
 
 	"github.com/etnz/portfolio"
 )
@@ -33,6 +36,20 @@ func Transaction(tx portfolio.Transaction) string {
 		return fmt.Sprintf("Converted %v to %v", v.FromAmount, v.ToAmount)
 	case portfolio.Declare:
 		return fmt.Sprintf("Declared %s as %s in %s", v.Ticker, v.ID, v.Currency)
+	case portfolio.UpdatePrice:
+		var buf strings.Builder
+		keys := slices.Collect(maps.Keys(v.Prices))
+		slices.Sort(keys)
+		buf.WriteString("Price update: ")
+		for i, k := range keys {
+			buf.WriteString(k)
+			buf.WriteString(" ")
+			buf.WriteString(v.Prices[k].StringFixed(4))
+			if i < len(keys) {
+				buf.WriteString(", ")
+			}
+		}
+		return buf.String()
 	default:
 		return string(tx.What())
 	}

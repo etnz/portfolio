@@ -58,9 +58,11 @@ func Fetch(key string, ledger *portfolio.Ledger, inception bool) ([]Change, []po
 	dividends := make(map[point]DividendChange)
 
 	visited := make(map[portfolio.ID]struct{})
+	id2Sec := make(map[portfolio.ID][]portfolio.Security)
 
 	for sec := range ledger.AllSecurities() {
 		id := sec.ID()
+		id2Sec[id] = append(id2Sec[id], sec)
 
 		if !(id.IsCurrencyPair() || id.IsISIN() || id.IsMSSI()) {
 			continue
@@ -78,6 +80,11 @@ func Fetch(key string, ledger *portfolio.Ledger, inception bool) ([]Change, []po
 		from, to, err := computeBounds(sec, ledger, inception)
 		if err != nil {
 			return nil, nil, err
+		}
+
+		if !to.After(from) {
+			// empty range, skip it
+			continue
 		}
 
 		// Compute the ticker for this security
@@ -106,16 +113,27 @@ func Fetch(key string, ledger *portfolio.Ledger, inception bool) ([]Change, []po
 
 	// Format the prices received in to
 	changes := make([]Change, 0, len(prices)+len(splits)+len(dividends))
+	updates := make([]portfolio.Transaction, 0, len(prices)+len(splits)+len(dividends))
+
 	for _, v := range splits {
 		changes = append(changes, v)
+		for _, sec := range id2Sec[v.ID] {
+			updates = append(updates, portfolio.NewSplit(v.Date, sec.Ticker(), v.Numerator, v.Denominator))
+		}
 	}
 	for _, v := range dividends {
 		changes = append(changes, v)
+		for _, sec := range id2Sec[v.ID] {
+			updates = append(updates, portfolio.NewDividend(v.Date, "", sec.Ticker(), portfolio.M(v.Amount, sec.Currency())))
+		}
 	}
 	for _, v := range prices {
 		changes = append(changes, v)
+		for _, sec := range id2Sec[v.ID] {
+			updates = append(updates, portfolio.NewUpdatePrice(v.Date, sec.Ticker(), portfolio.M(v.New, sec.Currency())))
+		}
 	}
-	return changes, nil, nil
+	return changes, updates, nil
 }
 
 func computeBounds(sec portfolio.Security, ledger *portfolio.Ledger, inception bool) (from, to portfolio.Date, err error) {
@@ -146,7 +164,7 @@ func forexBounds(sec portfolio.Security, ledger *portfolio.Ledger, inception boo
 	}
 
 	// Determine the to Date.
-	to = portfolio.Today()
+	to = portfolio.Today().Add(-1)
 	return from, to, nil
 }
 
@@ -164,7 +182,7 @@ func assetBounds(sec portfolio.Security, ledger *portfolio.Ledger, inception boo
 	if inception {
 		from = ledger.InceptionDate(sec.Ticker())
 	} else {
-		from = ledger.LastKnownMarketDataDate(sec.Ticker())
+		from = ledger.LastKnownMarketDataDate(sec.Ticker()).Add(1)
 	}
 
 	// Determine the to Date.
@@ -177,6 +195,9 @@ func assetBounds(sec portfolio.Security, ledger *portfolio.Ledger, inception boo
 	if pos.IsZero() {
 		// Latest position is 0, so we don't need updates beyond this.
 		to = lastOperationDate
+		// we include the day of selling because: if we try to fetch for a too small range
+		// there is the risk that there is no data for this range, and we will try for every.
+		// The sell day is very likely an open day with actual data. (but it is not guaranteed)
 	}
 	return from, to, nil
 }

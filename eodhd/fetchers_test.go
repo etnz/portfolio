@@ -68,7 +68,7 @@ func Test_fetchTickers(t *testing.T) {
 		t.Skip("not supported with demo key, use a real one.")
 	}
 	// Using "F" for Frankfurt Exchange
-	tickers, err := fetchTickers(EodhdApiDemoKey, "NYSE")
+	tickers, err := fetchTickers(EodhdApiDemoKey, "NYSE", false)
 	if err != nil {
 		t.Fatalf("fetchTickers() unexpected error = %v", err)
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/eodhd"
+	"github.com/etnz/portfolio/renderer"
 	"github.com/google/subcommands"
 )
 
@@ -60,7 +61,7 @@ func (c *eodhdFetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interfa
 		return subcommands.ExitFailure
 	}
 
-	changes, updates, err := eodhd.Fetch(key, ledger, c.inception)
+	_, updates, err := eodhd.Fetch(key, ledger, c.inception)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: could not fetch from eodhd.com: %v\n", err)
 		return subcommands.ExitFailure
@@ -85,16 +86,8 @@ func (c *eodhdFetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interfa
 		return subcommands.ExitFailure
 	}
 
-	for _, change := range changes {
-		switch c := change.(type) {
-		case eodhd.PriceChange:
-
-			if c.Old != nil {
-				fmt.Printf("%s %15s: %10s (%10s)\n", c.Date, c.ID, c.Old.StringFixed(4), c.New.StringFixed(4))
-			} else {
-				fmt.Printf("%s %15s: %10s\n", c.Date, c.ID, c.New.StringFixed(4))
-			}
-		}
+	for _, upd := range updates {
+		fmt.Println(upd.When(), renderer.Transaction(upd))
 	}
 
 	fmt.Fprintf(os.Stderr, "✅ Successfully fetched from eodhd.com and updated ledger.\n")
