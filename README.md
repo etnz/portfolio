@@ -151,7 +151,8 @@ pcs review -d 2025-08-27
 ```
 
 ```console check
-# Daily Review for 2025-08-27
+
+  # Daily Review for 2025-08-27
   
   *As of 2006-01-02 15:04:05*
   
@@ -204,15 +205,16 @@ pcs review -d 2025-08-27
   
   ## Transactions
   
-   Date       | Type         | Description                                
-  ------------|--------------|--------------------------------------------
-   2025-08-27 | declare      | Declared AAPL as US0378331005.XETR in EUR  
-   2025-08-27 | declare      | Declared BankFund1 as My-bank-Fund1 in EUR 
-   2025-08-27 | update-price | Price update: AAPL 193.2000,               
-   2025-08-27 | update-price | Price update: BankFund1 11.2300,           
-   2025-08-27 | deposit      | Deposited €10,000.00                       
-   2025-08-27 | buy          | Bought 10 of AAPL for €1,500.00            
-   2025-08-27 | buy          | Bought 100 of BankFund1 for €1,200.00
+   Date       | Type         | Description                                   
+  ------------|--------------|-----------------------------------------------
+   2025-08-27 | declare      | Declare "AAPL" as "US0378331005.XETR" in EUR  
+   2025-08-27 | declare      | Declare "BankFund1" as "My-bank-Fund1" in EUR 
+   2025-08-27 | update-price | Update price for "AAPL"=193.2000              
+   2025-08-27 | update-price | Update price for "BankFund1"=11.2300          
+   2025-08-27 | deposit      | Deposit €10,000.00                            
+   2025-08-27 | buy          | Buy 10 of "AAPL" for €1,500.00                
+   2025-08-27 | buy          | Buy 100 of "BankFund1" for €1,200.00          
+
 ```
 
 

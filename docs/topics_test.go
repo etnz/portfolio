@@ -3,6 +3,8 @@ package docs
 import (
 	"bufio"
 	"bytes"
+	"embed"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,6 +18,11 @@ import (
 	"github.com/yuin/goldmark/text"
 )
 
+var fixDocs = flag.Bool("fix-docs", false, "if true, update docs instead of checking them")
+
+//go:embed *.md
+var testDocs embed.FS
+
 const (
 	bashSetup    = "bash setup"
 	bashRun      = "bash run"
@@ -23,21 +30,26 @@ const (
 	bashCheck    = "bash check"
 )
 
+func TestFixModeIsOff(t *testing.T) {
+	if *fixDocs {
+		t.Fatal("-fix-docs is enabled. This flag should only be used for updating documentation and must be disabled for regular tests.")
+	}
+}
+
 func TestTopics(t *testing.T) {
 	// This test ensures that the documentation is in sync with the code.
 	// It checks two things:
 	// 1. Every topic listed in docs/readme.md can be successfully loaded by the pcs topic <topic_name> command.
 	// 2. Every .md file in the docs directory (excluding readme.md itself) is present in the list of topics extracted from docs/readme.md.
 
-	// Read docs/readme.md line by line and extract topics using regex.
-	file, err := os.Open("readme.md")
+	// Read readme.md from embedded fs and extract topics using regex.
+	content, err := testDocs.ReadFile("readme.md")
 	if err != nil {
-		t.Fatalf("failed to open readme.md: %v", err)
+		t.Fatalf("failed to read readme.md from embed.FS: %v", err)
 	}
-	defer file.Close()
+	scanner := bufio.NewScanner(bytes.NewReader(content))
 
 	var topicsInReadme []string
-	scanner := bufio.NewScanner(file)
 	topicRegex := regexp.MustCompile(`^\*\s+([^:]+):.*$`)
 
 	for scanner.Scan() {
@@ -64,22 +76,14 @@ func TestTopics(t *testing.T) {
 	}
 
 	// Check 2: Every .md file in the docs directory (excluding readme.md itself) is present in the list of topics extracted from docs/readme.md.
-	files, err := filepath.Glob("*.md")
+	mdFiles, err := GetAllTopics()
 	if err != nil {
-		t.Fatalf("failed to glob *.md: %v", err)
-	}
-
-	var mdFiles []string
-	for _, file := range files {
-		base := filepath.Base(file)
-		if base != "readme.md" {
-			mdFiles = append(mdFiles, strings.TrimSuffix(base, ".md"))
-		}
+		t.Fatalf("failed to get all topics: %v", err)
 	}
 
 	for _, mdFile := range mdFiles {
 		found := false
-		for _, topic := range topicsInReadme {
+		for _, topic := range topicsInReadme { // TODO: this is O(n^2), should be O(n) with a map
 			if topic == mdFile {
 				found = true
 				break
@@ -92,17 +96,29 @@ func TestTopics(t *testing.T) {
 }
 
 func TestCodeBlocks(t *testing.T) {
-	files, err := filepath.Glob("*.md")
+	topics, err := GetAllTopics()
 	if err != nil {
 		t.Fatal(err)
 	}
-	files = append(files, "../README.md")
+	topics = append(topics, "readme") // Add readme to the list of files to test
 
-	for _, file := range files {
-		t.Run(file, func(t *testing.T) {
-			runBlocks(t, file)
+	for _, topic := range topics {
+		t.Run(topic, func(t *testing.T) {
+			content, err := GetTopic(topic)
+			if err != nil {
+				t.Fatalf("failed to get topic %q: %v", topic, err)
+			}
+			filePath := filepath.Join("docs", topic+".md")
+			runBlocks(t, filePath, content)
 		})
 	}
+
+	// Handle ../README.md separately
+	readmeContent, err := os.ReadFile("../README.md")
+	if err != nil {
+		t.Fatalf("failed to read ../README.md: %v", err)
+	}
+	runBlocks(t, "README.md", string(readmeContent))
 }
 
 // HELPER
@@ -134,13 +150,10 @@ func buildPcs(t *testing.T, tmp string) string {
 }
 
 // parseMarkdown parses a markdown file and returns a list of Blocks.
-func parseMarkdown(t *testing.T, file string) []*Block {
+func parseMarkdown(t *testing.T, file string, md string) []*Block {
 	t.Helper()
 
-	content, err := os.ReadFile(file)
-	if err != nil {
-		t.Fatalf("failed to read %s: %v", file, err)
-	}
+	content := []byte(md)
 
 	mdParser := goldmark.DefaultParser()
 	root := mdParser.Parse(text.NewReader(content))
@@ -213,13 +226,26 @@ func (r *blockRunner) runBlock(t *testing.T, block *Block) {
 
 	// Check don't need execution.
 	if block.Type == consoleCheck {
-		want := strings.TrimSpace(block.Content)
-		got := strings.TrimSpace(r.previousOutput)
-		// replace tabs with spaces for consistent comparison
-		got = strings.ReplaceAll(got, "\t", "        ")
-		if want != got {
-			// Print out the diffs in full text first, and in escaped text later.
-			t.Errorf("%s:%d: output mismatch:\ngot:\n\n%s\n\nwant:\n\n%s\n\ngot :%q\nwant:%q\n", block.File, block.Line, got, want, got, want)
+		want := block.Content
+		got := r.previousOutput
+		if strings.TrimSpace(want) != strings.TrimSpace(got) {
+			if *fixDocs {
+				t.Logf("fixing %s:%d", block.File, block.Line)
+				// In fix mode, we update the file.
+				// file path are relative to the workspace not the test
+				filepath := filepath.Join("..", block.File)
+				content, err := os.ReadFile(filepath)
+				if err != nil {
+					t.Fatalf("failed to read file for fixing: %v", err)
+				}
+				newContent := strings.Replace(string(content), "```console check\n"+want+"```", "```console check\n"+got+"```", 1)
+				if err := os.WriteFile(filepath, []byte(newContent), 0644); err != nil {
+					t.Fatalf("failed to write fixed file: %v", err)
+				}
+			} else {
+				// In normal mode, we report an error.
+				t.Errorf("%s:%d: output mismatch:\ngot:\n%s\nwant:\n%s", block.File, block.Line, got, want)
+			}
 		}
 		return
 	}
@@ -255,7 +281,7 @@ func (r *blockRunner) runBlock(t *testing.T, block *Block) {
 
 // runBlocks executes a series of scenarios extracted from a
 // markdown file.
-func runBlocks(t *testing.T, file string) {
+func runBlocks(t *testing.T, file string, md string) {
 	t.Helper()
 	// override the Now function in renderer to have a stable fake date.
 
@@ -266,7 +292,7 @@ func runBlocks(t *testing.T, file string) {
 	newPath := fmt.Sprintf("PATH=%s%c%s", pcsDir, os.PathListSeparator, os.Getenv("PATH"))
 	baseEnv := append(os.Environ(), newPath, "PORTFOLIO_TESTING_NOW=2006-01-02 15:04:05")
 
-	blocks := parseMarkdown(t, file)
+	blocks := parseMarkdown(t, file, md)
 	if len(blocks) == 0 {
 		return
 	}
