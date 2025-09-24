@@ -15,6 +15,7 @@ Welcome to `pcs`, your private, local-first, command-line tool for gaining a cle
 * global-flags: Learn about the global flags that can be used with any `pcs` command.
 * holding: Display detailed holdings for a specific date.
 * summary: Display a portfolio performance summary.
+* expert-guide: A complete guide for financial experts about `pcs`.
 
 ## Usage Examples
 

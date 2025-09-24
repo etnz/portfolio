@@ -44,9 +44,9 @@ pcs gains --period month -d 2025-03-31
 
 ```console check
 # Monthly Review for 2025-March
-  
+
   *As of 2006-01-02 15:04:05*
-  
+
    **Total Portfolio Value** | **€14,999.99** 
   ---------------------------|----------------
               Previous Value |     €14,545.45 
@@ -60,9 +60,9 @@ pcs gains --period month -d 2025-03-31
      + Counterparties Change |          €0.00 
        + Market Value Change |     -€1,590.90 
             **= Net Change** |    **€454.54** 
-  
+
   ## Tax View
-  
+
    Asset     | Cost Basis (average) | Dividends |     Realized |   Unrealized 
   -----------|----------------------|-----------|--------------|--------------
    MSFT      |            $2,000.00 |      0.00 |     +$250.00 |     +$250.00 
@@ -99,9 +99,9 @@ pcs gains --period month -d 2025-03-31
 
 ```console check
 # Monthly Review for 2025-March
-  
+
   *As of 2006-01-02 15:04:05*
-  
+
    **Total Portfolio Value** | **€11,909.08** 
   ---------------------------|----------------
               Previous Value |     €11,999.99 
@@ -115,9 +115,9 @@ pcs gains --period month -d 2025-03-31
      + Counterparties Change |          €0.00 
        + Market Value Change |     -€1,090.90 
             **= Net Change** |    **-€90.90** 
-  
+
   ## Tax View
-  
+
    Asset     | Cost Basis (average) | Dividends |    Realized | Unrealized 
   -----------|----------------------|-----------|-------------|------------
    GOOG      |                $0.00 |      0.00 |    +$100.00 |      $0.00 

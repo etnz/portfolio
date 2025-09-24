@@ -41,17 +41,17 @@ pcs holding -d 2025-03-05
 
 ```console check
 # Holding Report on 2025-03-05
-  
+
   Total Portfolio Value: **€14,727.26**
-  
+
   ## Securities
-  
+
    Ticker | Quantity |   Price | Market Value 
   --------|----------|---------|--------------
    MSFT   |       10 | $420.00 |    €3,818.17 
-  
+
   ## Cash
-  
+
    Currency |    Balance |      Value 
   ----------|------------|------------
    EUR      | €10,000.00 | €10,000.00 
@@ -75,24 +75,24 @@ pcs holding -d 2025-03-06
 
 ```console check
 # Holding Report on 2025-03-06
-  
+
   Total Portfolio Value: **€14,763.63**
-  
+
   ## Securities
-  
+
    Ticker | Quantity |   Price | Market Value 
   --------|----------|---------|--------------
    MSFT   |        5 | $420.00 |    €1,909.08 
-  
+
   ## Cash
-  
+
    Currency |    Balance |      Value 
   ----------|------------|------------
    EUR      | €10,000.00 | €10,000.00 
    USD      |  $3,200.00 |  €2,909.08 
-  
+
   ## Counterparties
-  
+
    Name       | Balance |   Value 
   ------------|---------|---------
    TaxAccount | -$60.00 | -€54.54

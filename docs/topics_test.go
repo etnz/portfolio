@@ -20,18 +20,24 @@ import (
 
 var fixDocs = flag.Bool("fix-docs", false, "if true, update docs instead of checking them")
 
+func fix() bool {
+	// return true
+	return *fixDocs
+}
+
 //go:embed *.md
 var testDocs embed.FS
 
 const (
-	bashSetup    = "bash setup"
-	bashRun      = "bash run"
-	consoleCheck = "console check"
-	bashCheck    = "bash check"
+	bashSetup    = "bash setup"    // creates a new environment, run the bash, fail on error
+	bashDemo     = "bash demo"     // creates a new environment, run the bash, fail on error, remember the output
+	bashRun      = "bash run"      //                            run the bash, fail on error, remember the output
+	consoleCheck = "console check" //                            compare content with the latest output.
+	bashCheck    = "bash check"    //                            run the bash, fail on error
 )
 
 func TestFixModeIsOff(t *testing.T) {
-	if *fixDocs {
+	if fix() {
 		t.Fatal("-fix-docs is enabled. This flag should only be used for updating documentation and must be disabled for regular tests.")
 	}
 }
@@ -67,7 +73,7 @@ func TestTopics(t *testing.T) {
 
 	// Check 1: Every topic listed in docs/readme.md can be successfully loaded.
 	for _, topic := range topicsInReadme {
-		t.Run("load_"+topic, func(t *testing.T) {
+		t.Run("exist_"+topic, func(t *testing.T) {
 			_, err := GetTopic(topic)
 			if err != nil {
 				t.Errorf("failed to get topic %q: %v", topic, err)
@@ -82,16 +88,18 @@ func TestTopics(t *testing.T) {
 	}
 
 	for _, mdFile := range mdFiles {
-		found := false
-		for _, topic := range topicsInReadme { // TODO: this is O(n^2), should be O(n) with a map
-			if topic == mdFile {
-				found = true
-				break
+		t.Run("declared_"+mdFile, func(t *testing.T) {
+			found := false
+			for _, topic := range topicsInReadme { // TODO: this is O(n^2), should be O(n) with a map
+				if topic == mdFile {
+					found = true
+					break
+				}
 			}
-		}
-		if !found {
-			t.Errorf("topic %q is not listed in docs/readme.md", mdFile)
-		}
+			if !found {
+				t.Errorf("topic %q is not listed in docs/readme.md", mdFile)
+			}
+		})
 	}
 }
 
@@ -125,10 +133,15 @@ func TestCodeBlocks(t *testing.T) {
 
 // Block represents a fenced code block in the markdown file.
 type Block struct {
-	Type    string
-	Content string
-	File    string
-	Line    int
+	Type        string
+	Content     string
+	File        string
+	Line        int
+	EndLine     int
+	StartOffset int
+	EndOffset   int
+	Padding     int
+	Edited      bool
 }
 
 // buildPcs builds the `pcs` command-line executable and returns the absolute
@@ -181,15 +194,23 @@ func parseMarkdown(t *testing.T, file string, md string) []*Block {
 			}
 
 			// Get the line number of the block
-			startOffset := fcb.Info.Segment.Start
+			lines := fcb.BaseBlock.Lines()
+			startLine := lineNumber(content, fcb.Info.Segment.Start)
+			startOffset := lines.At(0).Start
+			endOffset := lines.At(lines.Len() - 1).Stop
+			padding := padding(content, startOffset)
 
 			switch lang {
-			case bashCheck, bashSetup, bashRun, consoleCheck:
+			case bashCheck, bashSetup, bashRun, consoleCheck, bashDemo:
 				blocks = append(blocks, &Block{
-					Type:    lang,
-					Content: blockContent.String(),
-					File:    file,
-					Line:    lineNumber(content, startOffset),
+					Type:        lang,
+					Content:     blockContent.String(),
+					File:        file,
+					Line:        startLine,
+					EndLine:     startLine + lines.Len() - 1,
+					StartOffset: startOffset,
+					EndOffset:   endOffset,
+					Padding:     padding,
 				})
 			}
 		}
@@ -214,6 +235,26 @@ func lineNumber(source []byte, offset int) (lineNumber int) {
 	return lineCount + 1
 }
 
+// padding computes the indentation (number of spaces) for a given offset.
+// It counts the number of space characters from the beginning of the line
+// up to the given offset.
+func padding(source []byte, offset int) int {
+	if offset > len(source) {
+		offset = len(source)
+	}
+
+	// Find the start of the current line.
+	lineStart := 0
+	if lastNewline := bytes.LastIndexByte(source[:offset], '\n'); lastNewline != -1 {
+		lineStart = lastNewline + 1
+	}
+
+	// The indentation is the part of the line from its start to the offset.
+	indentationSlice := source[lineStart:offset]
+
+	return bytes.Count(indentationSlice, []byte(" "))
+}
+
 // blockRunner defines all that is need to run a test for a block
 type blockRunner struct {
 	env            []string // env use to execute commands
@@ -227,30 +268,20 @@ func (r *blockRunner) runBlock(t *testing.T, block *Block) {
 	// Check don't need execution.
 	if block.Type == consoleCheck {
 		want := block.Content
-		got := r.previousOutput
+		got := trimEmptyLines(r.previousOutput)
 		if strings.TrimSpace(want) != strings.TrimSpace(got) {
-			if *fixDocs {
-				t.Logf("fixing %s:%d", block.File, block.Line)
-				// In fix mode, we update the file.
-				// file path are relative to the workspace not the test
-				filepath := filepath.Join("..", block.File)
-				content, err := os.ReadFile(filepath)
-				if err != nil {
-					t.Fatalf("failed to read file for fixing: %v", err)
-				}
-				newContent := strings.Replace(string(content), "```console check\n"+want+"```", "```console check\n"+got+"```", 1)
-				if err := os.WriteFile(filepath, []byte(newContent), 0644); err != nil {
-					t.Fatalf("failed to write fixed file: %v", err)
-				}
-			} else {
-				// In normal mode, we report an error.
-				t.Errorf("%s:%d: output mismatch:\ngot:\n%s\nwant:\n%s", block.File, block.Line, got, want)
+			if fix() {
+				t.Logf("fixing %s:%d-%d padding=%d", block.File, block.Line, block.EndLine, block.Padding)
+				block.Content = got
+				block.Edited = true
 			}
+			// In normal mode, we report an error.
+			t.Errorf("%s:%d: output mismatch:\ngot:\n%s\nwant:\n%s\n\n got=%q\nwant=%q\n", block.File, block.Line, got, want, got, want)
 		}
 		return
 	}
 	// Create a new execution folder on a new setup.
-	if block.Type == bashSetup {
+	if block.Type == bashSetup || block.Type == bashDemo {
 		r.tmpFolder = t.TempDir() // new scenario temp folder
 	}
 
@@ -261,7 +292,7 @@ func (r *blockRunner) runBlock(t *testing.T, block *Block) {
 	output, err := cmd.CombinedOutput()
 
 	// Record last run output.
-	if block.Type == bashRun {
+	if block.Type == bashRun || block.Type == bashDemo {
 		r.previousOutput = string(output)
 	}
 
@@ -269,8 +300,10 @@ func (r *blockRunner) runBlock(t *testing.T, block *Block) {
 	if err != nil {
 		switch block.Type {
 		case bashSetup, bashRun:
+			// other blocks may have dependencies on that execution, so it cannot be a simple "error"
 			t.Fatalf("%s:%d: %s failed: %v with output:\n%s\n", block.File, block.Line, block.Type, err, output)
-		case bashCheck:
+		case bashCheck, bashDemo:
+			// nobody depends on those, so failure is an error, but other blocks can be tested.
 			t.Errorf("%s:%d: %s failed: %v with output:\n%s\n", block.File, block.Line, block.Type, err, output)
 			return
 		default:
@@ -290,7 +323,7 @@ func runBlocks(t *testing.T, file string, md string) {
 	pcsDir := filepath.Dir(pcsPath)
 
 	newPath := fmt.Sprintf("PATH=%s%c%s", pcsDir, os.PathListSeparator, os.Getenv("PATH"))
-	baseEnv := append(os.Environ(), newPath, "PORTFOLIO_TESTING_NOW=2006-01-02 15:04:05")
+	baseEnv := append(os.Environ(), newPath, "PORTFOLIO_TESTING_NOW=2006-01-02 15:04:05", "NO_RENDER=1")
 
 	blocks := parseMarkdown(t, file, md)
 	if len(blocks) == 0 {
@@ -304,4 +337,60 @@ func runBlocks(t *testing.T, file string, md string) {
 	for _, block := range blocks {
 		r.runBlock(t, block)
 	}
+
+	if fix() {
+		// file is relative to workspace for presentation reasons, but the test is
+		// executed in ${workspace}/docs, hence the ".."
+		rewriteMarkdown(t, filepath.Join("..", file), md, blocks)
+	}
+}
+
+// rewriteMarkdown writes the updated content of the blocks back to the markdown file.
+func rewriteMarkdown(t *testing.T, file string, originalContent string, blocks []*Block) {
+	t.Helper()
+
+	content := []byte(originalContent)
+	var hasEdits bool
+
+	// Iterate backwards to not invalidate offsets
+	for i := len(blocks) - 1; i >= 0; i-- {
+		block := blocks[i]
+		if block.Edited {
+			hasEdits = true
+			// Replace the old block content with the new content.
+			// This is done by concatenating the part of the file before the block,
+			// the new block content, and the part of the file after the block.
+
+			// New lines need to be padded by block.Padding amount (except the first one).
+			padding := strings.Repeat(" ", block.Padding)
+			lines := strings.Split(strings.TrimSpace(block.Content), "\n")
+
+			paddedContent := strings.Join(lines, "\n"+padding)
+			paddedContent += "\n"
+
+			prefix := content[:block.StartOffset]
+			suffix := content[block.EndOffset:]
+			content = append(prefix, append([]byte(paddedContent), suffix...)...)
+		}
+	}
+
+	if hasEdits {
+		if err := os.WriteFile(file, content, 0644); err != nil {
+			t.Fatalf("failed to write updated markdown to %s: %v", file, err)
+		}
+		t.Logf("updated %s", file)
+	}
+}
+
+// trimEmptyLines takes a string, splits it into lines, and trims lines that
+// consist only of whitespace to an empty string. This helps normalize command
+// output for comparison against markdown blocks.
+func trimEmptyLines(s string) string {
+	lines := strings.Split(s, "\n")
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			lines[i] = ""
+		}
+	}
+	return strings.Join(lines, "\n")
 }

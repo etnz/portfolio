@@ -45,9 +45,9 @@ pcs daily -d 2025-01-03
 
 ```console check
 # Daily Review for 2025-01-03
-  
+
   *As of 2006-01-02 15:04:05*
-  
+
    **Total Portfolio Value** | **€11,865.50** 
   ---------------------------|----------------
               Previous Value |     €11,820.00 
@@ -56,9 +56,9 @@ pcs daily -d 2025-01-03
               + Market Gains |        +€45.50 
                + Forex Gains |          €0.00 
             **= Net Change** |     **€45.50** 
-  
+
   ## Performance View
-  
+
    Asset     |       Value |        Gain |        TWR 
   -----------|-------------|-------------|------------
    MSFT      |   $1,050.00 |     +$50.00 |     +5.00% 
@@ -95,11 +95,10 @@ pcs daily -d 2025-01-03
 ```
 
 ```console check
+# Daily Review for 2025-01-03
 
-  # Daily Review for 2025-01-03
-  
   *As of 2006-01-02 15:04:05*
-  
+
    **Total Portfolio Value** | **€12,272.72** 
   ---------------------------|----------------
               Previous Value |     €11,818.18 
@@ -113,12 +112,11 @@ pcs daily -d 2025-01-03
      + Counterparties Change |          €0.00 
        + Market Value Change |        -€45.45 
             **= Net Change** |    **€454.54** 
-  
+
   ## Performance View
-  
+
    Asset     |       Value |        Gain |        TWR 
   -----------|-------------|-------------|------------
    MSFT      |     $950.00 |     -$50.00 |     -5.00% 
-   **Total** | **€863.63** | **-€45.45** | **-0.38%** 
-
+   **Total** | **€863.63** | **-€45.45** | **-0.38%**
 ```

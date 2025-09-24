@@ -47,11 +47,11 @@ pcs summary -d 2025-01-31
 
 ```console check
 # Portfolio Summary on 2025-01-31
-  
+
   Total Market Value: €11,954.54
-  
+
   ## Performance
-  
+
    Period    |  Return 
   -----------|---------
    Day 31    |  +0.38% 

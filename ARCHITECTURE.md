@@ -46,6 +46,8 @@ This section describes the main Go packages and their distinct responsibilities.
     * **Internal Providers (e.g., `eodhd`, `amundi`):** These are Go packages compiled directly into the `pcs` binary, offering built-in support for common data sources.
     * **External Providers (Future):** Following the general extension mechanism, `pcs` will support external providers as standalone executables (e.g., `pcs-fetch-myprovider`). This will allow the community to add support for any data source without modifying the core application.
 
+* **`renderer` (Output Formatting):** This package contains helpers for generating user-facing output, primarily in Markdown format. It is used by the `cmd` package to display reports. A key utility is `renderer.ConditionalBlock`, which allows for the conditional printing of sections (e.g., printing a "Cash Accounts" table only if there are cash accounts to show), simplifying the logic for creating clean and readable reports.
+
 ---
 ## 4. Data View (The Files)
 
@@ -72,6 +74,13 @@ These documents are for the end-users of `pcs`. A key principle is that all user
 * **`README.md`:** The primary entry point for new users. It provides a high-level overview and a "Getting Started" tutorial.
 * **User Manual Topics (`docs/*.md`):** A collection of detailed, topic-specific guides that form the complete user manual. They are accessible via the `pcs topic` command. The `docs/readme.md` file serves as the index for these topics.
 
+#### The `-fix-docs` Workflow
+
+To streamline the maintenance of these test-verified documents, the test suite includes a powerful utility flag: `-fix-docs`.
+
+When a command's output changes, the `console check` blocks in the documentation will become outdated, causing tests to fail. Instead of manually updating each markdown file, a developer can run `go test ./docs -fix-docs`. This command will execute the tests, and for any failing `console check` block, it will automatically replace the old content with the new, correct output directly in the source `.md` file.
+
+This mechanism is a cornerstone of the "documentation as code" philosophy, ensuring that keeping the user manual synchronized with the application's behavior is a low-friction, automated process.
 ---
 ## 6. Development Workflow
 
