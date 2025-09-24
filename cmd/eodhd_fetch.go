@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/eodhd"
@@ -14,12 +15,26 @@ import (
 
 const eodhd_api_key = "EODHD_API_KEY"
 
+type stringSliceFlag []string
+
 // eodhdFetchCmd implements the "eodhd fetch" command.
 type eodhdFetchCmd struct {
-	eodhdApiFlag string
-	inception    bool
+	eodhdApiFlag   string
+	inception      bool
+	tickers        stringSliceFlag
+	fetchForex     bool
+	fetchMSSI      bool
+	fetchISIN      bool
+	fetchPrices    bool
+	fetchSplits    bool
+	fetchDividends bool
 }
 
+func (f *stringSliceFlag) String() string { return strings.Join(*f, ", ") }
+func (f *stringSliceFlag) Set(value string) error {
+	*f = append(*f, value)
+	return nil
+}
 func (*eodhdFetchCmd) Name() string     { return "fetch" }
 func (*eodhdFetchCmd) Synopsis() string { return "fetches market data from EODHD" }
 func (*eodhdFetchCmd) Usage() string {
@@ -28,11 +43,18 @@ func (*eodhdFetchCmd) Usage() string {
 	Fetches market data from eodhd.com.
 
 	Requires the EODHD_API_TOKEN environment variable to be set or passed as a flag.
-	`
+`
 }
 func (c *eodhdFetchCmd) SetFlags(f *flag.FlagSet) {
-	flag.StringVar(&c.eodhdApiFlag, "eodhd-api-key", "", "EODHD API key to use for consuming EODHD.com API. This flag takes precedence over the "+eodhd_api_key+" environment variable. You can get one at https://eodhd.com/")
-	flag.BoolVar(&c.inception, "inception", false, "ignore existing prices in ledger, and fetch all from inception date")
+	f.StringVar(&c.eodhdApiFlag, "eodhd-api-key", "", "EODHD API key to use for consuming EODHD.com API. This flag takes precedence over the "+eodhd_api_key+" environment variable. You can get one at https://eodhd.com/")
+	f.BoolVar(&c.inception, "inception", false, "ignore existing prices in ledger, and fetch all from inception date")
+	f.Var(&c.tickers, "s", "security ticker to update (can be specified multiple times). If empty, all are updated.")
+	f.BoolVar(&c.fetchForex, "forex", false, "fetch data for currency pairs")
+	f.BoolVar(&c.fetchMSSI, "mssi", false, "fetch data for securities identified by MSSI")
+	f.BoolVar(&c.fetchISIN, "isin", false, "fetch data for securities identified by ISIN")
+	f.BoolVar(&c.fetchPrices, "prices", false, "fetch price data")
+	f.BoolVar(&c.fetchSplits, "splits", false, "fetch split data")
+	f.BoolVar(&c.fetchDividends, "dividends", false, "fetch dividend data")
 }
 
 // eodhdApiKey retrieves the EODHD API key from the command-line flag or the environment variable.
@@ -61,7 +83,26 @@ func (c *eodhdFetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interfa
 		return subcommands.ExitFailure
 	}
 
-	_, updates, err := eodhd.Fetch(key, ledger, c.inception)
+	var options eodhd.FetchOptions
+	if c.fetchForex {
+		options |= eodhd.FetchForex
+	}
+	if c.fetchMSSI {
+		options |= eodhd.FetchMSSI
+	}
+	if c.fetchISIN {
+		options |= eodhd.FetchISIN
+	}
+	if c.fetchPrices {
+		options |= eodhd.FetchPrices
+	}
+	if c.fetchSplits {
+		options |= eodhd.FetchSplits
+	}
+	if c.fetchDividends {
+		options |= eodhd.FetchDividends
+	}
+	_, updates, err := eodhd.Fetch(key, ledger, c.inception, options, c.tickers...)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: could not fetch from eodhd.com: %v\n", err)
 		return subcommands.ExitFailure

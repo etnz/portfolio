@@ -153,8 +153,9 @@ func fetchDividends(apiKey string, id portfolio.ID, ticker string, from, to port
 	addr := fmt.Sprintf("https://eodhd.com/api/div/%s?fmt=json&api_token=%s&from=%s&to=%s", ticker, apiKey, from, to)
 
 	type apiDividend struct {
-		Date  portfolio.Date  `json:"date"` // ex-dividend date, see https://eodhd.com/financial-apis/api-splits-dividends
-		Value decimal.Decimal `json:"value"`
+		Date     portfolio.Date  `json:"date"` // ex-dividend date, see https://eodhd.com/financial-apis/api-splits-dividends
+		Value    decimal.Decimal `json:"value"`
+		Currency string          `json:"currency"`
 	}
 
 	content := make([]apiDividend, 0)
@@ -164,9 +165,10 @@ func fetchDividends(apiKey string, id portfolio.ID, ticker string, from, to port
 
 	for _, d := range content {
 		dividends[point{d.Date, id}] = DividendChange{
-			Date:   d.Date,
-			ID:     id,
-			Amount: d.Value,
+			Date:     d.Date,
+			ID:       id,
+			Amount:   d.Value,
+			Currency: d.Currency,
 		}
 	}
 	return nil

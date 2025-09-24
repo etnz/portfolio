@@ -480,6 +480,16 @@ func (t Dividend) Validate(ledger *Ledger) (Transaction, error) {
 	if !t.Amount.IsPositive() {
 		return t, errors.New("dividend must have a positive amount per share")
 	}
+
+	// Quick fix currency if not provided
+	if t.Amount.Currency() == "" {
+		ledgerSec := ledger.Security(t.Security) // Not nil, checked in secCmd.Validate
+		t.Amount = M(t.Amount.value, ledgerSec.Currency())
+	} else if err := ValidateCurrency(t.Amount.Currency()); err != nil {
+		// If currency is provided, validate it.
+		return t, fmt.Errorf("invalid currency for dividend: %w", err)
+	}
+
 	return t, nil
 }
 

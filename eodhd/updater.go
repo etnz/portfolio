@@ -20,10 +20,11 @@ type Change interface {
 }
 
 type PriceChange struct {
-	Date portfolio.Date
-	ID   portfolio.ID
-	Old  *decimal.Decimal
-	New  decimal.Decimal
+	Date     portfolio.Date
+	ID       portfolio.ID
+	Old      *decimal.Decimal
+	New      decimal.Decimal
+	Currency string
 }
 
 func (c PriceChange) When() portfolio.Date { return c.Date }
@@ -40,31 +41,91 @@ func (c SplitChange) When() portfolio.Date { return c.Date }
 func (c SplitChange) What() portfolio.ID   { return c.ID }
 
 type DividendChange struct {
-	Date   portfolio.Date
-	ID     portfolio.ID
-	Amount decimal.Decimal
+	Date     portfolio.Date
+	ID       portfolio.ID
+	Amount   decimal.Decimal
+	Currency string
 }
 
 func (c DividendChange) When() portfolio.Date { return c.Date }
 func (c DividendChange) What() portfolio.ID   { return c.ID }
 
-func Fetch(key string, ledger *portfolio.Ledger, inception bool) ([]Change, []portfolio.Transaction, error) {
-	// For each asset in the ledger relative to MSSI
-	// if inception: fetch all from inception day to today
-	// otherwise: find the latest market data known for this asset, and the latest holding position
-	//  fetch all from latest known market data to latest holding position.
+// FetchOptions is a bitmask to control what data to fetch.
+type FetchOptions uint
+
+const (
+	// FetchForex fetches data for currency pairs.
+	FetchForex FetchOptions = 1 << iota
+	// FetchMSSI fetches data for securities identified by MSSI.
+	FetchMSSI
+	// FetchISIN fetches data for securities identified by ISIN.
+	FetchISIN
+	FetchPrices
+	FetchSplits
+	FetchDividends
+
+	// FetchAll is a convenience constant to fetch all data types.
+	FetchAll = FetchForex | FetchMSSI | FetchISIN | FetchPrices | FetchSplits | FetchDividends
+)
+
+// Fetch retrieves market data from the EODHD API for securities in the provided ledger.
+// It can fetch historical prices, splits, and dividends based on the specified options.
+//
+// The function determines the date range for fetching data for each security. If 'inception'
+// is true, it fetches from the security's first appearance in the ledger. Otherwise, it
+// performs an incremental update, fetching from the date of the last known market data
+// up to either today or the last day the asset was held.
+//
+// Parameters:
+//   - key: The EODHD API key.
+//   - ledger: The portfolio ledger containing the securities to update.
+//   - inception: If true, fetches data from the security's inception date. If false, fetches incrementally.
+//   - options: A bitmask of FetchOptions (e.g., FetchPrices, FetchSplits) to specify what data to retrieve. If 0, it defaults to FetchAll.
+//   - tickers: An optional list of security tickers to update. If empty, it updates all relevant securities in the ledger.
+//
+// Returns:
+//   - A slice of Change interfaces, providing a detailed log of each data point fetched.
+//   - A slice of portfolio.Transaction objects (UpdatePrice, Split, Dividend) ready to be applied to a ledger.
+//   - An error if the API request or data processing fails.
+func Fetch(key string, ledger *portfolio.Ledger, inception bool, options FetchOptions, tickers ...string) ([]Change, []portfolio.Transaction, error) {
+	if options == 0 {
+		options = FetchAll
+	}
 	prices := make(map[point]PriceChange)
 	splits := make(map[point]SplitChange)
 	dividends := make(map[point]DividendChange)
+
+	tickersToUpdate := make(map[string]struct{})
+	if len(tickers) > 0 {
+		for _, t := range tickers {
+			tickersToUpdate[t] = struct{}{}
+		}
+	}
 
 	visited := make(map[portfolio.ID]struct{})
 	id2Sec := make(map[portfolio.ID][]portfolio.Security)
 
 	for sec := range ledger.AllSecurities() {
+		// If a list of tickers is provided, only update those.
+		if len(tickersToUpdate) > 0 {
+			if _, shouldUpdate := tickersToUpdate[sec.Ticker()]; !shouldUpdate {
+				continue
+			}
+		}
 		id := sec.ID()
 		id2Sec[id] = append(id2Sec[id], sec)
-
-		if !(id.IsCurrencyPair() || id.IsISIN() || id.IsMSSI()) {
+		// Check if we should fetch data for this security type based on options
+		shouldFetch := false
+		if (options&FetchForex != 0) && id.IsCurrencyPair() {
+			shouldFetch = true
+		}
+		if (options&FetchMSSI != 0) && id.IsMSSI() {
+			shouldFetch = true
+		}
+		if (options&FetchISIN != 0) && id.IsISIN() {
+			shouldFetch = true
+		}
+		if !shouldFetch {
 			continue
 		}
 
@@ -96,17 +157,22 @@ func Fetch(key string, ledger *portfolio.Ledger, inception bool) ([]Change, []po
 			// return nil, nil, err
 		}
 
-		if err := findPrices(key, id, ticker, from, to, prices); err != nil {
-			return nil, nil, err
+		if options&FetchPrices != 0 {
+			if err := findPrices(key, id, ticker, from, to, prices); err != nil {
+				return nil, nil, err
+			}
 		}
 
 		if id.IsMSSI() {
-			// Also fetch splits and dividends
-			if err := fetchSplits(key, id, ticker, from, to, splits); err != nil {
-				return nil, nil, err
+			if options&FetchSplits != 0 {
+				if err := fetchSplits(key, id, ticker, from, to, splits); err != nil {
+					return nil, nil, err
+				}
 			}
-			if err := fetchDividends(key, id, ticker, from, to, dividends); err != nil {
-				return nil, nil, err
+			if options&FetchDividends != 0 {
+				if err := fetchDividends(key, id, ticker, from, to, dividends); err != nil {
+					return nil, nil, err
+				}
 			}
 		}
 	}
@@ -124,7 +190,12 @@ func Fetch(key string, ledger *portfolio.Ledger, inception bool) ([]Change, []po
 	for _, v := range dividends {
 		changes = append(changes, v)
 		for _, sec := range id2Sec[v.ID] {
-			updates = append(updates, portfolio.NewDividend(v.Date, "", sec.Ticker(), portfolio.M(v.Amount, sec.Currency())))
+			// The dividend currency from the API is the source of truth, as companies
+			// pay dividends in their home currency, which may differ from the
+			// security's trading currency on a specific exchange (e.g., a US company
+			// paying in USD for shares traded in EUR on XETRA).
+			// The portfolio ledger will correctly credit the cash to the corresponding currency account.
+			updates = append(updates, portfolio.NewDividend(v.Date, "fetched from eodhd.com", sec.Ticker(), portfolio.M(v.Amount, v.Currency)))
 		}
 	}
 	for _, v := range prices {

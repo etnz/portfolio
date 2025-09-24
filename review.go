@@ -234,18 +234,6 @@ func (r *Review) AssetTotalReturn(ticker string) Money {
 	return marketGain.Add(dividends)
 }
 
-// AssetDividendReturn calculates the return from dividends for a single asset as a percentage of its starting value.
-// If the asset was not held at the start of the period, the return is considered not applicable (NaN).
-func (r *Review) AssetDividendReturn(ticker string) Percent {
-	dividends := r.AssetDividends(ticker)
-	startValue := r.start.MarketValue(ticker)
-
-	if startValue.IsZero() {
-		return Percent(math.NaN()) // Return is not applicable if starting value is zero.
-	}
-	return Percent(100 * r.end.Convert(dividends).AsFloat() / r.end.Convert(startValue).AsFloat())
-}
-
 // UnrealizedGains calculates the change in unrealized gains for a single security during the period.
 func (r *Review) UnrealizedGains(method CostBasisMethod) Money {
 	total := M(0, r.end.journal.cur)

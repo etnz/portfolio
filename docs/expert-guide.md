@@ -81,6 +81,9 @@ A **Stock Split** is recorded via a `split` transaction. It adjusts the quantity
 
 A `dividend` transaction records the dividend amount *per share*. The system then calculates the total dividend income based on the number of shares held on the transaction date. This income is a component of the portfolio's total return. The cash from the dividend is not automatically added to a cash account; it is assumed to be an external event until a corresponding `deposit` transaction is explicitly recorded, allowing for accurate tracking of dividends that may be paid to an external bank account.
 
+> [!IMPORTANT]
+> `pcs` records the dividend in the currency it was actually paid in, which may differ from the security's trading currency. For example, a US-domiciled stock traded in EUR on a European exchange will still pay its dividend in USD. This ensures that multi-currency income is tracked accurately. When fetching data automatically, the currency is taken directly from the provider; when adding a dividend manually via the CLI, the currency can be specified with the `-c` flag or it defaults to the security's declared currency.
+
 ### Commands and Flags
 
 The following is a comprehensive breakdown of each `pcs` command used to record transactions in the ledger.

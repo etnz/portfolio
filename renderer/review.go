@@ -197,8 +197,8 @@ func renderDividendView(w io.Writer, review *portfolio.Review) bool {
 
 	fmt.Fprintf(w, "\n## Dividend View\n\n")
 
-	fmt.Fprintln(w, "| Asset | Dividends | Dividend Return |")
-	fmt.Fprintln(w, "|:---|---:|---:|")
+	fmt.Fprintln(w, "| Asset | Dividends |")
+	fmt.Fprintln(w, "|:---|---:|")
 	hasContent := false
 	for ticker := range end.Securities() {
 		dividends := review.AssetDividends(ticker)
@@ -206,20 +206,17 @@ func renderDividendView(w io.Writer, review *portfolio.Review) bool {
 			continue
 		}
 		hasContent = true
-		divReturn := review.AssetDividendReturn(ticker)
-		fmt.Fprintf(w, "| %s | %s | %s |\n",
+		fmt.Fprintf(w, "| %s | %s |\n",
 			ticker,
 			dividends.SignedString(),
-			divReturn.SignedString(),
 		)
 	}
 	if !hasContent {
 		return false
 	}
-	fmt.Fprintf(w, "| **%s** | **%s** | **%s** |\n",
+	fmt.Fprintf(w, "| **%s** | **%s** |\n",
 		"Total",
 		review.Dividends().SignedString(),
-		review.DividendReturn().SignedString(),
 	)
 	return true
 }

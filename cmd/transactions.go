@@ -104,6 +104,7 @@ type dividendCmd struct {
 	date     string
 	security string
 	amount   decimal.Decimal
+	currency string
 	memo     string
 }
 
@@ -112,13 +113,15 @@ func (*dividendCmd) Synopsis() string { return "record a dividend payment for a 
 func (*dividendCmd) Usage() string {
 	return `pcs dividend -d <date> -s <security> -a <amount> [-m <memo>]
 
-	Records a dividend payment. The amount is credited to the cash account in the security's currency.
+	Records a dividend payment per share. This is an income event and does not affect the portfolio's cash balance.
+	The currency of the dividend can be specified with -c. If omitted, it defaults to the security's currency.
 `
 }
 func (c *dividendCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", portfolio.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.StringVar(&c.security, "s", "", "Security ticker receiving the dividend")
-	f.Var(DecimalVar(&c.amount, "0"), "a", "Total dividend amount received")
+	f.Var(DecimalVar(&c.amount, "0"), "a", "Dividend amount per share")
+	f.StringVar(&c.currency, "c", "", "Currency of the dividend (defaults to security's currency)")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
 }
 func (c *dividendCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -132,7 +135,7 @@ func (c *dividendCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 		return subcommands.ExitUsageError
 	}
 
-	tx := portfolio.NewDividend(day, c.memo, c.security, portfolio.M(c.amount, ""))
+	tx := portfolio.NewDividend(day, c.memo, c.security, portfolio.M(c.amount, c.currency))
 	_, status := handleTransaction(tx)
 	return status
 }
