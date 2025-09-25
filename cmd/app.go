@@ -35,6 +35,7 @@ func Register(c *subcommands.Commander) {
 	c.Register(&splitCmd{}, "transactions")
 
 	c.Register(&fmtCmd{}, "tools")
+	c.Register(&AssistCmd{}, "tools")
 
 	c.Register(&summaryCmd{}, "reports")
 	c.Register(&holdingCmd{}, "reports")
@@ -50,6 +51,7 @@ func Register(c *subcommands.Commander) {
 	c.Register(&reviewCmd{}, "reports")
 
 	c.Register(&topicCmd{}, "documentation")
+
 
 }
 
