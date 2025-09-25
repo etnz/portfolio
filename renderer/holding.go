@@ -27,6 +27,7 @@ func HoldingMarkdown(s *portfolio.Snapshot) string {
 		fmt.Fprintln(w, "| Ticker | Quantity | Price | Market Value |")
 		fmt.Fprintln(w, "|:---|---:|---:|---:|")
 	})
+
 	for ticker := range s.Securities() {
 		pos := s.Position(ticker)
 		if pos.IsZero() {
@@ -48,6 +49,7 @@ func HoldingMarkdown(s *portfolio.Snapshot) string {
 		fmt.Fprintln(w, "| Currency | Balance | Value |")
 		fmt.Fprintln(w, "|:---|---:|---:|")
 	})
+
 	for cur := range s.Currencies() {
 		bal := s.Cash(cur)
 		if bal.IsZero() {

@@ -257,7 +257,7 @@ func assetBounds(sec portfolio.Security, ledger *portfolio.Ledger, inception boo
 	}
 
 	// Determine the to Date.
-	to = portfolio.Today()
+	to = portfolio.Today().Add(-1)
 	// For forex it's always today.
 	// For Asset, it could be the last day the asset was held.
 	// It's an Asset, the current holding could be 0. check it out.

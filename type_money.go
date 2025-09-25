@@ -69,7 +69,11 @@ func cur(A, B Money) string {
 func (m Money) AsFloat() float64 { return m.value.InexactFloat64() }
 
 // SignedString returns the string representation of the money value with a sign.
+// 0 is represented as a ""
 func (m Money) SignedString() string {
+	if m.value.IsZero() {
+		return ""
+	}
 	if m.value.IsPositive() {
 		return "+" + m.String()
 	}

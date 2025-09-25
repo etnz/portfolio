@@ -53,3 +53,19 @@ func ConditionalBlock(w io.Writer, block func(io.Writer) bool) {
 		io.Copy(w, bw)
 	}
 }
+
+// Zeroable defines an interface for types that can be checked for a zero value.
+type Zeroable interface {
+	IsZero() bool
+}
+
+// AllAreZero returns true if all the provided items are zero.
+// It iterates through a variadic slice of items that implement the Zeroable interface.
+func AllAreZero(items ...Zeroable) bool {
+	for _, item := range items {
+		if !item.IsZero() {
+			return false
+		}
+	}
+	return true
+}

@@ -29,10 +29,7 @@ func ReviewMarkdown(review *portfolio.Review, method portfolio.CostBasisMethod) 
 
 	ConditionalBlock(&b, func(w io.Writer) bool { return renderReviewSummary(w, review) })
 	ConditionalBlock(&b, func(w io.Writer) bool { return renderAccountsSection(w, review) })
-	ConditionalBlock(&b, func(w io.Writer) bool { return renderHoldingView(w, review) })
-	ConditionalBlock(&b, func(w io.Writer) bool { return renderPerformanceView(w, review) })
-	ConditionalBlock(&b, func(w io.Writer) bool { return renderDividendView(w, review) })
-	ConditionalBlock(&b, func(w io.Writer) bool { return renderTaxView(w, review, method) })
+	ConditionalBlock(&b, func(w io.Writer) bool { return renderConsolidatedAssetReport(w, review, method) })
 	ConditionalBlock(&b, func(w io.Writer) bool { return renderTransactionsSection(w, review) })
 
 	return b.String()
@@ -74,10 +71,11 @@ func renderReviewSummarylevel(w io.Writer, review *portfolio.Review, level int, 
 	fmt.Fprintln(w, "|---:|---:|")
 	fmt.Fprintf(w, "| %s | %s |\n", "Previous Value", start.TotalPortfolio().String())
 	fmt.Fprintln(w, "| | |")
-	fmt.Fprintf(w, "| %s | %s |\n", "Cash Flow", review.CashFlow().SignedString())
+	fmt.Fprintf(w, "| %s | %s |\n", "Capital Flow", review.CashFlow().SignedString())
 	fmt.Fprintf(w, "| %s | %s |\n", "+ Market Gains", review.MarketGain().SignedString())
 	fmt.Fprintf(w, "| %s | %s |\n", "+ Forex Gains", gain.SignedString())
 	fmt.Fprintf(w, "| **%s** | **%s** |\n", "= Net Change", review.PortfolioChange().String())
+
 	rows := []bool{
 		!review.CashChange().IsZero(),
 		!review.CounterpartyChange().IsZero(),
@@ -97,9 +95,16 @@ func renderReviewSummarylevel(w io.Writer, review *portfolio.Review, level int, 
 		fmt.Fprintf(w, "| %s | %s |\n", "+ Market Value Change", review.TotalMarketChange().SignedString()) // This is tmvChange inside MarketGainLoss
 		fmt.Fprintf(w, "| **%s** | **%s** |\n", "= Net Change", review.PortfolioChange().String())
 	}
-	if !review.Dividends().IsZero() {
+
+	fmt.Fprintln(w, "| | |")
+	fmt.Fprintf(w, "| %s | %s |\n", "Dividends", review.Dividends().SignedString())
+	fmt.Fprintf(w, "| %s | %s |\n", "+ Market Gains", review.MarketGain().SignedString())
+	fmt.Fprintf(w, "| %s | %s |\n", "+ Forex Gains", gain.SignedString())
+
+	totalGains := review.MarketGain().Add(gain).Add(review.Dividends())
+	if !totalGains.IsZero() {
 		fmt.Fprintln(w, "| | |")
-		fmt.Fprintf(w, "| **%s** | **%s** |\n", "Dividends", review.Dividends().SignedString())
+		fmt.Fprintf(w, "| **%s** | **%s** |\n", "=Total Gains", totalGains.SignedString())
 	}
 	return true
 }
@@ -111,8 +116,8 @@ func renderAccountsSection(w io.Writer, review *portfolio.Review) bool {
 	fmt.Fprintln(w, "|  **Cash Accounts** | Value | Forex % |")
 	fmt.Fprintln(w, "|---:|---:|---:|")
 	for cur := range end.Currencies() {
-		// if end.Cash(cur).IsZero() && start.Cash(cur).IsZero() {
-		// 	continue
+		// if AllAreZero(end.Cash(cur), start.Cash(cur)) {
+		//	continue
 		// }
 		var forexReturn string
 		if cur != end.ReportingCurrency() {
@@ -124,7 +129,7 @@ func renderAccountsSection(w io.Writer, review *portfolio.Review) bool {
 	fmt.Fprintln(w, "\n\n| **Counterparty Accounts**  | Value |")
 	fmt.Fprintln(w, "|---:|---:|")
 	for acc := range end.Counterparties() {
-		if end.Counterparty(acc).IsZero() && start.Counterparty(acc).IsZero() {
+		if AllAreZero(end.Counterparty(acc), start.Counterparty(acc)) {
 			continue
 		}
 		fmt.Fprintf(w, "| %s | %s |\n", acc, end.Counterparty(acc).String())
@@ -133,40 +138,8 @@ func renderAccountsSection(w io.Writer, review *portfolio.Review) bool {
 	return true
 }
 
-func renderHoldingView(w io.Writer, review *portfolio.Review) bool {
-	start, end := review.Start(), review.End()
-	fmt.Fprintf(w, "\n## Holding View\n\n")
 
-	fmt.Fprintln(w, "| Asset | Prev. Value | Flow | Gain | End Value |")
-	fmt.Fprintln(w, "|:---|---:|---:|---:|---:|")
-	for ticker := range end.Securities() {
-		startValue := start.MarketValue(ticker)
-		endValue := end.MarketValue(ticker)
-		flow := review.AssetNetTradingFlow(ticker)
-		gain := review.AssetMarketGain(ticker)
-
-		if startValue.IsZero() && endValue.IsZero() && flow.IsZero() && gain.IsZero() {
-			continue
-		}
-		fmt.Fprintf(w, "| %s | %s | %s | %s | %s |\n",
-			ticker,
-			startValue.String(),
-			flow.SignedString(),
-			gain.SignedString(),
-			endValue.String(),
-		)
-	}
-
-	fmt.Fprintf(w, "| **%s** | **%s** | **%s** | **%s** | **%s** |\n",
-		"Total",
-		start.TotalMarket().String(),
-		review.NetTradingFlow().SignedString(),
-		review.MarketGain().SignedString(),
-		end.TotalMarket().String(),
-	)
-	return true
-}
-
+// renderPerformanceView is now unused and can be removed.
 func renderPerformanceView(w io.Writer, review *portfolio.Review) bool {
 	end := review.End()
 	fmt.Fprintf(w, "\n## Performance View\n\n")
@@ -189,82 +162,38 @@ func renderPerformanceView(w io.Writer, review *portfolio.Review) bool {
 	return true
 }
 
-func renderDividendView(w io.Writer, review *portfolio.Review) bool {
-	end := review.End()
-	if review.Dividends().IsZero() {
-		return false
-	}
-
-	fmt.Fprintf(w, "\n## Dividend View\n\n")
-
-	fmt.Fprintln(w, "| Asset | Dividends |")
-	fmt.Fprintln(w, "|:---|---:|")
-	hasContent := false
-	for ticker := range end.Securities() {
-		dividends := review.AssetDividends(ticker)
-		if dividends.IsZero() {
-			continue
-		}
-		hasContent = true
-		fmt.Fprintf(w, "| %s | %s |\n",
-			ticker,
-			dividends.SignedString(),
-		)
-	}
-	if !hasContent {
-		return false
-	}
-	fmt.Fprintf(w, "| **%s** | **%s** |\n",
-		"Total",
-		review.Dividends().SignedString(),
-	)
-	return true
-}
-
+// renderConsolidatedAssetReport generates a single table with a comprehensive view of all assets.
 func renderConsolidatedAssetReport(w io.Writer, review *portfolio.Review, method portfolio.CostBasisMethod) bool {
 	start, end := review.Start(), review.End()
 
-	// Determine if there's any data to show
-	hasContent := false
-	for ticker := range end.Securities() {
-		if !review.Start().MarketValue(ticker).IsZero() ||
-			!review.End().MarketValue(ticker).IsZero() ||
-			!review.AssetNetTradingFlow(ticker).IsZero() ||
-			!review.AssetMarketGain(ticker).IsZero() ||
-			!review.AssetRealizedGains(ticker, method).IsZero() ||
-			!review.AssetDividends(ticker).IsZero() {
-			hasContent = true
-			break
-		}
-	}
-	if !hasContent {
-		return false
-	}
-
-	fmt.Fprintf(w, "\n**Consolidated Asset Report**\n\n")
-	fmt.Fprintln(w, "| Asset | Start Value | End Value | Net Trading Flow | Market G/L | Realized G/L | Dividends |")
-	fmt.Fprintln(w, "|:---|---:|---:|---:|---:|---:|---:|")
+	fmt.Fprintf(w, "\n## Consolidated Asset Report\n\n")
+	fmt.Fprintln(w, "| Asset | Start Value | End Value | Trading Flow | Market Gain | Realized Gain | Unrealized Gain | Dividends |")
+	fmt.Fprintln(w, "|:---|---:|---:|---:|---:|---:|---:|---:|")
 
 	for ticker := range end.Securities() {
+
 		startValue := start.MarketValue(ticker)
 		endValue := end.MarketValue(ticker)
 		tradingFlow := review.AssetNetTradingFlow(ticker)
 		marketGain := review.AssetMarketGain(ticker)
 		realizedGain := review.AssetRealizedGains(ticker, method)
+		unrealizedGain := review.End().UnrealizedGains(ticker, method)
 		dividends := review.AssetDividends(ticker)
 
-		if startValue.IsZero() && endValue.IsZero() && tradingFlow.IsZero() && marketGain.IsZero() && realizedGain.IsZero() && dividends.IsZero() {
+		if AllAreZero(startValue, endValue, tradingFlow, marketGain, realizedGain, unrealizedGain, dividends) {
 			continue
 		}
 
-		fmt.Fprintf(w, "| %s | %s | %s | %s | %s | %s | %s |\n", ticker, startValue.String(), endValue.String(), tradingFlow.SignedString(), marketGain.SignedString(), realizedGain.SignedString(), dividends.SignedString())
+		fmt.Fprintf(w, "| %s | %s | %s | %s | %s | %s | %s | %s |\n", ticker, startValue.String(), endValue.String(), tradingFlow.SignedString(), marketGain.SignedString(), realizedGain.SignedString(), unrealizedGain.SignedString(), dividends.SignedString())
 	}
 
-	fmt.Fprintf(w, "| **Total** | **%s** | **%s** | **%s** | **%s** | **%s** | **%s** |\n", start.TotalMarket().String(), end.TotalMarket().String(), review.NetTradingFlow().SignedString(), review.MarketGain().SignedString(), review.RealizedGains(method).SignedString(), review.Dividends().SignedString())
+	totalUnrealizedGain := review.UnrealizedGains(method)
+	fmt.Fprintf(w, "| **Total** | **%s** | **%s** | **%s** | **%s** | **%s** | **%s** | **%s** |\n", start.TotalMarket().String(), end.TotalMarket().String(), review.NetTradingFlow().SignedString(), review.MarketGain().SignedString(), review.RealizedGains(method).SignedString(), totalUnrealizedGain.SignedString(), review.Dividends().SignedString())
 
 	return true
 }
 
+// renderTaxView is now unused and can be removed.
 func renderTaxView(w io.Writer, review *portfolio.Review, method portfolio.CostBasisMethod) bool {
 	start, end := review.Start(), review.End()
 	_ = start
@@ -278,7 +207,7 @@ func renderTaxView(w io.Writer, review *portfolio.Review, method portfolio.CostB
 		realized := review.AssetRealizedGains(ticker, method)
 		unrealized := end.UnrealizedGains(ticker, method)
 
-		if invested.IsZero() && dividends.IsZero() && realized.IsZero() && unrealized.IsZero() {
+		if AllAreZero(invested, dividends, realized, unrealized) {
 			continue
 		}
 		fmt.Fprintf(w, "| %s | %s | %s | %s | %s |\n",
@@ -307,10 +236,6 @@ func renderTransactionsSection(w io.Writer, review *portfolio.Review) bool {
 	}
 
 	fmt.Fprint(w, "\n## Transactions\n\n")
-	fmt.Fprintln(w, "| Date | Type | Description |")
-	fmt.Fprintln(w, "|:---|:---|:---|")
-	for _, tx := range transactions {
-		fmt.Fprintf(w, "| %s | %s | %s |\n", tx.When(), tx.What(), Transaction(tx))
-	}
+	fmt.Fprint(w, Transactions(transactions))
 	return true
 }

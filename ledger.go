@@ -72,6 +72,7 @@ func (l *Ledger) UpdateIntraday() error {
 	// a provider should be made, that can fetch data, and the UpdateMarketData should be used instead.
 	var newTxs []Transaction
 	var errs error
+	today := Today()
 
 	// Update the EURUSD ticker
 	val, err := tradegateLatestEURperUSD()
@@ -90,13 +91,15 @@ func (l *Ledger) UpdateIntraday() error {
 		var err error
 
 		id := sec.ID()
-		if isin, _, mssiErr := id.MSSI(); mssiErr == nil {
-			latest, err = tradegateLatest(sec.Ticker(), isin)
-		} else if isin, fundErr := id.ISIN(); fundErr == nil {
-			latest, err = tradegateLatest(sec.Ticker(), isin)
-		} else {
-			// Not a public stock/fund, skip.
-			continue
+		if !l.Position(today, sec.Ticker()).IsZero() {
+			if isin, _, mssiErr := id.MSSI(); mssiErr == nil {
+				latest, err = tradegateLatest(sec.Ticker(), isin)
+			} else if isin, fundErr := id.ISIN(); fundErr == nil {
+				latest, err = tradegateLatest(sec.Ticker(), isin)
+			} else {
+				// Not a public stock/fund, skip.
+				continue
+			}
 		}
 
 		if err != nil {
@@ -275,10 +278,12 @@ func (l *Ledger) UpdateMarketData(txs ...Transaction) (MarketDataUpdate, error) 
 			// But for logging reasons we want to know what was really new.
 			// So we split new prices and existing prices into two sets: the merged set, and the really new set.
 			onlyNew, all := mergePrices(nup.Prices, updatePrice.Prices)
-			nup.Prices = all
+
+			// Create a new UpdatePrice transaction with the merged prices
+			mergedTx := NewUpdatePrices(nup.When(), all)
 
 			// Update in place the existing UpdatePrice.
-			l.transactions[index] = nup
+			l.transactions[index] = mergedTx
 			updatedPrices += len(onlyNew)
 		}
 	}
