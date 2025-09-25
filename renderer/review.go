@@ -102,10 +102,7 @@ func renderReviewSummarylevel(w io.Writer, review *portfolio.Review, level int, 
 	fmt.Fprintf(w, "| %s | %s |\n", "+ Forex Gains", gain.SignedString())
 
 	totalGains := review.MarketGain().Add(gain).Add(review.Dividends())
-	if !totalGains.IsZero() {
-		fmt.Fprintln(w, "| | |")
-		fmt.Fprintf(w, "| **%s** | **%s** |\n", "=Total Gains", totalGains.SignedString())
-	}
+	fmt.Fprintf(w, "| **%s** | **%s** |\n", "=Total Gains", totalGains.SignedString())
 	return true
 }
 
@@ -137,7 +134,6 @@ func renderAccountsSection(w io.Writer, review *portfolio.Review) bool {
 
 	return true
 }
-
 
 // renderPerformanceView is now unused and can be removed.
 func renderPerformanceView(w io.Writer, review *portfolio.Review) bool {
