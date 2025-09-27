@@ -143,7 +143,7 @@ func Fetch(key string, ledger *portfolio.Ledger, inception bool, options FetchOp
 			return nil, nil, err
 		}
 
-		if !to.After(from) {
+		if from.After(to) { // from <= to
 			// empty range, skip it
 			continue
 		}

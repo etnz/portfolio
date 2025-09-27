@@ -39,7 +39,7 @@ func Fetch(ledger *portfolio.Ledger, inception bool) ([]portfolio.Transaction, e
 		}
 		to = portfolio.Today()
 
-		if !to.After(from) {
+		if from.After(to) {
 			continue
 		}
 
@@ -71,9 +71,21 @@ func getSeries(idBank string, from, to portfolio.Date) (*Series, error) {
 	)
 	log.Println("Downloading from INSEE:", url)
 
-	resp, err := http.Get(url)
+	var resp *http.Response
+	var err error
+	const retries = 3
+	for i := 1; i <= retries; i++ {
+		var e error
+		resp, e = http.Get(url)
+		if e != nil {
+			log.Println("Error downloading from INSEE Retrying.", i)
+			err = errors.Join(err, e)
+			continue
+		}
+		break
+	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to download from INSEE for ID %s: %w", idBank, err)
+		return nil, fmt.Errorf("failed to download from INSEE for ID %s after %d retries: %w", idBank, retries, err)
 	}
 	defer resp.Body.Close()
 
