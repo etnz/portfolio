@@ -4,9 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/etnz/portfolio/agent"
 	"github.com/google/subcommands"
+	"google.golang.org/genai"
 )
 
 // AssistCmd is the subcommand for the AI assistant.
@@ -30,15 +33,31 @@ func (*AssistCmd) SetFlags(_ *flag.FlagSet) {}
 
 // Execute executes the command.
 func (c *AssistCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
-	ledger, err := DecodeLedger()
+	var err error
+	initialPrompt := ""
+	if f.NArg() > 0 {
+		initialPrompt = strings.Join(f.Args(), " ")
+
+	}
+
+	// ledger, err := DecodeLedger()
+	// if err != nil {
+	// 	fmt.Println("Error loading ledger:", err)
+	// 	return subcommands.ExitFailure
+	// }
+
+	client, err := genai.NewClient(ctx, nil)
 	if err != nil {
-		fmt.Println("Error loading ledger:", err)
+		fmt.Fprintln(os.Stderr, "Error initializing Gemini's client:", err)
 		return subcommands.ExitFailure
 	}
 
-	ag := agent.New(ledger)
-	if err := ag.Run(ctx); err != nil {
-		fmt.Println("Agent failed:", err)
+	trader := agent.NewTrader()
+	accountant := agent.NewAccountant()
+	a := agent.New(os.Stdout, os.Stdin, trader, accountant)
+
+	if err := a.Run(ctx, client, initialPrompt); err != nil {
+		fmt.Fprintln(os.Stderr, "Agent failed:", err)
 		return subcommands.ExitFailure
 	}
 
