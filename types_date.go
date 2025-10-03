@@ -118,6 +118,9 @@ func (d Date) StartOf(period Period) Date {
 	}
 }
 
+// Range returns the date range for a given period relative to the date.
+func (d Date) Range(period Period) Range { return period.Range(d) }
+
 // EndOf returns the date of end of a given period
 func (d Date) EndOf(period Period) Date {
 	switch period {

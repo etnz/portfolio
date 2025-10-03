@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/renderer"
@@ -48,54 +49,18 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	}
 
 	if c.update {
-		// err := as.MarketData.UpdateIntraday()
-		// if err != nil {
-		// 	fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
-		// 	return subcommands.ExitFailure
-		// }
-	}
-
-	// Helper to create a review for a period and calculate TWR
-	calculateTWR := func(period portfolio.Range) (portfolio.Percent, error) {
-		review, err := ledger.NewReview(period)
+		err := ledger.UpdateIntraday()
 		if err != nil {
-			return 0, err
+			fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
+			return subcommands.ExitFailure
 		}
-		// TWR for the whole portfolio is calculated on a virtual asset with an empty ticker.
-		return review.TimeWeightedReturn(), nil
 	}
 
-	inceptionDate := ledger.GlobalInceptionDate()
+	var b strings.Builder
 
-	// Calculate TWR for all periods
-	daily, errD := calculateTWR(portfolio.Daily.Range(on))
-	wtd, errW := calculateTWR(portfolio.Weekly.Range(on))
-	mtd, errM := calculateTWR(portfolio.Monthly.Range(on))
-	qtd, errQ := calculateTWR(portfolio.Quarterly.Range(on))
-	ytd, errY := calculateTWR(portfolio.Yearly.Range(on))
-	inception, errI := calculateTWR(portfolio.NewRange(inceptionDate.Add(1), on))
+	renderer.RenderMultiPeriodSummary(&b, on, ledger.Journal())
 
-	if errD != nil || errW != nil || errM != nil || errQ != nil || errY != nil || errI != nil {
-		// Handle or log errors as needed
-		fmt.Fprintln(os.Stderr, "Error calculating performance metrics.")
-		return subcommands.ExitFailure
-	}
-
-	endSnapshot := ledger.NewSnapshot(on)
-
-	summaryData := &renderer.SummaryData{
-		Date:             on,
-		TotalMarketValue: endSnapshot.TotalPortfolio(),
-		Daily:            daily,
-		WTD:              wtd,
-		MTD:              mtd,
-		QTD:              qtd,
-		YTD:              ytd,
-		Inception:        inception,
-	}
-
-	md := renderer.SummaryMarkdown(summaryData)
-	printMarkdown(md)
+	printMarkdown(b.String())
 
 	return subcommands.ExitSuccess
 }

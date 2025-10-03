@@ -52,10 +52,15 @@ pcs daily -d 2025-01-03
   ---------------------------|----------------
               Previous Value |     €11,820.00 
                              |                
-                   Cash Flow |          €0.00 
+                Capital Flow |                
               + Market Gains |        +€45.50 
-               + Forex Gains |          €0.00 
+               + Forex Gains |                
             **= Net Change** |     **€45.50** 
+                             |                
+                   Dividends |                
+              + Market Gains |        +€45.50 
+               + Forex Gains |                
+            **=Total Gains** |    **+€45.50** 
 
   ## Performance View
 
@@ -103,15 +108,20 @@ pcs daily -d 2025-01-03
   ---------------------------|----------------
               Previous Value |     €11,818.18 
                              |                
-                   Cash Flow |       +€500.00 
+                Capital Flow |       +€500.00 
               + Market Gains |        -€45.45 
-               + Forex Gains |          €0.00 
+               + Forex Gains |                
             **= Net Change** |    **€454.54** 
                              |                
                  Cash Change |       +€500.00 
-     + Counterparties Change |          €0.00 
+     + Counterparties Change |                
        + Market Value Change |        -€45.45 
             **= Net Change** |    **€454.54** 
+                             |                
+                   Dividends |                
+              + Market Gains |        -€45.45 
+               + Forex Gains |                
+            **=Total Gains** |    **-€45.45** 
 
   ## Performance View
 

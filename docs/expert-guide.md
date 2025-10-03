@@ -609,12 +609,12 @@ Records dividend income per share for a security, which contributes to total ret
     Successfully appended transaction to transactions.jsonl
     Successfully appended transaction to transactions.jsonl
     
-      
+    
       • 2025-01-01: init
       •           : Declare "JNJ" as "US4781601046.XNYS" in USD
       •           : Deposit $10,000.00
       • 2025-01-10: Buy 50 of "JNJ" for $8,000.00
-      • 2025-03-15: Receive dividend of 1.19 per share for "JNJ"
+      • 2025-03-15: Receive dividend of $1.19 per share for "JNJ"
     ```
 
 2.  **Annual ETF distribution**:
@@ -633,12 +633,12 @@ Records dividend income per share for a security, which contributes to total ret
     Successfully appended transaction to transactions.jsonl
     Successfully appended transaction to transactions.jsonl
     
-      
+    
       • 2025-01-01: init
       •           : Declare "VTSAX" as "US9229087286.XNAS" in USD
       •           : Deposit $20,000.00
       • 2025-03-01: Buy 100 of "VTSAX" for $11,000.00
-      • 2025-12-20: Receive dividend of 2.50 per share for "VTSAX"
+      • 2025-12-20: Receive dividend of $2.50 per share for "VTSAX"
     ```
 
 3.  **Special one-time dividend**:
@@ -657,12 +657,12 @@ Records dividend income per share for a security, which contributes to total ret
     Successfully appended transaction to transactions.jsonl
     Successfully appended transaction to transactions.jsonl
     
-      
+    
       • 2025-01-01: init
       •           : Declare "MSFT" as "US5949181045.XNAS" in USD
       •           : Deposit $50,000.00
       • 2025-02-01: Buy 100 of "MSFT" for $40,000.00
-      • 2025-06-05: Receive dividend of 3.00 per share for "MSFT"
+      • 2025-06-05: Receive dividend of $3.00 per share for "MSFT"
     ```
 
 4.  **Dividend from a foreign stock (in its local currency)**:
@@ -681,12 +681,12 @@ Records dividend income per share for a security, which contributes to total ret
     Successfully appended transaction to transactions.jsonl
     Successfully appended transaction to transactions.jsonl
     
-      
+    
       • 2025-01-01: init
       •           : Declare "BNS.TO" as "CA0641491075.XTSE" in CAD
       •           : Deposit $10,000.00
       • 2025-04-01: Buy 100 of "BNS.TO" for $6,500.00
-      • 2025-09-25: Receive dividend of 1.03 per share for "BNS.TO"
+      • 2025-09-25: Receive dividend of $1.03 per share for "BNS.TO"
     ```
 
 5.  **Simulating a dividend reinvestment plan (DRIP)**:
@@ -709,12 +709,12 @@ Records dividend income per share for a security, which contributes to total ret
     Successfully appended transaction to transactions.jsonl
     Successfully appended transaction to transactions.jsonl
     
-      
+    
       • 2025-01-01: init
       •           : Declare "KO" as "US1912161007.XNYS" in USD
       •           : Deposit $10,000.00
       • 2025-01-15: Buy 198.369 of "KO" for $10,000.00
-      • 2025-04-10: Receive dividend of 0.46 per share for "KO"
+      • 2025-04-10: Receive dividend of $0.46 per share for "KO"
       •           : Deposit $91.25
       •           : Buy 1.5625 of "KO" for $91.25
     ```

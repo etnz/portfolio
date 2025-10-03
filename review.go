@@ -260,3 +260,11 @@ func (r *Review) TotalCostBasis(method CostBasisMethod) Money {
 	}
 	return total
 }
+
+// NewReview creates a new portfolio review for a given period.
+func NewReview(journal *Journal, period Range) (*Review, error) {
+	return &Review{
+		start: &Snapshot{journal: journal, on: period.From.Add(-1)},
+		end:   &Snapshot{journal: journal, on: period.To},
+	}, nil
+}

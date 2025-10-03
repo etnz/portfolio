@@ -51,22 +51,27 @@ pcs gains --period month -d 2025-03-31
   ---------------------------|----------------
               Previous Value |     €14,545.45 
                              |                
-                   Cash Flow |          €0.00 
+                Capital Flow |                
               + Market Gains |       +€454.54 
-               + Forex Gains |          €0.00 
+               + Forex Gains |                
             **= Net Change** |    **€454.54** 
                              |                
                  Cash Change |     +€2,045.45 
-     + Counterparties Change |          €0.00 
+     + Counterparties Change |                
        + Market Value Change |     -€1,590.90 
             **= Net Change** |    **€454.54** 
+                             |                
+                   Dividends |                
+              + Market Gains |       +€454.54 
+               + Forex Gains |                
+            **=Total Gains** |   **+€454.54** 
 
   ## Tax View
 
    Asset     | Cost Basis (average) | Dividends |     Realized |   Unrealized 
   -----------|----------------------|-----------|--------------|--------------
-   MSFT      |            $2,000.00 |      0.00 |     +$250.00 |     +$250.00 
-   **Total** |        **€1,818.18** | **€0.00** | **+€227.27** | **+€227.27**
+   MSFT      |            $2,000.00 |           |     +$250.00 |     +$250.00 
+   **Total** |        **€1,818.18** |     ** ** | **+€227.27** | **+€227.27**
 ```
 
 ### Impact of a Sale on Unrealized Gains
@@ -106,22 +111,27 @@ pcs gains --period month -d 2025-03-31
   ---------------------------|----------------
               Previous Value |     €11,999.99 
                              |                
-                   Cash Flow |          €0.00 
+                Capital Flow |                
               + Market Gains |        -€90.90 
-               + Forex Gains |          €0.00 
+               + Forex Gains |                
             **= Net Change** |    **-€90.90** 
                              |                
                  Cash Change |       +€999.99 
-     + Counterparties Change |          €0.00 
+     + Counterparties Change |                
        + Market Value Change |     -€1,090.90 
             **= Net Change** |    **-€90.90** 
+                             |                
+                   Dividends |                
+              + Market Gains |        -€90.90 
+               + Forex Gains |                
+            **=Total Gains** |    **-€90.90** 
 
   ## Tax View
 
    Asset     | Cost Basis (average) | Dividends |    Realized | Unrealized 
   -----------|----------------------|-----------|-------------|------------
-   GOOG      |                $0.00 |      0.00 |    +$100.00 |      $0.00 
-   **Total** |            **€0.00** | **€0.00** | **+€90.90** |  **€0.00**
+   GOOG      |                $0.00 |           |    +$100.00 |            
+   **Total** |            **€0.00** |     ** ** | **+€90.90** |      ** **
 ```
 
 **Explanation:**

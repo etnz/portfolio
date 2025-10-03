@@ -159,15 +159,20 @@ pcs review -d 2025-08-27
   ---------------------------|----------------
               Previous Value |          €0.00 
                              |                
-                   Cash Flow |    +€10,000.00 
+                Capital Flow |    +€10,000.00 
               + Market Gains |       +€355.00 
-               + Forex Gains |          €0.00 
+               + Forex Gains |                
             **= Net Change** | **€10,355.00** 
                              |                
                  Cash Change |     +€7,300.00 
-     + Counterparties Change |          €0.00 
+     + Counterparties Change |                
        + Market Value Change |     +€3,055.00 
             **= Net Change** | **€10,355.00** 
+                             |                
+                   Dividends |                
+              + Market Gains |       +€355.00 
+               + Forex Gains |                
+            **=Total Gains** |   **+€355.00** 
 
   ## Accounts
 
@@ -178,41 +183,23 @@ pcs review -d 2025-08-27
    **Counterparty Accounts** | Value 
   ---------------------------|-------
 
-  ## Holding View
+  ## Consolidated Asset Report
 
-   Asset     | Prev. Value |           Flow |         Gain |     End Value 
-  -----------|-------------|----------------|--------------|---------------
-   AAPL      |        0.00 |     +€1,500.00 |     +€432.00 |     €1,932.00 
-   BankFund1 |        0.00 |     +€1,200.00 |      -€77.00 |     €1,123.00 
-   **Total** |   **€0.00** | **+€2,700.00** | **+€355.00** | **€3,055.00** 
-
-  ## Performance View
-
-   Asset     |         Value |         Gain |       TWR 
-  -----------|---------------|--------------|-----------
-   AAPL      |     €1,932.00 |     +€432.00 |    +0.00% 
-   BankFund1 |     €1,123.00 |      -€77.00 |    -0.00% 
-   **Total** | **€3,055.00** | **+€355.00** | **+NaN%** 
-
-  ## Tax View
-
-   Asset     | Cost Basis (fifo) | Dividends |  Realized |   Unrealized 
-  -----------|-------------------|-----------|-----------|--------------
-   AAPL      |         €1,500.00 |      0.00 |      0.00 |     +€432.00 
-   BankFund1 |         €1,200.00 |      0.00 |      0.00 |      -€77.00 
-   **Total** |     **€2,700.00** | **€0.00** | **€0.00** | **+€355.00** 
+   Asset     | Start Value |     End Value |   Trading Flow |  Market Gain | Realized Gain | Unrealized Gain | Dividends 
+  -----------|-------------|---------------|----------------|--------------|---------------|-----------------|-----------
+   AAPL      |        0.00 |     €1,932.00 |     +€1,500.00 |     +€432.00 |               |        +€432.00 |           
+   BankFund1 |        0.00 |     €1,123.00 |     +€1,200.00 |      -€77.00 |               |         -€77.00 |           
+   **Total** |   **€0.00** | **€3,055.00** | **+€2,700.00** | **+€355.00** |         ** ** |    **+€355.00** |     ** ** 
 
   ## Transactions
 
-   Date       | Type         | Description                                   
-  ------------|--------------|-----------------------------------------------
-   2025-08-27 | declare      | Declare "AAPL" as "US0378331005.XETR" in EUR  
-   2025-08-27 | declare      | Declare "BankFund1" as "My-bank-Fund1" in EUR 
-   2025-08-27 | update-price | Update price for "AAPL"=193.2000              
-   2025-08-27 | update-price | Update price for "BankFund1"=11.2300          
-   2025-08-27 | deposit      | Deposit €10,000.00                            
-   2025-08-27 | buy          | Buy 10 of "AAPL" for €1,500.00                
-   2025-08-27 | buy          | Buy 100 of "BankFund1" for €1,200.00
+  • 2025-08-27: Declare "AAPL" as "US0378331005.XETR" in EUR
+  •           : Declare "BankFund1" as "My-bank-Fund1" in EUR
+  •           : Update price for "AAPL"=193.2000
+  •           : Update price for "BankFund1"=11.2300
+  •           : Deposit €10,000.00
+  •           : Buy 10 of "AAPL" for €1,500.00
+  •           : Buy 100 of "BankFund1" for €1,200.00
 ```
 
 
