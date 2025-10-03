@@ -183,7 +183,7 @@ func renderConsolidatedAssetReport(w io.Writer, review *portfolio.Review, method
 		fmt.Fprintf(w, "| %s | %s | %s | %s | %s | %s | %s | %s |\n", ticker, startValue.String(), endValue.String(), tradingFlow.SignedString(), marketGain.SignedString(), realizedGain.SignedString(), unrealizedGain.SignedString(), dividends.SignedString())
 	}
 
-	totalUnrealizedGain := review.UnrealizedGains(method)
+	totalUnrealizedGain := end.TotalUnrealizedGains(method)
 	fmt.Fprintf(w, "| **Total** | **%s** | **%s** | **%s** | **%s** | **%s** | **%s** | **%s** |\n", start.TotalMarket().String(), end.TotalMarket().String(), review.NetTradingFlow().SignedString(), review.MarketGain().SignedString(), review.RealizedGains(method).SignedString(), totalUnrealizedGain.SignedString(), review.Dividends().SignedString())
 
 	return true
