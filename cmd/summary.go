@@ -46,7 +46,7 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 
 	ledger, err := DecodeLedger(c.ledgerFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error decoding ledger: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error decoding ledger %q: %v\n", c.ledgerFile, err)
 		return subcommands.ExitFailure
 	}
 

@@ -24,7 +24,7 @@ type gainsCmd struct {
 func (*gainsCmd) Name() string     { return "gains" }
 func (*gainsCmd) Synopsis() string { return "realized and unrealized gain analysis" }
 func (*gainsCmd) Usage() string {
-	return `pcs gains [-period <period>] [-s <date>] [-d <date>] [-c <currency>] [-method <method>] [-u]
+	return `pcs gains [-period <period>] [-s <date>] [-d <date>] [-l <ledger>] [-method <method>]
 
   Calculates and displays realized and unrealized gains for each security.
 `

@@ -35,7 +35,7 @@ $ pcs fmt
 }
 
 func (p *fmtCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&p.ledgerFile, "l", "", "Ledger to format (can be a glob pattern). Formats all by default.")
+	f.StringVar(&p.ledgerFile, "l", "", "Ledger to format. Formats all by default.")
 }
 
 func (p *fmtCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {

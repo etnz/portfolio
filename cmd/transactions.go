@@ -27,7 +27,7 @@ func (*buyCmd) Name() string     { return "buy" }
 func (*buyCmd) Synopsis() string { return "record the purchase of a security" }
 func (*buyCmd) Usage() string {
 	return `pcs buy -d <date> -s <security> -q <quantity> -a <amount> [-m <memo>]
-
+	
 	Purchases shares of a security. The total cost is debited from the cash account in the security's currency.
 `
 }
@@ -73,7 +73,7 @@ func (*sellCmd) Name() string     { return "sell" }
 func (*sellCmd) Synopsis() string { return "record the sale of a security" }
 func (*sellCmd) Usage() string {
 	return `pcs sell -d <date> -s <security> -a <amount> [-q <quantity>] [-m <memo>]
-
+	
 	Sells shares of a security. The proceeds are credited to the cash account in the security's currency.
 	If -q is not specified, all shares of the security are sold.
 `
@@ -117,7 +117,7 @@ func (*dividendCmd) Name() string     { return "dividend" }
 func (*dividendCmd) Synopsis() string { return "record a dividend payment for a security" }
 func (*dividendCmd) Usage() string {
 	return `pcs dividend -d <date> -s <security> -a <amount> [-m <memo>]
-
+	
 	Records a dividend payment per share. This is an income event and does not affect the portfolio's cash balance.
 	The currency of the dividend can be specified with -c. If omitted, it defaults to the security's currency.
 `
@@ -162,7 +162,7 @@ func (*depositCmd) Name() string     { return "deposit" }
 func (*depositCmd) Synopsis() string { return "record a cash deposit into the portfolio" }
 func (*depositCmd) Usage() string {
 	return `pcs deposit -d <date> -a <amount> -c <currency> [-m <memo>] [-settles <account>]
-
+	
 	Records a cash deposit into the portfolio's cash account.
 `
 }
@@ -206,7 +206,7 @@ func (*withdrawCmd) Name() string     { return "withdraw" }
 func (*withdrawCmd) Synopsis() string { return "record a cash withdrawal from the portfolio" }
 func (*withdrawCmd) Usage() string {
 	return `pcs withdraw -d <date> -a <amount> -c <currency> [-m <memo>] [-settles <account>]
-
+	
 	Records a cash withdrawal from the portfolio's cash account.
 `
 }
@@ -254,7 +254,7 @@ func (*convertCmd) Synopsis() string {
 }
 func (*convertCmd) Usage() string {
 	return `pcs convert -d <date> -fc <currency> -fa <amount> -tc <currency> -ta <amount> [-m <memo>]
-
+	
 	Records an internal cash conversion between two currency accounts.
 	This does not represent a net portfolio deposit or withdrawal.
 `
@@ -303,7 +303,7 @@ func (*accrueCmd) Name() string     { return "accrue" }
 func (*accrueCmd) Synopsis() string { return "record a non-cash transaction with a counterparty" }
 func (*accrueCmd) Usage() string {
 	return `pcs accrue -d <date> (-payable <account> | -receivable <account>) -a <amount> -c <currency> [-m <memo>]
-
+	
 	Records a non-cash transaction with a counterparty, such as a loan or rent.
 `
 }
@@ -374,7 +374,7 @@ func (*priceCmd) Name() string     { return "price" }
 func (*priceCmd) Synopsis() string { return "records a price for a security on a specific date" }
 func (*priceCmd) Usage() string {
 	return `pcs price -s <ticker> -d <date> -p <price>
-
+	
 Records the price of a security on a given date in the ledger.
 This is an alternative to storing prices in the market.jsonl file.
 `
@@ -422,7 +422,7 @@ func (*splitCmd) Name() string     { return "split" }
 func (*splitCmd) Synopsis() string { return "records a stock split for a security" }
 func (*splitCmd) Usage() string {
 	return `pcs split -s <ticker> -d <date> -num <numerator> -den <denominator>
-
+	
 Records a stock split for a security in the ledger.
 For a 2-for-1 split, use -num 2 -den 1.
 For a 1-for-5 reverse split, use -num 1 -den 5.
@@ -474,7 +474,7 @@ func (*initCmd) Synopsis() string {
 }
 func (*initCmd) Usage() string {
 	return `pcs init -c <currency> [-d <date>] [-m <memo>]
-
+	
 Initializes the ledger. This command should be run first. It sets the
 ledger's reporting currency and its inception date. If run on an existing
 ledger, it will update or create the existing 'init' transaction.

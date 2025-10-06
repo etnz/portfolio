@@ -28,7 +28,7 @@ To allow your external commands to seamlessly integrate with the user's setup, `
 
 The following environment variables are set:
 
-* `PCS_LEDGER_FILE`: The absolute path to the `transactions.jsonl` file currently in use.
+* `PORTFOLIO_PATH`: The absolute path to the portfolio directory currently in use. This directory can contain multiple ledger files (`.jsonl`).
 * `PCS_DEFAULT_CURRENCY`: The default currency (e.g., "EUR") set by the user.
 
 By reading these variables, your extension can operate on the same data as the core `pcs` tool without needing the user to specify file paths or API keys again.

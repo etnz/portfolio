@@ -28,7 +28,7 @@ Fetches market data from data.insee.fr.
 }
 
 func (c *inseeFetchCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.ledgerFile, "l", "", "ledger name to update. update all ledgers by default.")
+	f.StringVar(&c.ledgerFile, "l", "", "Ledger name to update. Updates all ledgers by default.")
 	f.BoolVar(&c.inception, "inception", false, "ignore existing prices in ledger, and fetch all from inception date")
 }
 

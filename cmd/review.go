@@ -30,7 +30,7 @@ func (*reviewCmd) Name() string { return "review" }
 
 func (*reviewCmd) Synopsis() string { return "review a portfolio performance" }
 func (*reviewCmd) Usage() string {
-	return `pcs review [-period <p>| -start <date>] [-d <date>] [-l <ledger>]
+	return `pcs review [-p <period>| -start <date>] [-d <date>] [-l <ledger>]
 	
   Review the portfolio for a given period.
 `

@@ -45,7 +45,7 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 
 	ledger, err := DecodeLedger(c.ledgerFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading ledger: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error loading ledger %q: %v\n", c.ledgerFile, err)
 		return subcommands.ExitFailure
 	}
 

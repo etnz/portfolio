@@ -47,7 +47,7 @@ func (*eodhdFetchCmd) Usage() string {
 `
 }
 func (c *eodhdFetchCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.ledgerFile, "l", "", "ledger name to update. update all ledgers by default.")
+	f.StringVar(&c.ledgerFile, "l", "", "Ledger name to update. Updates all ledgers by default.")
 	f.StringVar(&c.eodhdApiFlag, "eodhd-api-key", "", "EODHD API key to use for consuming EODHD.com API. This flag takes precedence over the "+eodhd_api_key+" environment variable. You can get one at https://eodhd.com/")
 	f.BoolVar(&c.inception, "inception", false, "ignore existing prices in ledger, and fetch all from inception date")
 	f.Var(&c.tickers, "s", "security ticker to update (can be specified multiple times). If empty, all are updated.")

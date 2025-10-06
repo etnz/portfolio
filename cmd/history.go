@@ -23,7 +23,7 @@ type historyCmd struct {
 func (*historyCmd) Name() string     { return "history" }
 func (*historyCmd) Synopsis() string { return "display asset value history" }
 func (*historyCmd) Usage() string {
-	return `pcs history -s <security> | -c <currency> [-l <ledger>]\n\n  Displays the value of a single asset or cash account over time.\n`
+	return `pcs history -s <security> | -c <currency> [-l <ledger>]\n\n  Displays the value of a single asset or cash account over time.`
 }
 
 func (c *historyCmd) SetFlags(f *flag.FlagSet) {

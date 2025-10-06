@@ -26,7 +26,7 @@ func (*logCmd) Synopsis() string {
 }
 func (*logCmd) Usage() string {
 	return `pcs log [-p <period> | -s <start_date>] [-d <end_date>] [-method <method>] [-l <ledger>]
-
+  
   Generates a detailed, stateful log of all portfolio activities within a
   given date range, showing the impact of each transaction. The log is
   punctuated by periodic performance summaries.

@@ -21,7 +21,7 @@ type dailyCmd struct {
 func (*dailyCmd) Name() string     { return "daily" }
 func (*dailyCmd) Synopsis() string { return "display a daily portfolio performance report" }
 func (*dailyCmd) Usage() string {
-	return `pcs daily [-d <date>] [-c <currency>] [-u] [-w n] 
+	return `pcs daily [-d <date>] [-l <ledger>] [-method <method>] [-w n] 
 
   Displays a summary of the portfolio for a single day.
 `
@@ -31,6 +31,7 @@ func (c *dailyCmd) SetFlags(f *flag.FlagSet) {
 	c.review.period = "day"
 	f.StringVar(&c.review.date, "d", "", "Date for the report (defaults to today)")
 	f.StringVar(&c.review.method, "method", "fifo", "Cost basis method (average, fifo)")
+	f.StringVar(&c.review.ledgerFile, "l", "", "Ledger to report on. Defaults to the only ledger if one exists.")
 	f.IntVar(&c.watch, "w", 0, "run every n seconds")
 }
 
