@@ -2,10 +2,8 @@
 package cmd
 
 import (
-	"errors"
 	"flag"
 	"fmt"
-	"io/fs"
 	"log"
 	"os"
 
@@ -81,22 +79,9 @@ func PortfolioPath() string {
 
 // DecodeLedger decodes the ledger from the application's default ledger file.
 // If the file does not exist, it returns a new empty ledger.
-func DecodeLedger() (*portfolio.Ledger, error) {
-	f, err := os.Open(*ledgerFile)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			// If the file doesn't exist, it's an empty ledger.
-			return portfolio.NewLedger(), nil
-		}
-		return nil, fmt.Errorf("could not open ledger file %q: %w", *ledgerFile, err)
-	}
-	defer f.Close()
-
-	ledger, err := portfolio.DecodeLedger(f)
-	if err != nil {
-		return nil, fmt.Errorf("could not decode ledger file %q: %w", *ledgerFile, err)
-	}
-	return ledger, nil
+func DecodeLedger(query string) (*portfolio.Ledger, error) {
+	path := PortfolioPath()
+	return portfolio.FindLedger(path, query)
 }
 
 // DecodeLedgers decodes all ledgers from the portfolio path.
@@ -107,28 +92,21 @@ func DecodeLedgers(query string) ([]*portfolio.Ledger, error) {
 
 // EncodeTransaction validates a transaction against the market data and existing
 // ledger, then appends it to the ledger file.
-func EncodeTransaction(tx portfolio.Transaction) (portfolio.Transaction, error) {
-	ledger, err := DecodeLedger()
-	if err != nil {
-		return nil, fmt.Errorf("could not load ledger: %w", err)
-	}
-
-	tx, err = ledger.Validate(tx)
+func EncodeTransaction(ledger *portfolio.Ledger, tx portfolio.Transaction) (portfolio.Transaction, error) {
+	validatedTx, err := ledger.Validate(tx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Open the file in append mode, creating it if it doesn't exist.
-	f, err := os.OpenFile(*ledgerFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return nil, fmt.Errorf("error opening portfolio file %q: %w", *ledgerFile, err)
+	if err := ledger.Append(validatedTx); err != nil {
+		return nil, fmt.Errorf("could not append transaction: %w", err)
 	}
-	defer f.Close()
 
-	if err := portfolio.EncodeTransaction(f, tx); err != nil {
-		return nil, fmt.Errorf("error writing to portfolio file %q: %w", *ledgerFile, err)
+	if err := portfolio.SaveLedger(PortfolioPath(), ledger); err != nil {
+		return nil, fmt.Errorf("could not save ledger: %w", err)
 	}
-	return tx, nil
+
+	return validatedTx, nil
 }
 
 // printMarkdown renders a markdown string to stdout with appropriate styling.

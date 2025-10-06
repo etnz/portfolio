@@ -15,19 +15,21 @@ import (
 
 // historyCmd holds the flags for the 'history' subcommand.
 type historyCmd struct {
-	security string
-	currency string
+	security   string
+	currency   string
+	ledgerFile string
 }
 
 func (*historyCmd) Name() string     { return "history" }
 func (*historyCmd) Synopsis() string { return "display asset value history" }
 func (*historyCmd) Usage() string {
-	return `pcs history -s <security> | -c <currency>\n\n  Displays the value of a single asset or cash account over time.\n`
+	return `pcs history -s <security> | -c <currency> [-l <ledger>]\n\n  Displays the value of a single asset or cash account over time.\n`
 }
 
 func (c *historyCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.security, "s", "", "security ticker to report on")
 	f.StringVar(&c.currency, "c", "", "currency of cash account to report on")
+	f.StringVar(&c.ledgerFile, "l", "", "Ledger to report on. Defaults to the only ledger if one exists.")
 }
 
 func (c *historyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -36,7 +38,7 @@ func (c *historyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitUsageError
 	}
 
-	ledger, err := DecodeLedger()
+	ledger, err := DecodeLedger(c.ledgerFile)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			fmt.Fprintln(os.Stderr, "Ledger file not found. Nothing to report.")

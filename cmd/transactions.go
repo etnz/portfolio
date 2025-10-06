@@ -20,6 +20,7 @@ type buyCmd struct {
 	quantity decimal.Decimal
 	amount   decimal.Decimal
 	memo     string
+	ledger   string
 }
 
 func (*buyCmd) Name() string     { return "buy" }
@@ -37,6 +38,7 @@ func (c *buyCmd) SetFlags(f *flag.FlagSet) {
 	f.Var(DecimalVar(&c.quantity, "0"), "q", "Number of shares")
 	f.Var(DecimalVar(&c.amount, "0"), "a", "Total amount paid for the shares")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
+	f.StringVar(&c.ledger, "l", "", "Ledger to add the transaction to.")
 }
 
 func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -51,7 +53,7 @@ func (c *buyCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) s
 	}
 
 	tx := portfolio.NewBuy(day, c.memo, c.security, portfolio.Q(c.quantity), portfolio.M(c.amount, ""))
-	_, status := handleTransaction(tx)
+	_, status := handleTransaction(c.ledger, tx)
 	return status
 }
 
@@ -64,6 +66,7 @@ type sellCmd struct {
 	quantity portfolio.Quantity
 	amount   decimal.Decimal
 	memo     string
+	ledger   string
 }
 
 func (*sellCmd) Name() string     { return "sell" }
@@ -81,6 +84,7 @@ func (c *sellCmd) SetFlags(f *flag.FlagSet) {
 	f.Var(QuantityVar(&c.quantity, "0"), "q", "Number of shares, if missing all shares are sold")
 	f.Var(DecimalVar(&c.amount, "0"), "a", "Total amount received for the shares")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
+	f.StringVar(&c.ledger, "l", "", "Ledger to add the transaction to.")
 }
 func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if c.security == "" || c.amount.IsZero() {
@@ -93,7 +97,7 @@ func (c *sellCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return subcommands.ExitUsageError
 	}
 	tx := portfolio.NewSell(day, c.memo, c.security, c.quantity, portfolio.M(c.amount, ""))
-	_, status := handleTransaction(tx)
+	_, status := handleTransaction(c.ledger, tx)
 	return status
 }
 
@@ -106,6 +110,7 @@ type dividendCmd struct {
 	amount   decimal.Decimal
 	currency string
 	memo     string
+	ledger   string
 }
 
 func (*dividendCmd) Name() string     { return "dividend" }
@@ -123,6 +128,7 @@ func (c *dividendCmd) SetFlags(f *flag.FlagSet) {
 	f.Var(DecimalVar(&c.amount, "0"), "a", "Dividend amount per share")
 	f.StringVar(&c.currency, "c", "", "Currency of the dividend (defaults to security's currency)")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
+	f.StringVar(&c.ledger, "l", "", "Ledger to add the transaction to.")
 }
 func (c *dividendCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if c.security == "" || c.amount.IsZero() {
@@ -136,7 +142,7 @@ func (c *dividendCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 	}
 
 	tx := portfolio.NewDividend(day, c.memo, c.security, portfolio.M(c.amount, c.currency))
-	_, status := handleTransaction(tx)
+	_, status := handleTransaction(c.ledger, tx)
 	return status
 }
 
@@ -149,6 +155,7 @@ type depositCmd struct {
 	currency string
 	memo     string
 	settles  string
+	ledger   string
 }
 
 func (*depositCmd) Name() string     { return "deposit" }
@@ -165,6 +172,7 @@ func (c *depositCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.currency, "c", "EUR", "Currency of the deposit (e.g., USD, EUR). Cash is kept in that currency")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
 	f.StringVar(&c.settles, "settles", "", "Settle a counterparty account")
+	f.StringVar(&c.ledger, "l", "", "Ledger to add the transaction to.")
 }
 func (c *depositCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...any) subcommands.ExitStatus {
 	if c.amount.IsZero() {
@@ -178,7 +186,7 @@ func (c *depositCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...any) subco
 	}
 
 	tx := portfolio.NewDeposit(day, c.memo, portfolio.M(c.amount, c.currency), c.settles)
-	_, status := handleTransaction(tx)
+	_, status := handleTransaction(c.ledger, tx)
 	return status
 }
 
@@ -191,6 +199,7 @@ type withdrawCmd struct {
 	currency string
 	memo     string
 	settles  string
+	ledger   string
 }
 
 func (*withdrawCmd) Name() string     { return "withdraw" }
@@ -207,6 +216,7 @@ func (c *withdrawCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.currency, "c", "EUR", "Currency of the withdrawal (e.g., USD, EUR)")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
 	f.StringVar(&c.settles, "settles", "", "Settle a counterparty account")
+	f.StringVar(&c.ledger, "l", "", "Ledger to add the transaction to.")
 }
 func (c *withdrawCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if c.amount.IsZero() {
@@ -221,7 +231,7 @@ func (c *withdrawCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface
 
 	tx := portfolio.NewWithdraw(day, c.memo, portfolio.M(c.amount, c.currency))
 	tx.Settles = c.settles
-	_, status := handleTransaction(tx)
+	_, status := handleTransaction(c.ledger, tx)
 	return status
 }
 
@@ -235,6 +245,7 @@ type convertCmd struct {
 	toCurrency   string
 	toAmount     decimal.Decimal
 	memo         string
+	ledger       string
 }
 
 func (*convertCmd) Name() string { return "convert" }
@@ -256,6 +267,7 @@ func (c *convertCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.toCurrency, "tc", "", "Destination currency code (e.g., EUR")
 	f.Var(DecimalVar(&c.toAmount, "0"), "ta", "Amount of cash received in the destination currency")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
+	f.StringVar(&c.ledger, "l", "", "Ledger to add the transaction to.")
 }
 
 func (c *convertCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -270,7 +282,7 @@ func (c *convertCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	}
 
 	tx := portfolio.NewConvert(day, c.memo, portfolio.M(c.fromAmount, c.fromCurrency), portfolio.M(c.toAmount, c.toCurrency))
-	_, status := handleTransaction(tx)
+	_, status := handleTransaction(c.ledger, tx)
 	return status
 }
 
@@ -284,6 +296,7 @@ type accrueCmd struct {
 	amount     decimal.Decimal
 	currency   string
 	memo       string
+	ledger     string
 }
 
 func (*accrueCmd) Name() string     { return "accrue" }
@@ -302,6 +315,7 @@ func (c *accrueCmd) SetFlags(f *flag.FlagSet) {
 	f.Var(DecimalVar(&c.amount, "0"), "a", "Amount of cash to accrue")
 	f.StringVar(&c.currency, "c", "EUR", "Currency of the accrual (e.g., USD, EUR)")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note")
+	f.StringVar(&c.ledger, "l", "", "Ledger to add the transaction to.")
 }
 
 func (c *accrueCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -333,7 +347,7 @@ func (c *accrueCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 	tx := portfolio.NewAccrue(day, c.memo, account, portfolio.M(amount, c.currency))
 
 	// Call handleTransaction and receive the validated transaction
-	validatedTx, status := handleTransaction(tx)
+	validatedTx, status := handleTransaction(c.ledger, tx)
 	if status != subcommands.ExitSuccess {
 		return status
 	}
@@ -353,6 +367,7 @@ type priceCmd struct {
 	date   string
 	ticker string
 	price  decimal.Decimal
+	ledger string
 }
 
 func (*priceCmd) Name() string     { return "price" }
@@ -369,6 +384,7 @@ func (c *priceCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", portfolio.Today().String(), "date of the price")
 	f.StringVar(&c.ticker, "s", "", "security ticker")
 	f.Var(DecimalVar(&c.price, "0"), "p", "price per share")
+	f.StringVar(&c.ledger, "l", "", "Ledger to add the transaction to.")
 }
 
 func (c *priceCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -388,7 +404,7 @@ func (c *priceCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 	}
 
 	tx := portfolio.NewUpdatePrice(date, c.ticker, portfolio.M(c.price, ""))
-	_, status := handleTransaction(tx)
+	_, status := handleTransaction(c.ledger, tx)
 	return status
 }
 
@@ -399,6 +415,7 @@ type splitCmd struct {
 	ticker string
 	num    int64
 	den    int64
+	ledger string
 }
 
 func (*splitCmd) Name() string     { return "split" }
@@ -417,6 +434,7 @@ func (c *splitCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.ticker, "s", "", "security ticker")
 	f.Int64Var(&c.num, "num", 0, "numerator of the split ratio (e.g., 2 in a 2-for-1 split)")
 	f.Int64Var(&c.den, "den", 1, "denominator of the split ratio (e.g., 1 in a 2-for-1 split)")
+	f.StringVar(&c.ledger, "l", "", "Ledger to add the transaction to.")
 }
 
 func (c *splitCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -436,7 +454,7 @@ func (c *splitCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 	}
 
 	tx := portfolio.NewSplit(date, c.ticker, c.num, c.den)
-	_, status := handleTransaction(tx)
+	_, status := handleTransaction(c.ledger, tx)
 	return status
 }
 
@@ -447,6 +465,7 @@ type initCmd struct {
 	date     string
 	currency string
 	memo     string
+	ledger   string
 }
 
 func (*initCmd) Name() string { return "init" }
@@ -466,6 +485,7 @@ func (c *initCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", "", "Inception date of the ledger (defaults to today or day before first transaction).")
 	f.StringVar(&c.currency, "c", "", "The reporting currency for the entire ledger (e.g., EUR, USD).")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction.")
+	f.StringVar(&c.ledger, "l", "", "Ledger to add the transaction to.")
 }
 
 func (c *initCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -485,7 +505,7 @@ func (c *initCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 
 	tx := portfolio.NewInit(day, c.memo, c.currency)
 
-	_, status := handleTransaction(tx)
+	_, status := handleTransaction(c.ledger, tx)
 	return status
 }
 
@@ -496,6 +516,7 @@ type declareCmd struct {
 	currency string
 	date     string
 	memo     string
+	ledger   string
 }
 
 func (*declareCmd) Name() string     { return "declare" }
@@ -515,6 +536,7 @@ func (c *declareCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.currency, "c", "", "The currency of the security (e.g., 'USD')")
 	f.StringVar(&c.date, "d", portfolio.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
+	f.StringVar(&c.ledger, "l", "", "Ledger to add the transaction to.")
 }
 
 // GenerateCommand generates the 'pcs add-security' command string with the given parameters.
@@ -543,7 +565,7 @@ func (c *declareCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		return subcommands.ExitUsageError
 	}
 	tx := portfolio.NewDeclare(day, c.memo, c.ticker, id, c.currency)
-	_, status := handleTransaction(tx)
+	_, status := handleTransaction(c.ledger, tx)
 	return status
 }
 
@@ -555,13 +577,18 @@ func (c *declareCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 // This function also applies "quick fixes" during validation, such as resolving
 // "sell all" quantities. The returned `portfolio.Transaction` is the validated
 // and potentially modified transaction.
-func handleTransaction(tx portfolio.Transaction) (portfolio.Transaction, subcommands.ExitStatus) {
-	validatedTx, err := EncodeTransaction(tx)
+func handleTransaction(ledgerName string, tx portfolio.Transaction) (portfolio.Transaction, subcommands.ExitStatus) {
+	ledger, err := DecodeLedger(ledgerName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading ledger %q: %v\n", ledgerName, err)
+		return nil, subcommands.ExitFailure
+	}
+
+	validatedTx, err := EncodeTransaction(ledger, tx)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return nil, subcommands.ExitUsageError
 	}
-
-	fmt.Printf("Successfully appended transaction to %s\n", *ledgerFile)
+	fmt.Fprintf(os.Stderr, "✅ Successfully recorded transaction in ledger %q.\n", ledger.Name())
 	return validatedTx, subcommands.ExitSuccess
 }

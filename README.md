@@ -46,7 +46,7 @@ pcs declare -d 2025-08-27 -s AAPL -id US0378331005.XETR -c EUR
 ```
 
 ```console check
-Successfully appended transaction to transactions.jsonl
+✅ Successfully recorded transaction in ledger "transactions".
 ```
 
 > [!NOTE]
@@ -60,7 +60,7 @@ pcs declare -d 2025-08-27 -s BankFund1 -id My-bank-Fund1 -c EUR
 ```
 
 ```console check
-Successfully appended transaction to transactions.jsonl
+✅ Successfully recorded transaction in ledger "transactions".
 ```
 
 > [!NOTE]
@@ -80,7 +80,7 @@ pcs deposit -d 2025-08-27 -a 10000 -c EUR
 ```
 
 ```console check
-Successfully appended transaction to transactions.jsonl
+✅ Successfully recorded transaction in ledger "transactions".
 ```
 
  [!NOTE]
@@ -95,7 +95,7 @@ pcs buy -d 2025-08-27 -s AAPL -q 10 -a 1500.0
 ```
 
 ```console check
-Successfully appended transaction to transactions.jsonl
+✅ Successfully recorded transaction in ledger "transactions".
 ```
 
 Let's record a buy in the corporate savings plan.
@@ -105,7 +105,7 @@ pcs buy -d 2025-08-27 -s BankFund1 -q 100 -a 1200.0
 ```
 
 ```console check
-Successfully appended transaction to transactions.jsonl
+✅ Successfully recorded transaction in ledger "transactions".
 ```
 
 
@@ -128,7 +128,7 @@ pcs price -s AAPL -d 2025-08-27 -p 193.20
 ```
 
 ```console check
-Successfully appended transaction to transactions.jsonl
+✅ Successfully recorded transaction in ledger "transactions".
 ```
 
 From your corporate saving bank site you can get the price on 2025-08-27:
@@ -138,7 +138,7 @@ pcs price -s BankFund1 -d 2025-08-27 -p 11.23
 ```
 
 ```console check
-Successfully appended transaction to transactions.jsonl
+✅ Successfully recorded transaction in ledger "transactions".
 ```
 
 

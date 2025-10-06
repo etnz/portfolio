@@ -14,11 +14,12 @@ import (
 
 // reviewCmd holds the flags for the 'review' subcommand.
 type reviewCmd struct {
-	period string
-	date   string
-	start  string
-	method string
-	update bool
+	period     string
+	date       string
+	start      string
+	method     string
+	update     bool
+	ledgerFile string
 	// processed
 	parsedMethod portfolio.CostBasisMethod
 	rng          portfolio.Range
@@ -29,7 +30,7 @@ func (*reviewCmd) Name() string { return "review" }
 
 func (*reviewCmd) Synopsis() string { return "review a portfolio performance" }
 func (*reviewCmd) Usage() string {
-	return `pcs review [-period <p>| -start <date>] [-d <date>]
+	return `pcs review [-period <p>| -start <date>] [-d <date>] [-l <ledger>]
 	
   Review the portfolio for a given period.
 `
@@ -40,6 +41,7 @@ func (c *reviewCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.period, "p", portfolio.Daily.String(), "period for the review (day, week, month, quarter, year)")
 	f.StringVar(&c.start, "start", "", "Start date of the reporting period. Overrides -p.")
 	f.StringVar(&c.method, "method", "fifo", "Cost basis method (average, fifo)")
+	f.StringVar(&c.ledgerFile, "l", "", "Ledger to report on. Defaults to the only ledger if one exists.")
 }
 
 func (c *reviewCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -93,7 +95,7 @@ func (c *reviewCmd) init() error {
 	}
 	c.parsedMethod = method
 
-	c.ledger, err = DecodeLedger()
+	c.ledger, err = DecodeLedger(c.ledgerFile)
 	if err != nil {
 		return fmt.Errorf("decoding ledger: %w", err)
 	}

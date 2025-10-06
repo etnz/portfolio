@@ -277,7 +277,3 @@ func (ledger *Ledger) newJournal() error {
 	ledger.journal = journal
 	return nil
 }
-
-func (j *Journal) transactionFromEvent(e event) Transaction {
-	return j.txs[e.source()]
-}

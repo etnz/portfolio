@@ -259,7 +259,7 @@ func padding(source []byte, offset int) int {
 type blockRunner struct {
 	env            []string // env use to execute commands
 	previousOutput string
-	tmpFolder      string
+	cwd            string
 }
 
 func (r *blockRunner) runBlock(t *testing.T, block *Block) {
@@ -282,13 +282,13 @@ func (r *blockRunner) runBlock(t *testing.T, block *Block) {
 	}
 	// Create a new execution folder on a new setup.
 	if block.Type == bashSetup || block.Type == bashDemo {
-		r.tmpFolder = t.TempDir() // new scenario temp folder
+		r.cwd = t.TempDir() // new scenario temp folder
 	}
 
 	// Execute bash.
 	cmd := exec.Command("bash", "-c", "set -e; "+block.Content)
-	cmd.Dir = r.tmpFolder
-	cmd.Env = r.env
+	cmd.Dir = r.cwd
+	cmd.Env = append(r.env, "PORTFOLIO_PATH="+r.cwd)
 	output, err := cmd.CombinedOutput()
 
 	// Record last run output.
@@ -323,16 +323,21 @@ func runBlocks(t *testing.T, file string, md string) {
 	pcsDir := filepath.Dir(pcsPath)
 
 	newPath := fmt.Sprintf("PATH=%s%c%s", pcsDir, os.PathListSeparator, os.Getenv("PATH"))
-	baseEnv := append(os.Environ(), newPath, "PORTFOLIO_TESTING_NOW=2006-01-02 15:04:05", "NO_RENDER=1")
+	baseEnv := append(os.Environ(),
+		newPath,
+		"PORTFOLIO_TESTING_NOW=2006-01-02 15:04:05",
+		"NO_RENDER=1",
+	)
 
 	blocks := parseMarkdown(t, file, md)
 	if len(blocks) == 0 {
 		return
 	}
 
+	cwd := t.TempDir()
 	r := blockRunner{
-		env:       baseEnv,
-		tmpFolder: t.TempDir(),
+		env: baseEnv,
+		cwd: cwd,
 	}
 	for _, block := range blocks {
 		r.runBlock(t, block)

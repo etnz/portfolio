@@ -36,7 +36,7 @@ func main() {
 		fmt.Printf("arg[%%d]=%%s\n", i, arg)
 	}
 }
-`, EnvLedgerFile, EnvLedgerFile, EnvDefaultCurrency, EnvDefaultCurrency, EnvVerbose, EnvVerbose)
+`, EnvPortfolioPath, EnvPortfolioPath, EnvDefaultCurrency, EnvDefaultCurrency, EnvVerbose, EnvVerbose)
 
 	helloCmdPath := filepath.Join(tempDir, "pcs-hello")
 
@@ -65,13 +65,13 @@ func main() {
 	log.Printf("Compiled pcs binary to %s", pcsBinaryPath)
 
 	// Define random values for global flags
-	expectedLedgerFile := filepath.Join(tempDir, "random_ledger.jsonl")
+	//expectedLedgerFile := filepath.Join(tempDir, "random_ledger.jsonl")
 	expectedDefaultCurrency := "XYZ"
 	expectedVerbose := true
 
 	// 5. Call pcs binary with extension and global flags
 	args := []string{
-		"--ledger-file", expectedLedgerFile,
+		"--portfolio", tempDir,
 		"--default-currency", expectedDefaultCurrency,
 		"-v",
 		"hello",           // The extension subcommand
@@ -103,7 +103,7 @@ func main() {
 		Name  string
 		Value string
 	}{
-		{EnvLedgerFile, expectedLedgerFile},
+		{EnvPortfolioPath, tempDir},
 		{EnvDefaultCurrency, expectedDefaultCurrency},
 		{EnvVerbose, strconv.FormatBool(expectedVerbose)},
 	}

@@ -13,21 +13,23 @@ import (
 
 // holdingCmd holds the flags for the 'holding' subcommand.
 type holdingCmd struct {
-	date   string
-	update bool
+	date       string
+	update     bool
+	ledgerFile string
 }
 
 func (*holdingCmd) Name() string     { return "holding" }
-func (*holdingCmd) Synopsis() string { return "display detailed holdings for a specific date" }
+func (*holdingCmd) Synopsis() string { return "displays portfolio holdings on a specific date" }
 func (*holdingCmd) Usage() string {
-	return `pcs holding [-d <date>] [-c <currency>] [-u]
+	return `pcs holding [-d <date>] [-l <ledger>]
 
-  Displays the portfolio holdings (securities and cash) on a given date.
+  Displays the portfolio's holdings (positions and cash balances) as of a specific date.
 `
 }
 
 func (c *holdingCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", portfolio.Today().String(), "Date for the holdings report. See the user manual for supported date formats.")
+	f.StringVar(&c.ledgerFile, "l", "", "Ledger to report on. Defaults to the only ledger if one exists.")
 }
 
 func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -41,17 +43,17 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		c.update = true
 	}
 
-	ledger, err := DecodeLedger()
+	ledger, err := DecodeLedger(c.ledgerFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error decoding ledger: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error loading ledger: %v\n", err)
 		return subcommands.ExitFailure
 	}
 
 	if c.update {
 		err := ledger.UpdateIntraday()
 		if err != nil {
-			// fmt.Fprintf(os.Stderr, "Error updating intraday prices: %v\n", err)
-			// return subcommands.ExitFailure
+			fmt.Fprintf(os.Stderr, "Warning: could not update intraday prices: %v\n", err)
+			// Continue without failing
 		}
 	}
 

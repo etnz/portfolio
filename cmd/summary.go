@@ -14,14 +14,15 @@ import (
 
 // summaryCmd holds the flags for the 'summary' subcommand.
 type summaryCmd struct {
-	date   string
-	update bool
+	date       string
+	ledgerFile string
+	update     bool
 }
 
 func (*summaryCmd) Name() string     { return "summary" }
 func (*summaryCmd) Synopsis() string { return "display a portfolio performance summary" }
 func (*summaryCmd) Usage() string {
-	return `pcs summary [-d <date>]
+	return `pcs summary [-d <date>] [-l <ledger>]
 
   Displays a summary of the portfolio, including total market value.
 `
@@ -29,6 +30,7 @@ func (*summaryCmd) Usage() string {
 
 func (c *summaryCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", portfolio.Today().String(), "Date for the summary. See the user manual for supported date formats.")
+	f.StringVar(&c.ledgerFile, "l", "", "Ledger to report on. Defaults to the only ledger if one exists.")
 }
 
 func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -42,7 +44,7 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		c.update = true
 	}
 
-	ledger, err := DecodeLedger()
+	ledger, err := DecodeLedger(c.ledgerFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error decoding ledger: %v\n", err)
 		return subcommands.ExitFailure

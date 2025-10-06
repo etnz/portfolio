@@ -13,11 +13,12 @@ import (
 
 // gainsCmd holds the flags for the 'gains' subcommand.
 type gainsCmd struct {
-	period string
-	start  string
-	end    string
-	method string
-	update bool
+	period     string
+	start      string
+	end        string
+	method     string
+	update     bool
+	ledgerFile string
 }
 
 func (*gainsCmd) Name() string     { return "gains" }
@@ -34,6 +35,7 @@ func (c *gainsCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.start, "s", "", "Start date of the reporting period. See the user manual for supported date formats.")
 	f.StringVar(&c.end, "d", portfolio.Today().String(), "End date of the reporting period. See the user manual for supported date formats.")
 	f.StringVar(&c.method, "method", "average", "Cost basis method (average, fifo)")
+	f.StringVar(&c.ledgerFile, "l", "", "Ledger to report on. Defaults to the only ledger if one exists.")
 }
 
 func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -72,9 +74,9 @@ func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 		period = p.Range(endDate)
 	}
 
-	ledger, err := DecodeLedger()
+	ledger, err := DecodeLedger(c.ledgerFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating accounting system: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error loading ledger %q: %v\n", c.ledgerFile, err)
 		return subcommands.ExitFailure
 	}
 

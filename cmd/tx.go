@@ -12,17 +12,18 @@ import (
 )
 
 type txCmd struct {
-	period string
-	start  string
-	date   string
-	head   int
-	tail   int
+	period     string
+	start      string
+	date       string
+	head       int
+	tail       int
+	ledgerFile string
 }
 
 func (*txCmd) Name() string     { return "tx" }
 func (*txCmd) Synopsis() string { return "list all transactions in the ledger" }
 func (*txCmd) Usage() string {
-	return `pcs tx [-p <period> | -s <start_date>] [-d <end_date>] [-head <n>] [-tail <n>]
+	return `pcs tx [-p <period> | -s <start_date>] [-d <end_date>] [-head <n>] [-tail <n>] [-l <ledger>]
 
   Lists transactions from the ledger, with options for filtering and limiting the output.
 `
@@ -34,6 +35,7 @@ func (p *txCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.date, "d", "", "The end date for the range.")
 	f.IntVar(&p.head, "head", 0, "Show only the first N transactions.")
 	f.IntVar(&p.tail, "tail", 0, "Show only the last N transactions.")
+	f.StringVar(&p.ledgerFile, "l", "", "Ledger to report on. Defaults to the only ledger if one exists.")
 }
 
 func (p *txCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -42,7 +44,7 @@ func (p *txCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) su
 		return subcommands.ExitUsageError
 	}
 
-	ledger, err := DecodeLedger()
+	ledger, err := DecodeLedger(p.ledgerFile)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return subcommands.ExitFailure

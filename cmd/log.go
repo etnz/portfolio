@@ -13,10 +13,11 @@ import (
 )
 
 type logCmd struct {
-	period string
-	start  string
-	date   string
-	method string
+	period     string
+	start      string
+	date       string
+	method     string
+	ledgerFile string
 }
 
 func (*logCmd) Name() string { return "log" }
@@ -24,7 +25,7 @@ func (*logCmd) Synopsis() string {
 	return "display a chronological log of all transactions and their impact on the portfolio"
 }
 func (*logCmd) Usage() string {
-	return `pcs log [-p <period> | -s <start_date>] [-d <end_date>] [-method <method>]
+	return `pcs log [-p <period> | -s <start_date>] [-d <end_date>] [-method <method>] [-l <ledger>]
 
   Generates a detailed, stateful log of all portfolio activities within a
   given date range, showing the impact of each transaction. The log is
@@ -37,10 +38,11 @@ func (p *logCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.start, "s", "", "The start date for a custom log range. Overrides -p.")
 	f.StringVar(&p.date, "d", "0d", "The end date for the log (defaults to today).")
 	f.StringVar(&p.method, "method", "average", "The cost basis method (average, fifo) to use for calculating realized gains.")
+	f.StringVar(&p.ledgerFile, "l", "", "Ledger to report on. Defaults to the only ledger if one exists.")
 }
 
 func (p *logCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	ledger, err := DecodeLedger()
+	ledger, err := DecodeLedger(p.ledgerFile)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return subcommands.ExitFailure

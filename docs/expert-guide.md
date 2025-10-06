@@ -108,11 +108,11 @@ Recognizes an off-balance-sheet asset (receivable) or liability (payable) with a
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     A new counterparty account 'TaxAuthority' has been created.
     
-      
+    
       • 2025-01-01: init
       • 2025-12-31: Accrue payable €15,200.00 to "TaxAuthority"
     ```
@@ -124,11 +124,11 @@ Recognizes an off-balance-sheet asset (receivable) or liability (payable) with a
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     A new counterparty account 'PrivateLoan_JohnDoe' has been created.
     
-      
+    
       • 2025-01-01: init
       • 2025-06-30: Accrue receivable $250.00 from "PrivateLoan_JohnDoe"
     ```
@@ -140,11 +140,11 @@ Recognizes an off-balance-sheet asset (receivable) or liability (payable) with a
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     A new counterparty account 'EmployerCorp' has been created.
     
-      
+    
       • 2025-01-01: init
       • 2025-12-31: Accrue receivable €10,000.00 from "EmployerCorp"
     ```
@@ -156,11 +156,11 @@ Recognizes an off-balance-sheet asset (receivable) or liability (payable) with a
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     A new counterparty account 'LegalServicesLLC' has been created.
     
-      
+    
       • 2025-01-01: init
       • 2025-11-30: Accrue payable $5,000.00 to "LegalServicesLLC"
     ```
@@ -172,11 +172,11 @@ Recognizes an off-balance-sheet asset (receivable) or liability (payable) with a
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     A new counterparty account 'FwdContract_XYZ' has been created.
     
-      
+    
       • 2025-01-01: init
       • 2025-09-30: Accrue receivable 1,250.00 CHF from "FwdContract_XYZ"
     ```
@@ -201,12 +201,12 @@ Records the acquisition of a security, establishing a new cost basis lot and deb
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "VTI" as "US9229087690.XNAS" in USD
       •           : Deposit $30,000.00
@@ -222,12 +222,12 @@ Records the acquisition of a security, establishing a new cost basis lot and deb
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "FXAIX" as "US3159117502.XNAS" in USD
       •           : Deposit $5,000.00
@@ -243,12 +243,12 @@ Records the acquisition of a security, establishing a new cost basis lot and deb
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "ADBE" as "US00724F1012.XNAS" in USD
       •           : Deposit $10,000.00
@@ -264,12 +264,12 @@ Records the acquisition of a security, establishing a new cost basis lot and deb
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "PrivateStartupX" as "Private Startup X Equity" in USD
       •           : Deposit $25,000.00
@@ -285,12 +285,12 @@ Records the acquisition of a security, establishing a new cost basis lot and deb
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "SIE.XETR" as "DE0007236101.XETR" in EUR
       •           : Deposit €10,000.00
@@ -317,11 +317,11 @@ Executes a foreign exchange transaction between two internal cash accounts.
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Deposit $10,000.00
       • 2025-04-15: Convert $10,000.00 to €9,250.50
@@ -335,11 +335,11 @@ Executes a foreign exchange transaction between two internal cash accounts.
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Deposit £520.25
       • 2025-07-02: Convert £520.25 to €610.90
@@ -353,11 +353,11 @@ Executes a foreign exchange transaction between two internal cash accounts.
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Deposit €2,000.00
       • 2025-08-20: Convert €2,000.00 to ¥295,000
@@ -371,11 +371,11 @@ Executes a foreign exchange transaction between two internal cash accounts.
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Deposit 125.50 CHF
       • 2025-12-30: Convert 125.50 CHF to €128.20
@@ -389,11 +389,11 @@ Executes a foreign exchange transaction between two internal cash accounts.
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Deposit $50,000.00
       • 2025-10-10: Convert $50,000.00 to ¥7,250,000
@@ -417,10 +417,10 @@ Establishes the canonical mapping between a user-defined ticker and a unique Sec
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "AAPL" as "US0378331005.XNAS" in USD
     ```
@@ -432,10 +432,10 @@ Establishes the canonical mapping between a user-defined ticker and a unique Sec
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "IWDA" as "IE00B4L5Y983.XETR" in EUR
     ```
@@ -447,10 +447,10 @@ Establishes the canonical mapping between a user-defined ticker and a unique Sec
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "MyPEFund" as "PE-Fund-Vintage-2025" in USD
     ```
@@ -462,10 +462,10 @@ Establishes the canonical mapping between a user-defined ticker and a unique Sec
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "EURUSD" as "EURUSD" in USD
     ```
@@ -477,10 +477,10 @@ Establishes the canonical mapping between a user-defined ticker and a unique Sec
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "PrimaryResidence" as "RealEstate-MainSt-123" in EUR
     ```
@@ -503,10 +503,10 @@ Records an external capital injection into a cash account, optionally settling a
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       • 2025-01-15: Deposit €50,000.00
     ```
@@ -519,12 +519,12 @@ Records an external capital injection into a cash account, optionally settling a
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     A new counterparty account 'PrivateLoan_JohnDoe' has been created.
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Accrue receivable $1,000.00 from "PrivateLoan_JohnDoe"
       • 2025-05-15: Deposit $500.00
@@ -537,10 +537,10 @@ Records an external capital injection into a cash account, optionally settling a
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       • 2025-09-20: Deposit €15,000.00
     ```
@@ -553,12 +553,12 @@ Records an external capital injection into a cash account, optionally settling a
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     A new counterparty account 'ClientX' has been created.
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       • 2025-05-20: Accrue receivable $2,500.00 from "ClientX"
       • 2025-06-01: Deposit $2,500.00
@@ -572,12 +572,12 @@ Records an external capital injection into a cash account, optionally settling a
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     A new counterparty account 'EmployerCorp' has been created.
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       • 2025-12-31: Accrue receivable €10,000.00 from "EmployerCorp"
       • 2026-01-31: Deposit €10,000.00
@@ -603,11 +603,11 @@ Records dividend income per share for a security, which contributes to total ret
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
     
       • 2025-01-01: init
@@ -627,11 +627,11 @@ Records dividend income per share for a security, which contributes to total ret
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
     
       • 2025-01-01: init
@@ -651,11 +651,11 @@ Records dividend income per share for a security, which contributes to total ret
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
     
       • 2025-01-01: init
@@ -675,11 +675,11 @@ Records dividend income per share for a security, which contributes to total ret
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
     
       • 2025-01-01: init
@@ -701,13 +701,13 @@ Records dividend income per share for a security, which contributes to total ret
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
     
       • 2025-01-01: init
@@ -734,9 +734,9 @@ Establishes the ledger's fundamental parameters, including its inception date an
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2020-01-01: init
     ```
 
@@ -746,9 +746,9 @@ Establishes the ledger's fundamental parameters, including its inception date an
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2018-05-15: init
     ```
 
@@ -758,9 +758,9 @@ Establishes the ledger's fundamental parameters, including its inception date an
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2024-04-06: init
     ```
 
@@ -770,9 +770,9 @@ Establishes the ledger's fundamental parameters, including its inception date an
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2021-01-01: init
     ```
 
@@ -783,10 +783,10 @@ Establishes the ledger's fundamental parameters, including its inception date an
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2019-12-31: init
       • 2025-01-01: init
     ```
@@ -808,11 +808,11 @@ Logs a market price point for a security on a specific date, essential for mark-
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "GOOG" as "US38259P5089.XNAS" in USD
       • 2025-03-10: Update price for "GOOG"=140.2500
@@ -826,11 +826,11 @@ Logs a market price point for a security on a specific date, essential for mark-
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "MyPEFund" as "PE-Fund-Vintage-2025" in USD
       • 2025-12-31: Update price for "MyPEFund"=1.3500
@@ -844,11 +844,11 @@ Logs a market price point for a security on a specific date, essential for mark-
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "PrimaryResidence" as "RealEstate-MainSt-123" in EUR
       • 2025-06-30: Update price for "PrimaryResidence"=750000.0000
@@ -862,11 +862,11 @@ Logs a market price point for a security on a specific date, essential for mark-
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2024-01-01: init
       •           : Declare "USDEUR" as "USDEUR" in EUR
       •           : Update price for "USDEUR"=0.9050
@@ -882,12 +882,12 @@ Logs a market price point for a security on a specific date, essential for mark-
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "F" as "US3453708600.XNYS" in USD
       • 2025-02-15: Update price for "F"=12.0500
@@ -915,13 +915,13 @@ Records the disposition of a security, triggering a realized gain or loss calcul
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "NVDA" as "US67066G1040.XNAS" in USD
       •           : Deposit $25,000.00
@@ -939,13 +939,13 @@ Records the disposition of a security, triggering a realized gain or loss calcul
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2024-01-15: init
       •           : Declare "BABA" as "US01609W1027.XNYS" in USD
       •           : Deposit $30,000.00
@@ -963,13 +963,13 @@ Records the disposition of a security, triggering a realized gain or loss calcul
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "EEM" as "US4642872349.XNAS" in USD
       •           : Deposit $5,000.00
@@ -986,12 +986,12 @@ Records the disposition of a security, triggering a realized gain or loss calcul
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "ADBE" as "US00724F1012.XNAS" in USD
       • 2025-11-15: Deposit $10,250.00
@@ -1008,13 +1008,13 @@ Records the disposition of a security, triggering a realized gain or loss calcul
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "PYPL" as "US70450Y1038.XNAS" in USD
       •           : Deposit $10,000.00
@@ -1040,11 +1040,11 @@ Adjusts the quantity of all existing lots for a security to reflect a corporate 
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "AAPL" as "US0378331005.XNAS" in USD
       • 2025-08-31: split
@@ -1058,11 +1058,11 @@ Adjusts the quantity of all existing lots for a security to reflect a corporate 
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "GE" as "US3696041033.XNYS" in USD
       • 2025-07-19: split
@@ -1076,11 +1076,11 @@ Adjusts the quantity of all existing lots for a security to reflect a corporate 
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "NVDA" as "US67066G1040.XNAS" in USD
       • 2025-05-21: split
@@ -1094,11 +1094,11 @@ Adjusts the quantity of all existing lots for a security to reflect a corporate 
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "AMZN" as "US0231351067.XNAS" in USD
       • 2025-06-03: split
@@ -1112,11 +1112,11 @@ Adjusts the quantity of all existing lots for a security to reflect a corporate 
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Declare "CITI" as "US1729674242.XNYS" in USD
       • 2025-05-09: split
@@ -1141,11 +1141,11 @@ Records an external capital withdrawal from a cash account, optionally settling 
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Deposit €10,000.00
       • 2025-03-05: Withdraw €5,000.00
@@ -1160,13 +1160,13 @@ Records an external capital withdrawal from a cash account, optionally settling 
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     A new counterparty account 'PrivateLoan_JohnDoe' has been created.
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Deposit $2,000.00
       • 2025-01-15: Accrue payable $1,000.00 to "PrivateLoan_JohnDoe"
@@ -1181,11 +1181,11 @@ Records an external capital withdrawal from a cash account, optionally settling 
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Deposit €50,000.00
       • 2025-08-01: Withdraw €40,000.00
@@ -1200,13 +1200,13 @@ Records an external capital withdrawal from a cash account, optionally settling 
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     A new counterparty account 'TaxAuthority' has been created.
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Deposit €20,000.00
       • 2025-12-31: Accrue payable €15,200.00 to "TaxAuthority"
@@ -1222,12 +1222,12 @@ Records an external capital withdrawal from a cash account, optionally settling 
     pcs tx
     ```
     ```console check
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
-    Successfully appended transaction to transactions.jsonl
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "transactions".
     
-      
+    
       • 2025-01-01: init
       •           : Deposit €2,000.00
       • 2025-07-01: Convert €1,500.00 to ¥220,000

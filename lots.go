@@ -14,27 +14,6 @@ type lot struct {
 
 type lots []lot
 
-// averageCostOfSelling determines the cost of shares sold using the average cost method.
-func (l lots) averageCostOfSelling(quantityToSell Quantity) Money {
-	if len(l) == 0 {
-		return Money{}
-	}
-
-	var totalQuantity Quantity
-	var totalCost Money
-	for _, currentLot := range l {
-		totalQuantity = totalQuantity.Add(currentLot.Quantity)
-		totalCost = totalCost.Add(currentLot.Cost)
-	}
-
-	if totalQuantity.IsZero() {
-		return M(decimal.Zero, totalCost.Currency()) // Cannot sell from zero shares, so cost is zero.
-	}
-
-	costOfSoldShares := totalCost.Mul(quantityToSell).Div(totalQuantity)
-	return costOfSoldShares
-}
-
 // fifoCostOfSelling calculates the cost of selling a quantity of shares using FIFO.
 func (l lots) fifoCostOfSelling(quantityToSell Quantity) Money {
 	var costOfSoldShares Money
