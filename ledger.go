@@ -23,16 +23,6 @@ type Ledger struct {
 	journal        *Journal
 }
 
-// Currencies returns a sequence of all currencies used in the ledger as of today.
-func (ledger *Ledger) Currencies() iter.Seq[string] {
-	return ledger.NewSnapshot(Today()).Currencies()
-}
-
-func (ledger *Ledger) Currency() string { return ledger.currency }
-
-// Name returns the name of the ledger, which is its relative path from the portfolio root.
-func (ledger *Ledger) Name() string { return ledger.name }
-
 // NewLedger creates an empty ledger.
 func NewLedger() *Ledger {
 	return &Ledger{
@@ -43,6 +33,42 @@ func NewLedger() *Ledger {
 		journal:        &Journal{},
 	}
 }
+
+// Fmt creates a new, formatted ledger from the current one.
+// It validates and sorts all transactions, applying quick fixes where applicable.
+// This produces a canonical version of the ledger.
+func (l *Ledger) Fmt() (*Ledger, error) {
+	// The source ledger needs to be sorted to process transactions in order for validation.
+	l.stableSort()
+
+	// Create a new empty ledger, preserving the name and currency from the original.
+	newLedger := NewLedger()
+	newLedger.name = l.name
+	newLedger.currency = l.currency
+
+	// Append transactions one by one to the new ledger. The Append method
+	// will handle validation and re-building the internal state (journal).
+	for _, tx := range l.transactions {
+		validatedTx, err := newLedger.Validate(tx)
+		if err != nil {
+			return nil, fmt.Errorf("validation failed for transaction on %s (%T): %w", tx.When(), tx, err)
+		}
+		if err := newLedger.Append(validatedTx); err != nil {
+			return nil, fmt.Errorf("failed to append transaction on %s: %w", tx.When(), err)
+		}
+	}
+	return newLedger, nil
+}
+
+// Currencies returns a sequence of all currencies used in the ledger as of today.
+func (ledger *Ledger) Currencies() iter.Seq[string] {
+	return ledger.NewSnapshot(Today()).Currencies()
+}
+
+func (ledger *Ledger) Currency() string { return ledger.currency }
+
+// Name returns the name of the ledger, which is its relative path from the portfolio root.
+func (ledger *Ledger) Name() string { return ledger.name }
 
 func (l *Ledger) CounterPartyCurrency(account string) (cur string, exists bool) {
 	// TODO: ledger should not hold index, this should be the journal.

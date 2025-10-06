@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/shopspring/decimal"
 )
@@ -64,29 +63,10 @@ func DecodeValidateLedger(r io.Reader) (*Ledger, error) {
 	if err != nil {
 		return nil, err
 	}
-	ledger.stableSort() // make sure that there are correctly sorted before validating.
-
-	// now create a new empty ledger and insert all transactions one by one with validation.
-	// this will ensure that indexes are correctly set, and that all transactions are valid.
-	// if market is nil, skip all validations.
-	newLedger := NewLedger()
-
-	// perform strict validation, and quick fixes.
-
-	// move all transactions out and insert them one by one with strict validation from
-	// the accounting system.
-	// For validation, a reporting currency is not needed. We pass an empty string.
-	txs := ledger.transactions
-	ledger.transactions = make([]Transaction, 0, len(txs))
-	for _, tx := range txs {
-		log.Println("validating", tx)
-		t, err := newLedger.Validate(tx)
-		if err != nil {
-			return nil, err
-		}
-		if err := newLedger.Append(t); err != nil {
-			return nil, err
-		}
+	// Fmt() creates a new ledger with validated and sorted transactions.
+	newLedger, err := ledger.Fmt()
+	if err != nil {
+		return nil, fmt.Errorf("could not format ledger: %w", err)
 	}
 	return newLedger, nil
 }

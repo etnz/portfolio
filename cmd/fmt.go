@@ -2,12 +2,8 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
-	"io"
-	"io/fs"
-	"log"
 	"os"
 
 	"github.com/etnz/portfolio"
@@ -16,6 +12,7 @@ import (
 
 type fmtCmd struct {
 	outputFile string
+	ledgerFile string
 }
 
 func (*fmtCmd) Name() string { return "fmt" }
@@ -23,92 +20,54 @@ func (*fmtCmd) Synopsis() string {
 	return "validates and formats the ledger file into a canonical form"
 }
 func (*fmtCmd) Usage() string {
-	return `pcs fmt [-o <file_path>]
+	return `pcs fmt [-l <ledger_name>]
 
   Validates and formats the ledger file. This command reads all transactions,
   validates them, applies available quick-fixes (like resolving "sell all"),
   sorts them by date, and writes them back in a canonical JSONL format.
-  If -o is not specified, it overwrites the default ledger file. Use -o - to write to stdout.
+  By default, it formats all ledgers in-place. Use -l to specify a single ledger.
 
 Usage Examples:
 # Writes to the default ledger file.
 $ pcs fmt
 
-# Writes the output to /tmp/my-custom-ledger.txt.
-$ pcs fmt -o /tmp/my-custom-ledger.txt
-
-# Writes output to stdout, which is then piped to the 'less' command.
-$ pcs fmt -o - | less
 `
 }
 
 func (p *fmtCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&p.outputFile, "o", "", "Output file path. Use '-' for stdout.")
+	f.StringVar(&p.ledgerFile, "l", "", "Ledger to format (can be a glob pattern). Formats all by default.")
 }
 
 func (p *fmtCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	log.Printf("input file=%s", *ledgerFile)
-
-	// We need to decode with validation the
-	file, err := os.Open(*ledgerFile)
+	ledgers, err := DecodeLedgers(p.ledgerFile)
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			fmt.Fprintf(os.Stderr, "No ledger file found at %q\n", *ledgerFile)
-			return subcommands.ExitFailure
-		}
-		fmt.Fprintf(os.Stderr, "could not open ledger file %q: %v", *ledgerFile, err)
-		return subcommands.ExitFailure
-	}
-	ledger, err := portfolio.DecodeValidateLedger(file)
-	file.Close()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error decoding ledger: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: could not load ledgers: %v\n", err)
 		return subcommands.ExitFailure
 	}
 
-	// Determine output
-	var writer io.Writer
-	var confirmationMessage string
+	if len(ledgers) == 0 {
+		fmt.Fprintf(os.Stderr, "Warning: no ledgers found to format.\n")
+		return subcommands.ExitSuccess
+	}
 
-	switch p.outputFile {
-	case "":
-		// Default behavior: write to ledgerFile
-		outputPath := *ledgerFile
-		log.Printf("output file=%s", outputPath)
-		file, err := os.Create(outputPath)
+	// Default case: format all specified ledgers in-place
+	for _, ledger := range ledgers {
+		ledgerName := ledger.Name()
+		fmt.Fprintf(os.Stderr, "Formatting ledger %q...\n", ledgerName)
+
+		formattedLedger, err := ledger.Fmt()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error opening default ledger file %q for writing: %v\n", outputPath, err)
-			return subcommands.ExitFailure
+			fmt.Fprintf(os.Stderr, "Error formatting ledger %q: %v\n", ledgerName, err)
+			continue
 		}
-		defer file.Close()
-		writer = file
-		confirmationMessage = fmt.Sprintf("Default ledger file '%s' has been formatted.\n", outputPath)
-	case "-":
-		// Write to stdout
-		writer = os.Stdout
-		log.Printf("output to stdout")
 
-	default:
-		// Write to specified output file
-		outputPath := p.outputFile
-		log.Printf("output file=%s", outputPath)
-		file, err := os.Create(outputPath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error opening output file %q for writing: %v\n", outputPath, err)
-			return subcommands.ExitFailure
+		if err := portfolio.SaveLedger(PortfolioPath(), formattedLedger); err != nil {
+			fmt.Fprintf(os.Stderr, "Error saving formatted ledger %q: %v\n", ledgerName, err)
+			continue
 		}
-		defer file.Close()
-		writer = file
-		confirmationMessage = fmt.Sprintf("Ledger file '%s' has been formatted.\n", outputPath)
+		fmt.Fprintf(os.Stderr, "Finished formatting ledger %q.\n", ledgerName)
 	}
 
-	// 2. Write the ledger
-	err = portfolio.EncodeLedger(writer, ledger)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error encoding ledger: %v\n", err)
-		return subcommands.ExitFailure
-	}
-
-	fmt.Print(confirmationMessage)
+	fmt.Fprintf(os.Stderr, "✅ Successfully formatted ledgers.\n")
 	return subcommands.ExitSuccess
 }
