@@ -20,6 +20,7 @@ type stringSliceFlag []string
 // eodhdFetchCmd implements the "eodhd fetch" command.
 type eodhdFetchCmd struct {
 	eodhdApiFlag   string
+	ledgerFile     string
 	inception      bool
 	tickers        stringSliceFlag
 	fetchForex     bool
@@ -46,6 +47,7 @@ func (*eodhdFetchCmd) Usage() string {
 `
 }
 func (c *eodhdFetchCmd) SetFlags(f *flag.FlagSet) {
+	f.StringVar(&c.ledgerFile, "l", "", "ledger name to update. update all ledgers by default.")
 	f.StringVar(&c.eodhdApiFlag, "eodhd-api-key", "", "EODHD API key to use for consuming EODHD.com API. This flag takes precedence over the "+eodhd_api_key+" environment variable. You can get one at https://eodhd.com/")
 	f.BoolVar(&c.inception, "inception", false, "ignore existing prices in ledger, and fetch all from inception date")
 	f.Var(&c.tickers, "s", "security ticker to update (can be specified multiple times). If empty, all are updated.")
@@ -67,20 +69,21 @@ func (c *eodhdFetchCmd) eodhdApiKey() string {
 	return c.eodhdApiFlag
 }
 func (c *eodhdFetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	// Load the ledger.
-	// TODO: the DecodeLedger will work only as long as this command is part of the pcs CLI
-	//       once it is exported as an extension, a different function will have to be implemented.
-
 	key := c.eodhdApiKey()
 	if key == "" {
 		fmt.Fprintf(os.Stderr, "Error: EODHD API key is not set. Use -eodhd-api-key flag or EODHD_API_KEY environment variable\n")
 		return subcommands.ExitFailure
 	}
 
-	ledger, err := DecodeLedger()
+	ledgers, err := DecodeLedgers(c.ledgerFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not load ledger: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: could not load ledgers: %v\n", err)
 		return subcommands.ExitFailure
+	}
+
+	if len(ledgers) == 0 {
+		fmt.Fprintf(os.Stderr, "Warning: no ledgers found to update.\n")
+		return subcommands.ExitSuccess
 	}
 
 	var options eodhd.FetchOptions
@@ -102,35 +105,36 @@ func (c *eodhdFetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interfa
 	if c.fetchDividends {
 		options |= eodhd.FetchDividends
 	}
-	_, updates, err := eodhd.Fetch(key, ledger, c.inception, options, c.tickers...)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not fetch from eodhd.com: %v\n", err)
-		return subcommands.ExitFailure
+
+	for _, ledger := range ledgers {
+		ledgerName := ledger.Name()
+		fmt.Fprintf(os.Stderr, "Processing ledger %q...\n", ledgerName)
+		_, updates, err := eodhd.Fetch(key, ledger, c.inception, options, c.tickers...)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: could not fetch from eodhd.com for ledger %q: %v\n", ledgerName, err)
+			continue // Continue to the next ledger
+		}
+
+		// Update the ledger with the new market data.
+		_, err = ledger.UpdateMarketData(updates...)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: could not add market data to the ledger %q: %v\n", ledgerName, err)
+			continue
+		}
+
+		if err := portfolio.SaveLedger(PortfolioPath(), ledger); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing updated ledger file for %q: %v\n", ledgerName, err)
+			continue
+		}
+
+		for _, upd := range updates {
+			fmt.Println(upd.When(), renderer.Transaction(upd))
+		}
+		if len(updates) == 0 {
+			fmt.Printf("No updates for ledger %q.\n", ledgerName)
+		}
 	}
 
-	// Update the ledger with the new market data.
-	if _, err := ledger.UpdateMarketData(updates...); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not add market data to the ledger: %v\n", err)
-		return subcommands.ExitFailure
-	}
-
-	file, err := os.Create(*ledgerFile)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error opening ledger file %q for writing: %v\n", *ledgerFile, err)
-		return subcommands.ExitFailure
-	}
-	defer file.Close()
-
-	err = portfolio.EncodeLedger(file, ledger)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error wrting  updated ledger file: %v\n", err)
-		return subcommands.ExitFailure
-	}
-
-	for _, upd := range updates {
-		fmt.Println(upd.When(), renderer.Transaction(upd))
-	}
-
-	fmt.Fprintf(os.Stderr, "✅ Successfully fetched from eodhd.com and updated ledger.\n")
+	fmt.Fprintf(os.Stderr, "✅ Successfully fetched from eodhd.com and updated ledgers.\n")
 	return subcommands.ExitSuccess
 }

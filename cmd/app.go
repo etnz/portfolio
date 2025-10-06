@@ -52,7 +52,6 @@ func Register(c *subcommands.Commander) {
 
 	c.Register(&topicCmd{}, "documentation")
 
-
 }
 
 // As a CLI application, it has a very short-lived lifecycle, so it is ok to use global variables for flags.
@@ -62,7 +61,23 @@ var (
 	defaultCurrency = flag.String("default-currency", "EUR", "default currency")
 	Verbose         = flag.Bool("v", false, "enable verbose logging")
 	noRender        = flag.Bool("no-render", false, "disable markdown rendering in terminal output")
+	portfolioPath   = flag.String("portfolio", "", "Path to the portfolio directory (overrides PORTFOLIO_PATH env var)")
 )
+
+// PortfolioPath resolves the path to the portfolio directory.
+// It follows this order of precedence:
+// 1. --portfolio flag
+// 2. PORTFOLIO_PATH environment variable
+// 3. Current working directory (".")
+func PortfolioPath() string {
+	if *portfolioPath != "" {
+		return *portfolioPath
+	}
+	if envPath := os.Getenv("PORTFOLIO_PATH"); envPath != "" {
+		return envPath
+	}
+	return "."
+}
 
 // DecodeLedger decodes the ledger from the application's default ledger file.
 // If the file does not exist, it returns a new empty ledger.
@@ -82,6 +97,12 @@ func DecodeLedger() (*portfolio.Ledger, error) {
 		return nil, fmt.Errorf("could not decode ledger file %q: %w", *ledgerFile, err)
 	}
 	return ledger, nil
+}
+
+// DecodeLedgers decodes all ledgers from the portfolio path.
+func DecodeLedgers(query string) ([]*portfolio.Ledger, error) {
+	path := PortfolioPath()
+	return portfolio.FindLedgers(path, query)
 }
 
 // EncodeTransaction validates a transaction against the market data and existing

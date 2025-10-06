@@ -15,6 +15,7 @@ import (
 //
 // In a Ledger transactions are always in chronological order.
 type Ledger struct {
+	name           string
 	currency       string // ledger currency
 	transactions   []Transaction
 	securities     map[string]Security // index securities by ticker
@@ -28,6 +29,9 @@ func (ledger *Ledger) Currencies() iter.Seq[string] {
 }
 
 func (ledger *Ledger) Currency() string { return ledger.currency }
+
+// Name returns the name of the ledger, which is its relative path from the portfolio root.
+func (ledger *Ledger) Name() string { return ledger.name }
 
 // NewLedger creates an empty ledger.
 func NewLedger() *Ledger {

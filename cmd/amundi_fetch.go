@@ -13,7 +13,8 @@ import (
 
 // amundiFetchCmd implements the "amundi fetch" command.
 type amundiFetchCmd struct {
-	inception bool
+	inception  bool
+	ledgerFile string
 }
 
 func (*amundiFetchCmd) Name() string     { return "fetch" }
@@ -30,6 +31,7 @@ it continues backward.
 
 func (c *amundiFetchCmd) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&c.inception, "inception", false, "ignore existing prices in ledger, and fetch all from today back to inception date")
+	f.StringVar(&c.ledgerFile, "l", "", "ledger name to update. update all ledgers by default.")
 }
 
 func (c *amundiFetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -41,48 +43,52 @@ func (c *amundiFetchCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interf
 		return subcommands.ExitFailure
 	}
 
-	// Load the ledger.
-	// TODO: the DecodeLedger will work only as long as this command is part of the pcs CLI
-	//       once it is exported as an extension, a different function will have to be implemented.
-	ledger, err := DecodeLedger()
+	ledgers, err := DecodeLedgers(c.ledgerFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not load ledger: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: could not load ledgers: %v\n", err)
 		return subcommands.ExitFailure
 	}
 
-	changes, updates, err := amundi.Fetch(headers, ledger, c.inception)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not fetch from Amundi: %v\n", err)
-		return subcommands.ExitFailure
+	if len(ledgers) == 0 {
+		fmt.Fprintf(os.Stderr, "Warning: no ledgers found to update.\n")
+		return subcommands.ExitSuccess
 	}
 
-	// Update the ledger with the new market data.
-	if _, err := ledger.UpdateMarketData(updates...); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not add market data to the ledger: %v\n", err)
-		return subcommands.ExitFailure
-	}
+	for _, ledger := range ledgers {
+		ledgerName := ledger.Name()
+		fmt.Fprintf(os.Stderr, "Processing ledger %q...\n", ledgerName)
+		changes, updates, err := amundi.Fetch(headers, ledger, c.inception)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: could not fetch from Amundi for ledger %q: %v\n", ledgerName, err)
+			continue
+		}
 
-	file, err := os.Create(*ledgerFile)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error opening ledger file %q for writing: %v\n", *ledgerFile, err)
-		return subcommands.ExitFailure
-	}
-	defer file.Close()
+		// Update the ledger with the new market data.
+		summary, err := ledger.UpdateMarketData(updates...)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: could not add market data to the ledger %q: %v\n", ledgerName, err)
+			continue
+		}
 
-	err = portfolio.EncodeLedger(file, ledger)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error wrting  updated ledger file: %v\n", err)
-		return subcommands.ExitFailure
-	}
+		if err := portfolio.SaveLedger(PortfolioPath(), ledger); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing updated ledger file for %q: %v\n", ledgerName, err)
+			continue
+		}
 
-	for _, c := range changes {
-		if c.Old != nil {
-			fmt.Printf("%s %15s: %10s (%10s)\n", c.Date, c.ID, c.Old.StringFixed(4), c.New.StringFixed(4))
+		for _, c := range changes {
+			if c.Old != nil {
+				fmt.Printf("%s %15s: %10s (%10s)\n", c.Date, c.ID, c.Old.StringFixed(4), c.New.StringFixed(4))
+			} else {
+				fmt.Printf("%s %15s: %10s\n", c.Date, c.ID, c.New.StringFixed(4))
+			}
+		}
+		if summary.Total() > 0 {
+			fmt.Fprintf(os.Stderr, "Finished processing ledger %q, %d updates applied.\n", ledgerName, summary.Total())
 		} else {
-			fmt.Printf("%s %15s: %10s\n", c.Date, c.ID, c.New.StringFixed(4))
+			fmt.Fprintf(os.Stderr, "Finished processing ledger %q, no updates.\n", ledgerName)
 		}
 	}
 
-	fmt.Fprintf(os.Stderr, "✅ Successfully fetched from Amundi.\n")
+	fmt.Fprintf(os.Stderr, "✅ Successfully fetched from Amundi and updated ledgers.\n")
 	return subcommands.ExitSuccess
 }
