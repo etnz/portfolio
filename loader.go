@@ -24,7 +24,7 @@ func FindLedger(path, query string) (*Ledger, error) {
 		if query == "" {
 			l := NewLedger()
 			// use a default name
-			l.name = "transactions"
+			l.name = "ledger"
 			return l, nil
 		}
 		return nil, fmt.Errorf("could not find ledger %q", query)

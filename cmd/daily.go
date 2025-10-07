@@ -41,14 +41,10 @@ func (c *dailyCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...interfa
 		return subcommands.ExitUsageError
 	}
 	for {
-		review, err := c.review.generateReview()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			return subcommands.ExitFailure
-
+		for _, ledger := range c.review.ledgers {
+			review := c.review.generateReview(ledger)
+			c.render(review, c.review.parsedMethod)
 		}
-
-		c.render(review, c.review.parsedMethod)
 
 		if c.watch > 0 {
 			time.Sleep(time.Duration(c.watch) * time.Second)

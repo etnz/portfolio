@@ -23,7 +23,7 @@ type reviewCmd struct {
 	// processed
 	parsedMethod portfolio.CostBasisMethod
 	rng          portfolio.Range
-	ledger       *portfolio.Ledger
+	ledgers      []*portfolio.Ledger
 }
 
 func (*reviewCmd) Name() string { return "review" }
@@ -50,13 +50,10 @@ func (c *reviewCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 		return subcommands.ExitUsageError
 	}
 
-	review, err := c.generateReview()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return subcommands.ExitFailure
+	for _, ledger := range c.ledgers {
+		review := c.generateReview(ledger)
+		c.render(review, c.parsedMethod)
 	}
-
-	c.render(review, c.parsedMethod)
 
 	return subcommands.ExitSuccess
 }
@@ -95,21 +92,21 @@ func (c *reviewCmd) init() error {
 	}
 	c.parsedMethod = method
 
-	c.ledger, err = DecodeLedger(c.ledgerFile)
+	c.ledgers, err = DecodeLedgers(c.ledgerFile)
 	if err != nil {
-		return fmt.Errorf("decoding ledger: %w", err)
+		return fmt.Errorf("decoding ledgers: %w", err)
 	}
 	return nil
 }
 
-func (c *reviewCmd) generateReview() (*portfolio.Review, error) {
+func (c *reviewCmd) generateReview(ledger *portfolio.Ledger) *portfolio.Review {
 
 	if c.update {
-		if err := c.ledger.UpdateIntraday(); err != nil {
+		if err := ledger.UpdateIntraday(); err != nil {
 			log.Printf("Warning: could not update some intraday prices: %v\n", err)
 		}
 	}
-	return c.ledger.NewReview(c.rng)
+	return ledger.NewReview(c.rng)
 }
 
 func (c *reviewCmd) render(review *portfolio.Review, method portfolio.CostBasisMethod) {

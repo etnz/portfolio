@@ -45,7 +45,7 @@ func getPeriodRanges(p portfolio.Period, on portfolio.Date) (current portfolio.R
 	return
 }
 
-func RenderMultiPeriodSummary(w io.Writer, on portfolio.Date, journal *portfolio.Journal) bool {
+func RenderMultiPeriodSummary(w io.Writer, on portfolio.Date, ledger *portfolio.Ledger) bool {
 	// Periods to be displayed
 	periods := []portfolio.Period{
 		portfolio.Daily,
@@ -61,11 +61,11 @@ func RenderMultiPeriodSummary(w io.Writer, on portfolio.Date, journal *portfolio
 		currentRange, previousRange := getPeriodRanges(p, on)
 
 		// Add previous period
-		prevReview, _ := portfolio.NewReview(journal, previousRange)
+		prevReview := ledger.NewReview(previousRange)
 		reviews = append(reviews, prevReview)
 
 		// Add current period
-		currentReview, _ := portfolio.NewReview(journal, currentRange)
+		currentReview := ledger.NewReview(currentRange)
 		reviews = append(reviews, currentReview)
 	}
 
@@ -163,6 +163,7 @@ func renderReviewSummary(w io.Writer, review *portfolio.Review) bool {
 func renderReviewSummarylevel(w io.Writer, review *portfolio.Review, level int, asOf bool) bool {
 	start, end := review.Start(), review.End()
 	heading := strings.Repeat("#", level)
+	name := review.Name()
 	// --- Main Summary ---
 	if p, ok := review.Range().Period(); ok {
 		var title string
@@ -173,9 +174,9 @@ func renderReviewSummarylevel(w io.Writer, review *portfolio.Review, level int, 
 		}
 		identifier := review.Range().Identifier()
 
-		fmt.Fprintf(w, "%s %s Review for %s\n\n", heading, strings.Title(title), identifier)
+		fmt.Fprintf(w, "%s %s %s Review for %s\n\n", heading, name, strings.Title(title), identifier)
 	} else {
-		fmt.Fprintf(w, "%s Review from %s to %s\n\n", heading, review.Range().From, review.Range().To)
+		fmt.Fprintf(w, "%s %s Review from %s to %s\n\n", heading, name, review.Range().From, review.Range().To)
 	}
 
 	if asOf {

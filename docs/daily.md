@@ -44,7 +44,7 @@ pcs daily -d 2025-01-03
 ```
 
 ```console check
-# Daily Review for 2025-01-03
+# ledger Daily Review for 2025-01-03
 
   *As of 2006-01-02 15:04:05*
 
@@ -100,7 +100,7 @@ pcs daily -d 2025-01-03
 ```
 
 ```console check
-# Daily Review for 2025-01-03
+# ledger Daily Review for 2025-01-03
 
   *As of 2006-01-02 15:04:05*
 

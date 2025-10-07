@@ -92,11 +92,7 @@ func (c *gainsCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{})
 	}
 
 	// Calculate gains
-	review, err := ledger.NewReview(period)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error calculating gains: %v\n", err)
-		return subcommands.ExitFailure
-	}
+	review := ledger.NewReview(period)
 
 	// Print report
 	md := renderer.GainsMarkdown(review, method)

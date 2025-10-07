@@ -60,7 +60,7 @@ func (c *summaryCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 
 	var b strings.Builder
 
-	renderer.RenderMultiPeriodSummary(&b, on, ledger.Journal())
+	renderer.RenderMultiPeriodSummary(&b, on, ledger)
 
 	printMarkdown(b.String())
 

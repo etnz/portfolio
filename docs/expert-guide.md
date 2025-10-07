@@ -108,8 +108,8 @@ Recognizes an off-balance-sheet asset (receivable) or liability (payable) with a
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     A new counterparty account 'TaxAuthority' has been created.
     
     
@@ -124,8 +124,8 @@ Recognizes an off-balance-sheet asset (receivable) or liability (payable) with a
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     A new counterparty account 'PrivateLoan_JohnDoe' has been created.
     
     
@@ -140,8 +140,8 @@ Recognizes an off-balance-sheet asset (receivable) or liability (payable) with a
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     A new counterparty account 'EmployerCorp' has been created.
     
     
@@ -156,8 +156,8 @@ Recognizes an off-balance-sheet asset (receivable) or liability (payable) with a
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     A new counterparty account 'LegalServicesLLC' has been created.
     
     
@@ -172,8 +172,8 @@ Recognizes an off-balance-sheet asset (receivable) or liability (payable) with a
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     A new counterparty account 'FwdContract_XYZ' has been created.
     
     
@@ -201,10 +201,10 @@ Records the acquisition of a security, establishing a new cost basis lot and deb
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -222,10 +222,10 @@ Records the acquisition of a security, establishing a new cost basis lot and deb
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -243,10 +243,10 @@ Records the acquisition of a security, establishing a new cost basis lot and deb
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -264,10 +264,10 @@ Records the acquisition of a security, establishing a new cost basis lot and deb
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -285,10 +285,10 @@ Records the acquisition of a security, establishing a new cost basis lot and deb
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -317,9 +317,9 @@ Executes a foreign exchange transaction between two internal cash accounts.
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -335,9 +335,9 @@ Executes a foreign exchange transaction between two internal cash accounts.
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -353,9 +353,9 @@ Executes a foreign exchange transaction between two internal cash accounts.
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -371,9 +371,9 @@ Executes a foreign exchange transaction between two internal cash accounts.
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -389,9 +389,9 @@ Executes a foreign exchange transaction between two internal cash accounts.
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -417,8 +417,8 @@ Establishes the canonical mapping between a user-defined ticker and a unique Sec
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -432,8 +432,8 @@ Establishes the canonical mapping between a user-defined ticker and a unique Sec
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -447,8 +447,8 @@ Establishes the canonical mapping between a user-defined ticker and a unique Sec
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -462,8 +462,8 @@ Establishes the canonical mapping between a user-defined ticker and a unique Sec
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -477,8 +477,8 @@ Establishes the canonical mapping between a user-defined ticker and a unique Sec
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -503,8 +503,8 @@ Records an external capital injection into a cash account, optionally settling a
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -519,10 +519,10 @@ Records an external capital injection into a cash account, optionally settling a
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     A new counterparty account 'PrivateLoan_JohnDoe' has been created.
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -537,8 +537,8 @@ Records an external capital injection into a cash account, optionally settling a
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -553,10 +553,10 @@ Records an external capital injection into a cash account, optionally settling a
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     A new counterparty account 'ClientX' has been created.
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -572,10 +572,10 @@ Records an external capital injection into a cash account, optionally settling a
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     A new counterparty account 'EmployerCorp' has been created.
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -603,11 +603,11 @@ Records dividend income per share for a security, which contributes to total ret
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -627,11 +627,11 @@ Records dividend income per share for a security, which contributes to total ret
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -651,11 +651,11 @@ Records dividend income per share for a security, which contributes to total ret
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -675,11 +675,11 @@ Records dividend income per share for a security, which contributes to total ret
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -701,13 +701,13 @@ Records dividend income per share for a security, which contributes to total ret
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -734,7 +734,7 @@ Establishes the ledger's fundamental parameters, including its inception date an
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2020-01-01: init
@@ -746,7 +746,7 @@ Establishes the ledger's fundamental parameters, including its inception date an
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2018-05-15: init
@@ -758,7 +758,7 @@ Establishes the ledger's fundamental parameters, including its inception date an
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2024-04-06: init
@@ -770,7 +770,7 @@ Establishes the ledger's fundamental parameters, including its inception date an
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2021-01-01: init
@@ -783,8 +783,8 @@ Establishes the ledger's fundamental parameters, including its inception date an
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2019-12-31: init
@@ -808,9 +808,9 @@ Logs a market price point for a security on a specific date, essential for mark-
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -826,9 +826,9 @@ Logs a market price point for a security on a specific date, essential for mark-
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -844,9 +844,9 @@ Logs a market price point for a security on a specific date, essential for mark-
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -862,9 +862,9 @@ Logs a market price point for a security on a specific date, essential for mark-
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2024-01-01: init
@@ -882,10 +882,10 @@ Logs a market price point for a security on a specific date, essential for mark-
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -915,11 +915,11 @@ Records the disposition of a security, triggering a realized gain or loss calcul
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -939,11 +939,11 @@ Records the disposition of a security, triggering a realized gain or loss calcul
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2024-01-15: init
@@ -963,11 +963,11 @@ Records the disposition of a security, triggering a realized gain or loss calcul
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -986,10 +986,10 @@ Records the disposition of a security, triggering a realized gain or loss calcul
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -1008,11 +1008,11 @@ Records the disposition of a security, triggering a realized gain or loss calcul
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -1040,9 +1040,9 @@ Adjusts the quantity of all existing lots for a security to reflect a corporate 
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -1058,9 +1058,9 @@ Adjusts the quantity of all existing lots for a security to reflect a corporate 
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -1076,9 +1076,9 @@ Adjusts the quantity of all existing lots for a security to reflect a corporate 
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -1094,9 +1094,9 @@ Adjusts the quantity of all existing lots for a security to reflect a corporate 
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -1112,9 +1112,9 @@ Adjusts the quantity of all existing lots for a security to reflect a corporate 
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -1141,9 +1141,9 @@ Records an external capital withdrawal from a cash account, optionally settling 
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -1160,11 +1160,11 @@ Records an external capital withdrawal from a cash account, optionally settling 
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     A new counterparty account 'PrivateLoan_JohnDoe' has been created.
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -1181,9 +1181,9 @@ Records an external capital withdrawal from a cash account, optionally settling 
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -1200,11 +1200,11 @@ Records an external capital withdrawal from a cash account, optionally settling 
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     A new counterparty account 'TaxAuthority' has been created.
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init
@@ -1222,10 +1222,10 @@ Records an external capital withdrawal from a cash account, optionally settling 
     pcs tx
     ```
     ```console check
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
-    ✅ Successfully recorded transaction in ledger "transactions".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
+    ✅ Successfully recorded transaction in ledger "ledger".
     
     
       • 2025-01-01: init

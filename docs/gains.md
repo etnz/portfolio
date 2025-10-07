@@ -43,7 +43,7 @@ pcs gains --period month -d 2025-03-31
 ```
 
 ```console check
-# Monthly Review for 2025-March
+# ledger Monthly Review for 2025-March
 
   *As of 2006-01-02 15:04:05*
 
@@ -103,7 +103,7 @@ pcs gains --period month -d 2025-03-31
 ```
 
 ```console check
-# Monthly Review for 2025-March
+# ledger Monthly Review for 2025-March
 
   *As of 2006-01-02 15:04:05*
 

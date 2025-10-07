@@ -703,14 +703,18 @@ func (l *Ledger) InceptionDate(security string) Date {
 // NewSnapshot creates a new portfolio snapshot for a given date.
 func (l *Ledger) NewSnapshot(on Date) *Snapshot {
 	return &Snapshot{
+		name:    l.name,
 		journal: l.journal,
 		on:      on,
 	}
 }
 
 // NewReview creates a new portfolio review for a given period.
-func (l *Ledger) NewReview(period Range) (*Review, error) {
-	return NewReview(l.journal, period)
+func (l *Ledger) NewReview(period Range) *Review {
+	return &Review{
+		start: l.NewSnapshot(period.From.Add(-1)),
+		end:   l.NewSnapshot(period.To),
+	}
 }
 
 // GenerateLog generates a log of reviews for each sub-period within a given date range.
@@ -721,10 +725,7 @@ func (l *Ledger) GenerateLog(r Range, period Period) ([]*Review, error) {
 	}
 
 	for subRange := range r.Periods(period) {
-		review, err := l.NewReview(subRange)
-		if err != nil {
-			return nil, err
-		}
+		review := l.NewReview(subRange)
 		result = append(result, review)
 	}
 	return result, nil

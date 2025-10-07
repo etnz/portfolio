@@ -13,6 +13,10 @@ type Review struct {
 	end   *Snapshot // Snapshot at period.To
 }
 
+func (r *Review) Name() string {
+	return r.end.Name()
+}
+
 // Start returns the snapshot at the beginning of the review period (taken on `period.From - 1`).
 func (r *Review) Start() *Snapshot {
 	return r.start
@@ -259,12 +263,4 @@ func (r *Review) TotalCostBasis(method CostBasisMethod) Money {
 		total = total.Add(r.end.Convert(cost))
 	}
 	return total
-}
-
-// NewReview creates a new portfolio review for a given period.
-func NewReview(journal *Journal, period Range) (*Review, error) {
-	return &Review{
-		start: &Snapshot{journal: journal, on: period.From.Add(-1)},
-		end:   &Snapshot{journal: journal, on: period.To},
-	}, nil
 }

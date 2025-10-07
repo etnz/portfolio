@@ -9,8 +9,13 @@ import (
 // It is a stateless calculator that computes all values on-the-fly by
 // processing journal events up to its 'on' date.
 type Snapshot struct {
+	name    string // the ledger's name
 	journal *Journal
 	on      Date
+}
+
+func (s *Snapshot) Name() string {
+	return s.name
 }
 
 // On returns the date of the snapshot.

@@ -40,16 +40,10 @@ func (c *weeklyCmd) Execute(ctx context.Context, f *flag.FlagSet, args ...interf
 		return subcommands.ExitUsageError
 	}
 	for {
-		review, err := c.review.generateReview()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			if c.watch == 0 {
-				return subcommands.ExitFailure
-			}
-		} else {
+		for _, ledger := range c.review.ledgers {
+			review := c.review.generateReview(ledger)
 			c.render(review, c.review.parsedMethod)
 		}
-
 		if c.watch > 0 {
 			time.Sleep(time.Duration(c.watch) * time.Second)
 		} else {
