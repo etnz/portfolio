@@ -11,7 +11,6 @@ import (
 )
 
 type fmtCmd struct {
-	outputFile string
 	ledgerFile string
 }
 

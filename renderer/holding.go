@@ -2,88 +2,13 @@ package renderer
 
 import (
 	"fmt"
-	"io"
 	"strings"
-	"time"
 
 	"github.com/etnz/portfolio"
 )
 
-func HoldingMarkdown(s *portfolio.Snapshot) string {
-	var b strings.Builder
-	on := s.On()
-
-	valDay := on.String()
-	if on.IsToday() {
-		valDay += " " + time.Now().Format("15:04:05")
-	}
-	fmt.Fprintf(&b, "# Holding Report on %s\n\n", valDay)
-
-	fmt.Fprintf(&b, "Total Portfolio Value: **%s**\n\n", s.TotalPortfolio().String())
-
-	// --- Securities Section ---
-	securitiesSection := Header(func(w io.Writer) {
-		fmt.Fprint(w, "## Securities\n\n")
-		fmt.Fprintln(w, "| Ticker | Quantity | Price | Market Value |")
-		fmt.Fprintln(w, "|:---|---:|---:|---:|")
-	})
-
-	for ticker := range s.Securities() {
-		pos := s.Position(ticker)
-		if pos.IsZero() {
-			continue
-		}
-		securitiesSection.PrintHeader(&b)
-		fmt.Fprintf(&b, "| %s | %s | %s | %s |\n",
-			ticker,
-			pos.String(),
-			s.Price(ticker).String(),
-			s.Convert(s.MarketValue(ticker)).String(),
-		)
-	}
-	securitiesSection.PrintFooter(&b)
-
-	// --- Cash Section ---
-	cashSection := Header(func(w io.Writer) {
-		fmt.Fprint(w, "\n## Cash\n\n")
-		fmt.Fprintln(w, "| Currency | Balance | Value |")
-		fmt.Fprintln(w, "|:---|---:|---:|")
-	})
-
-	for cur := range s.Currencies() {
-		bal := s.Cash(cur)
-		if bal.IsZero() {
-			continue
-		}
-		cashSection.PrintHeader(&b)
-		fmt.Fprintf(&b, "| %s | %s | %s |\n",
-			cur,
-			bal.String(),
-			s.Convert(bal).String(),
-		)
-	}
-	cashSection.PrintFooter(&b)
-
-	// --- Counterparties Section ---
-	if !s.TotalCounterparty().IsZero() {
-		counterpartiesSection := Header(func(w io.Writer) {
-			fmt.Fprint(w, "\n## Counterparties\n\n")
-			fmt.Fprintln(w, "| Name | Balance | Value |")
-			fmt.Fprintln(w, "|:---|---:|---:|")
-		})
-		for acc := range s.Counterparties() {
-			bal := s.Counterparty(acc)
-			if bal.IsZero() {
-				continue
-			}
-			counterpartiesSection.PrintHeader(&b)
-			fmt.Fprintf(&b, "| %s | %s | %s |\n",
-				acc, bal.SignedString(), s.Convert(bal).SignedString())
-		}
-	}
-
-	return b.String()
-}
+// Still used in `assist` because that is the only way to let Gemini know the tickers (ID and description are key)
+// We'll keep it until we have a better way to do it (maybe passing Holding as a json would be better)
 
 // DeclarationMarkdown renders the full declaration of stocks ticker.
 func DeclarationMarkdown(s *portfolio.Snapshot) string {

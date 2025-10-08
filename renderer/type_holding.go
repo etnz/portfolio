@@ -1,11 +1,6 @@
 package renderer
 
 import (
-	"bytes"
-	"fmt"
-	"strings"
-	"text/template"
-
 	"github.com/etnz/portfolio"
 )
 
@@ -156,17 +151,6 @@ Total {{ if .Name }}{{ .Name }} {{ end }}Portfolio Value: **{{ .TotalPortfolioVa
 {{- end -}}
 `
 
-// ToMarkdown renders the Holding struct to a markdown string using a text/template.
-func RenderHolding(h *Holding) string {
-	tmpl := template.Must(template.New("holding").Parse(holdingMarkdownTemplate))
-	var b strings.Builder
-	if err := tmpl.Execute(&b, h); err != nil {
-		// In a real application, you might want to handle this error more gracefully.
-		return fmt.Sprintf("Error executing template: %v", err)
-	}
-	return b.String()
-}
-
 // ConsolidatedHolding represents a consolidated view of multiple holdings.
 type ConsolidatedHolding struct {
 	Date                            portfolio.Date  `json:"date"`
@@ -260,16 +244,3 @@ Consolidated Portfolio Value: **{{ .ConsolidatedPortfolioValue }}**
 {{- end }}
 | **Consolidated Total** | | **{{ .ConsolidatedCounterpartiesValue.SignedString }}** |
 `
-
-// RenderConsolidatedHolding renders the ConsolidatedHolding struct to a markdown string.
-func RenderConsolidatedHolding(ch *ConsolidatedHolding) string {
-	// Using a buffer to capture output of a nested template execution
-	var renderedHoldings bytes.Buffer
-	tmpl := template.Must(template.New("consolidatedHolding").Parse(consolidatedHoldingMarkdownTemplate))
-
-	if err := tmpl.Execute(&renderedHoldings, ch); err != nil {
-		return fmt.Sprintf("Error executing template: %v", err)
-	}
-
-	return renderedHoldings.String()
-}

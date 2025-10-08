@@ -72,7 +72,7 @@ func (m Money) AsFloat() float64 { return m.value.InexactFloat64() }
 // 0 is represented as a ""
 func (m Money) SignedString() string {
 	if m.value.IsZero() {
-		return " "
+		return "-"
 	}
 	if m.value.IsPositive() {
 		return "+" + m.String()

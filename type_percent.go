@@ -19,5 +19,9 @@ func (p Percent) String() string {
 }
 
 func (p Percent) SignedString() string {
-	return fmt.Sprintf("%+.2f%%", p)
+	res := fmt.Sprintf("%+.2f%%", p)
+	if res == "+0.00%" {
+		return "-"
+	}
+	return res
 }

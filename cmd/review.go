@@ -20,6 +20,7 @@ type reviewCmd struct {
 	method     string
 	update     bool
 	ledgerFile string
+	options    renderer.ReviewRenderOptions
 	// processed
 	parsedMethod portfolio.CostBasisMethod
 	rng          portfolio.Range
@@ -30,7 +31,7 @@ func (*reviewCmd) Name() string { return "review" }
 
 func (*reviewCmd) Synopsis() string { return "review a portfolio performance" }
 func (*reviewCmd) Usage() string {
-	return `pcs review [-p <period>| -start <date>] [-d <date>] [-l <ledger>]
+	return `pcs review [-p <period>| -start <date>] [-d <date>] [-l <ledger>] [-s]
 	
   Review the portfolio for a given period.
 `
@@ -39,6 +40,8 @@ func (*reviewCmd) Usage() string {
 func (c *reviewCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", "", "Date for the report. See the user manual for supported date formats.")
 	f.StringVar(&c.period, "p", portfolio.Daily.String(), "period for the review (day, week, month, quarter, year)")
+	f.BoolVar(&c.options.SimplifiedView, "s", false, "provide a simplified asset review")
+	f.BoolVar(&c.options.SkipTransactions, "t", false, "skip transactions in the report")
 	f.StringVar(&c.start, "start", "", "Start date of the reporting period. Overrides -p.")
 	f.StringVar(&c.method, "method", "fifo", "Cost basis method (average, fifo)")
 	f.StringVar(&c.ledgerFile, "l", "", "Ledger to report on. Defaults to the only ledger if one exists.")
@@ -110,6 +113,7 @@ func (c *reviewCmd) generateReview(ledger *portfolio.Ledger) *portfolio.Review {
 }
 
 func (c *reviewCmd) render(review *portfolio.Review, method portfolio.CostBasisMethod) {
-	md := renderer.ReviewMarkdown(review, method)
+	r := renderer.NewReview(review, method)
+	md := renderer.RenderReview(r, c.options)
 	printMarkdown(md)
 }
