@@ -46,6 +46,14 @@ func (d Date) Day() int { return d.d }
 // String format the date in date RFC3339
 func (d Date) String() string { return d.time().Format(DateFormat) }
 
+// DayString return d.String() + if the day is today the hh:mm:ss time.
+func (d Date) DayString() string {
+	if d.IsToday() {
+		return d.String() + " " + time.Now().Format("15:04:05")
+	}
+	return d.String()
+}
+
 // Full format the date in date-time RFC3339
 func (d Date) Full() string { return d.time().Format(DatetimeFormat) }
 

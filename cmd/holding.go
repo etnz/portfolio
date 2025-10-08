@@ -43,23 +43,31 @@ func (c *holdingCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		c.update = true
 	}
 
-	ledger, err := DecodeLedger(c.ledgerFile)
+	ledgers, err := DecodeLedgers(c.ledgerFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading ledger %q: %v\n", c.ledgerFile, err)
 		return subcommands.ExitFailure
 	}
 
-	if c.update {
-		err := ledger.UpdateIntraday()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: could not update intraday prices: %v\n", err)
-			// Continue without failing
+	var snaps []*portfolio.Snapshot
+	for _, ledger := range ledgers {
+		if c.update {
+			err := ledger.UpdateIntraday()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: could not update intraday prices: %v\n", err)
+				// Continue without failing
+			}
 		}
+		snaps = append(snaps, ledger.NewSnapshot(on))
 	}
 
-	snapshot := ledger.NewSnapshot(on)
-
-	printMarkdown(renderer.HoldingMarkdown(snapshot))
+	var md string
+	if len(snaps) == 1 {
+		md = renderer.RenderHolding(renderer.NewHolding(snaps[0]))
+	} else {
+		md = renderer.RenderConsolidatedHolding(renderer.NewConsolidatedHolding(snaps))
+	}
+	printMarkdown(md)
 
 	return subcommands.ExitSuccess
 }
