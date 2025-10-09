@@ -293,7 +293,7 @@ func (r *blockRunner) runBlock(t *testing.T, block *Block) {
 
 	// Record last run output.
 	if block.Type == bashRun || block.Type == bashDemo {
-		r.previousOutput = string(output)
+		r.previousOutput = strings.TrimSpace(string(output))
 	}
 
 	// Handling bash errors.

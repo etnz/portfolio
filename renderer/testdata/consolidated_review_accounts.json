@@ -1,0 +1,26 @@
+{
+    "consolidatedTotalCashValue": { "amount": "1000", "currency": "EUR" },
+    "consolidatedTotalCounterpartiesValue": { "amount": "200", "currency": "EUR" },
+    "reviews": [
+        {
+            "name": "Ledger A",
+            "totalCashValue": { "amount": "1000", "currency": "EUR" },
+            "totalCounterpartiesValue": { "amount": "200", "currency": "EUR" },
+            "accounts": {
+                "cash": [
+                    {
+                        "currency": "EUR",
+                        "value": { "amount": "1000", "currency": "EUR" },
+                        "forexReturn": 0
+                    }
+                ],
+                "counterparty": [
+                    {
+                        "name": "Receivable",
+                        "value": { "amount": "200", "currency": "EUR" }
+                    }
+                ]
+            }
+        }
+    ]
+}

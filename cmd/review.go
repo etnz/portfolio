@@ -3,9 +3,7 @@ package cmd
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
-	"os"
 
 	"github.com/etnz/portfolio"
 	"github.com/etnz/portfolio/renderer"
@@ -20,11 +18,7 @@ type reviewCmd struct {
 	method     string
 	update     bool
 	ledgerFile string
-	options    renderer.ReviewRenderOptions
-	// processed
-	parsedMethod portfolio.CostBasisMethod
-	rng          portfolio.Range
-	ledgers      []*portfolio.Ledger
+	opts       renderer.ReviewRenderOptions
 }
 
 func (*reviewCmd) Name() string { return "review" }
@@ -40,80 +34,77 @@ func (*reviewCmd) Usage() string {
 func (c *reviewCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.date, "d", "", "Date for the report. See the user manual for supported date formats.")
 	f.StringVar(&c.period, "p", portfolio.Daily.String(), "period for the review (day, week, month, quarter, year)")
-	f.BoolVar(&c.options.SimplifiedView, "s", false, "provide a simplified asset review")
-	f.BoolVar(&c.options.SkipTransactions, "t", false, "skip transactions in the report")
+	f.BoolVar(&c.opts.SimplifiedView, "s", false, "provide a simplified asset review")
+	f.BoolVar(&c.opts.SkipTransactions, "t", false, "skip transactions in the report")
 	f.StringVar(&c.start, "start", "", "Start date of the reporting period. Overrides -p.")
 	f.StringVar(&c.method, "method", "fifo", "Cost basis method (average, fifo)")
 	f.StringVar(&c.ledgerFile, "l", "", "Ledger to report on. Defaults to the only ledger if one exists.")
 }
 
 func (c *reviewCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if err := c.init(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return subcommands.ExitUsageError
-	}
-
-	for _, ledger := range c.ledgers {
-		review := c.generateReview(ledger)
-		c.render(review, c.parsedMethod)
-	}
-
-	return subcommands.ExitSuccess
-}
-
-func (c *reviewCmd) init() error {
 	if c.date == "" {
 		c.date = portfolio.Today().String()
 	}
 	endDate, err := portfolio.ParseDate(c.date)
 	if err != nil {
-		return fmt.Errorf("parsing end date: %w", err)
+		log.Printf("Error parsing end date: %v", err)
+		return subcommands.ExitUsageError
 	}
+
+	var rng portfolio.Range
 	if c.start != "" {
 		// Custom range using start and end dates
 		startDate, err := portfolio.ParseDate(c.start)
 		if err != nil {
-			return fmt.Errorf("parsing start date: %w", err)
+			log.Printf("Error parsing start date: %v", err)
+			return subcommands.ExitUsageError
 		}
-		c.rng = portfolio.NewRange(startDate, endDate)
+		rng = portfolio.NewRange(startDate, endDate)
 	} else {
 		// Predefined period
 		p, err := portfolio.ParsePeriod(c.period)
 		if err != nil {
-			return fmt.Errorf("parsing period: %w", err)
+			log.Printf("Error parsing period: %v", err)
+			return subcommands.ExitUsageError
 		}
-		c.rng = p.Range(endDate)
+		rng = p.Range(endDate)
 	}
 
-	if !c.rng.To.Before(portfolio.Today()) {
+	if !rng.To.Before(portfolio.Today()) {
 		c.update = true
 	}
 
-	method, err := portfolio.ParseCostBasisMethod(c.method)
+	parsedMethod, err := portfolio.ParseCostBasisMethod(c.method)
 	if err != nil {
-		return fmt.Errorf("parsing cost basis method: %w", err)
+		log.Printf("Error parsing cost basis method: %v", err)
+		return subcommands.ExitUsageError
 	}
-	c.parsedMethod = method
 
-	c.ledgers, err = DecodeLedgers(c.ledgerFile)
+	ledgers, err := DecodeLedgers(c.ledgerFile)
 	if err != nil {
-		return fmt.Errorf("decoding ledgers: %w", err)
+		log.Printf("Error decoding ledgers: %v", err)
+		return subcommands.ExitFailure
 	}
-	return nil
-}
 
-func (c *reviewCmd) generateReview(ledger *portfolio.Ledger) *portfolio.Review {
-
-	if c.update {
-		if err := ledger.UpdateIntraday(); err != nil {
-			log.Printf("Warning: could not update some intraday prices: %v\n", err)
+	var reviews []*portfolio.Review
+	for _, ledger := range ledgers {
+		if c.update {
+			if err := ledger.UpdateIntraday(); err != nil {
+				log.Printf("Warning: could not update some intraday prices for ledger %q: %v\n", ledger.Name(), err)
+			}
 		}
+		reviews = append(reviews, ledger.NewReview(rng))
 	}
-	return ledger.NewReview(c.rng)
-}
 
-func (c *reviewCmd) render(review *portfolio.Review, method portfolio.CostBasisMethod) {
-	r := renderer.NewReview(review, method)
-	md := renderer.RenderReview(r, c.options)
+	var md string
+	if len(reviews) == 1 {
+		r := renderer.NewReview(reviews[0], parsedMethod)
+		md = renderer.RenderReview(r, c.opts)
+	} else {
+		cr := renderer.NewConsolidatedReview(reviews, parsedMethod)
+		md = renderer.RenderConsolidatedReview(cr, c.opts)
+	}
 	printMarkdown(md)
+
+	return subcommands.ExitSuccess
 }

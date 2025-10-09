@@ -1,0 +1,19 @@
+{
+    "consolidatedTotalPortfolioValue": { "amount": "20000", "currency": "EUR" },
+    "consolidatedPreviousValue": { "amount": "15000", "currency": "EUR" },
+    "consolidatedCapitalFlow": { "amount": "2000", "currency": "EUR" },
+    "consolidatedMarketGains": { "amount": "2500", "currency": "EUR" },
+    "consolidatedForexGains": { "amount": "500", "currency": "EUR" },
+    "consolidatedNetChange": { "amount": "5000", "currency": "EUR" },
+    "reviews": [
+        {
+            "name": "Ledger A",
+            "totalPortfolioValue": { "amount": "12000", "currency": "EUR" },
+            "previousValue": { "amount": "9000", "currency": "EUR" },
+            "capitalFlow": { "amount": "1000", "currency": "EUR" },
+            "marketGains": { "amount": "1500", "currency": "EUR" },
+            "forexGains": { "amount": "500", "currency": "EUR" },
+            "netChange": { "amount": "3000", "currency": "EUR" }
+        }
+    ]
+}

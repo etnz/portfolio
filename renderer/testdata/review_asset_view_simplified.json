@@ -1,0 +1,13 @@
+{
+    "totalEndMarketValue": { "amount": "7500.00", "currency": "EUR" },
+    "marketGains": { "amount": "1500.00", "currency": "EUR" },
+    "totalTwr": 25.0,
+    "assets": [
+        {
+            "ticker": "AAPL",
+            "endValue": { "amount": "7500.00", "currency": "EUR" },
+            "marketGain": { "amount": "1500.00", "currency": "EUR" },
+            "twr": 25.0
+        }
+    ]
+}

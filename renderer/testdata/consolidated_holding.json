@@ -1,0 +1,47 @@
+{
+    "date": "2024-01-15",
+    "consolidatedPortfolioValue": { "amount": "24691.34", "currency": "EUR" },
+    "consolidatedSecuritiesValue": { "amount": "20000.00", "currency": "EUR" },
+    "consolidatedCashValue": { "amount": "4000.00", "currency": "EUR" },
+    "consolidatedCounterpartiesValue": { "amount": "691.34", "currency": "EUR" },
+    "reportingCurrency": "EUR",
+    "holdings": [
+        {
+            "name": "Ledger A",
+            "totalPortfolioValue": { "amount": "12345.67", "currency": "EUR" },
+            "totalSecuritiesValue": { "amount": "10000.00", "currency": "EUR" },
+            "totalCashValue": { "amount": "2000.00", "currency": "EUR" },
+            "totalCounterpartiesValue": { "amount": "345.67", "currency": "EUR" },
+            "securities": [
+                {
+                    "ticker": "AAPL",
+                    "quantity": "10",
+                    "price": { "amount": "1000.00", "currency": "EUR" },
+                    "marketValue": { "amount": "10000.00", "currency": "EUR" }
+                }
+            ],
+            "cash": [
+                {
+                    "currency": "EUR",
+                    "balance": { "amount": "2000.00", "currency": "EUR" }
+                }
+            ],
+            "counterparties": [
+                {
+                    "name": "Fees",
+                    "balance": { "amount": "345.67", "currency": "EUR" }
+                }
+            ]
+        },
+        {
+            "name": "Ledger B",
+            "totalPortfolioValue": { "amount": "12345.67", "currency": "EUR" },
+            "totalSecuritiesValue": { "amount": "10000.00", "currency": "EUR" },
+            "totalCashValue": { "amount": "2000.00", "currency": "EUR" },
+            "totalCounterpartiesValue": { "amount": "345.67", "currency": "EUR" },
+            "securities": [],
+            "cash": [],
+            "counterparties": []
+        }
+    ]
+}

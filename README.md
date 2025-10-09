@@ -151,45 +151,43 @@ pcs review -d 2025-08-27
 ```
 
 ```console check
-# ledger Daily Review for 2025-08-27
+# ledger Review for 2025-08-27
 
-  *As of 2006-01-02 15:04:05*
+  *As of 2006-01-02 15:04:05*| **Total Portfolio Value** | **€10,355.00** |
+  |---:|---:|
+  | Previous Value | €0.00 |
+  | | |
+  |   Capital Flow | +€10,000.00 |
+  | + Market Gains | +€355.00 |
+  | + Forex Gains | - |
+  | **= Net Change** | **€10,355.00** |
+  | | |
+  | Cash Change | +€7,300.00 |
+  | + Counterparties Change | - |
+  | + Market Value Change | +€3,055.00 |
+  | **= Net Change** | **€10,355.00** |
+  | | |
+  |   Dividends | - |
+  | + Market Gains | +€355.00 |
+  | + Forex Gains | - |
+  | **=Total Gains** | **+€355.00** |## Accounts
 
-   **Total Portfolio Value** | **€10,355.00** 
-  ---------------------------|----------------
-              Previous Value |          €0.00 
-                             |                
-                Capital Flow |    +€10,000.00 
-              + Market Gains |       +€355.00 
-               + Forex Gains |                
-            **= Net Change** | **€10,355.00** 
-                             |                
-                 Cash Change |     +€7,300.00 
-     + Counterparties Change |                
-       + Market Value Change |     +€3,055.00 
-            **= Net Change** | **€10,355.00** 
-                             |                
-                   Dividends |                
-              + Market Gains |       +€355.00 
-               + Forex Gains |                
-            **=Total Gains** |   **+€355.00** 
-
-  ## Accounts
-
-   **Cash Accounts** |     Value | Forex % 
-  -------------------|-----------|---------
-                 EUR | €7,300.00 |         
+   **Cash Accounts** |         Value | Forex % 
+  -------------------|---------------|---------
+                 EUR |     €7,300.00 |       - 
+           **Total** | **€7,300.00** |         
 
    **Counterparty Accounts** | Value 
   ---------------------------|-------
+                   **Total** | **-** 
 
   ## Consolidated Asset Report
 
-   Asset     | Start Value |     End Value |   Trading Flow |  Market Gain | Realized Gain | Unrealized Gain | Dividends 
-  -----------|-------------|---------------|----------------|--------------|---------------|-----------------|-----------
-   AAPL      |        0.00 |     €1,932.00 |     +€1,500.00 |     +€432.00 |               |        +€432.00 |           
-   BankFund1 |        0.00 |     €1,123.00 |     +€1,200.00 |      -€77.00 |               |         -€77.00 |           
-   **Total** |   **€0.00** | **€3,055.00** | **+€2,700.00** | **+€355.00** |         ** ** |    **+€355.00** |     ** ** 
+   Asset     | Start Value |     End Value |   Trading Flow |  Market Gain | Realized Gain | Unrealized Gain | Dividends |       TWR 
+  -----------|-------------|---------------|----------------|--------------|---------------|-----------------|-----------|-----------
+   AAPL      |        0.00 |     €1,932.00 |     +€1,500.00 |     +€432.00 |             - |        +€432.00 |         - |         - 
+   BankFund1 |        0.00 |     €1,123.00 |     +€1,200.00 |      -€77.00 |             - |         -€77.00 |         - |    -0.00% 
+   **Total** |   **€0.00** | **€3,055.00** | **+€2,700.00** | **+€355.00** |         **-** |    **+€355.00** |     **-** | **+NaN%** 
 
   ## Transactions
 

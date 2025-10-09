@@ -1,0 +1,23 @@
+{
+    "totalStartMarketValue": { "amount": "5000.00", "currency": "EUR" },
+    "totalEndMarketValue": { "amount": "7500.00", "currency": "EUR" },
+    "totalNetTradingFlow": { "amount": "1000.00", "currency": "EUR" },
+    "marketGains": { "amount": "1500.00", "currency": "EUR" },
+    "totalRealizedGains": { "amount": "200.00", "currency": "EUR" },
+    "totalUnrealizedGains": { "amount": "1300.00", "currency": "EUR" },
+    "dividends": { "amount": "50.00", "currency": "EUR" },
+    "totalTwr": 25.0,
+    "assets": [
+        {
+            "ticker": "AAPL",
+            "startValue": { "amount": "5000.00", "currency": "EUR" },
+            "endValue": { "amount": "7500.00", "currency": "EUR" },
+            "tradingFlow": { "amount": "1000.00", "currency": "EUR" },
+            "marketGain": { "amount": "1500.00", "currency": "EUR" },
+            "realizedGain": { "amount": "200.00", "currency": "EUR" },
+            "unrealizedGain": { "amount": "1300.00", "currency": "EUR" },
+            "dividends": { "amount": "50.00", "currency": "EUR" },
+            "twr": 25.0
+        }
+    ]
+}

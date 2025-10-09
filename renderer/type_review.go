@@ -1,12 +1,16 @@
 package renderer
 
 import (
+	"embed"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/etnz/portfolio"
 )
+
+//go:embed *.md
+var templates embed.FS
 
 // Now is the current time used in reports.
 // it has to be a global variable so that tests can override it.
@@ -23,20 +27,22 @@ func Now() time.Time {
 
 // Review is a struct to represent the review data for rendering.
 type Review struct {
-	Name                 string          `json:"name,omitempty"`
-	AsOf                 string          `json:"asOf"`
-	Range                portfolio.Range `json:"range"`
-	TotalPortfolioValue  portfolio.Money `json:"totalPortfolioValue"`
-	PreviousValue        portfolio.Money `json:"previousValue"`
-	CapitalFlow          portfolio.Money `json:"capitalFlow"`
-	MarketGains          portfolio.Money `json:"marketGains"`
-	ForexGains           portfolio.Money `json:"forexGains"`
-	NetChange            portfolio.Money `json:"netChange"`
-	CashChange           portfolio.Money `json:"cashChange"`
-	CounterpartiesChange portfolio.Money `json:"counterpartiesChange"`
-	MarketValueChange    portfolio.Money `json:"marketValueChange"`
-	Dividends            portfolio.Money `json:"dividends"`
-	TotalGains           portfolio.Money `json:"totalGains"`
+	Name                     string          `json:"name,omitempty"`
+	AsOf                     string          `json:"asOf"`
+	Range                    portfolio.Range `json:"range"`
+	TotalPortfolioValue      portfolio.Money `json:"totalPortfolioValue"`
+	TotalCashValue           portfolio.Money `json:"totalCashValue"`
+	TotalCounterpartiesValue portfolio.Money `json:"totalCounterpartiesValue"`
+	PreviousValue            portfolio.Money `json:"previousValue"`
+	CapitalFlow              portfolio.Money `json:"capitalFlow"`
+	MarketGains              portfolio.Money `json:"marketGains"`
+	ForexGains               portfolio.Money `json:"forexGains"`
+	NetChange                portfolio.Money `json:"netChange"`
+	CashChange               portfolio.Money `json:"cashChange"`
+	CounterpartiesChange     portfolio.Money `json:"counterpartiesChange"`
+	MarketValueChange        portfolio.Money `json:"marketValueChange"`
+	Dividends                portfolio.Money `json:"dividends"`
+	TotalGains               portfolio.Money `json:"totalGains"`
 	// Totals for the asset report
 	TotalStartMarketValue portfolio.Money   `json:"totalStartMarketValue"`
 	TotalEndMarketValue   portfolio.Money   `json:"totalEndMarketValue"`
@@ -99,20 +105,22 @@ func NewReview(pr *portfolio.Review, method portfolio.CostBasisMethod) *Review {
 	forexGain := pr.PortfolioChange().Sub(pr.CashFlow()).Sub(pr.MarketGain())
 
 	r := &Review{
-		AsOf:                 Now().Format("2006-01-02 15:04:05"),
-		Name:                 pr.Name(),
-		Range:                pr.Range(),
-		TotalPortfolioValue:  end.TotalPortfolio(),
-		PreviousValue:        start.TotalPortfolio(),
-		CapitalFlow:          pr.CashFlow(),
-		MarketGains:          pr.MarketGain(),
-		ForexGains:           forexGain,
-		NetChange:            pr.PortfolioChange(),
-		CashChange:           pr.CashChange(),
-		CounterpartiesChange: pr.CounterpartyChange(),
-		MarketValueChange:    pr.TotalMarketChange(),
-		Dividends:            pr.Dividends(),
-		TotalGains:           pr.MarketGain().Add(forexGain).Add(pr.Dividends()),
+		AsOf:                     Now().Format("2006-01-02 15:04:05"),
+		Name:                     pr.Name(),
+		Range:                    pr.Range(),
+		TotalPortfolioValue:      end.TotalPortfolio(),
+		TotalCashValue:           end.TotalCash(),
+		TotalCounterpartiesValue: end.TotalCounterparty(),
+		PreviousValue:            start.TotalPortfolio(),
+		CapitalFlow:              pr.CashFlow(),
+		MarketGains:              pr.MarketGain(),
+		ForexGains:               forexGain,
+		NetChange:                pr.PortfolioChange(),
+		CashChange:               pr.CashChange(),
+		CounterpartiesChange:     pr.CounterpartyChange(),
+		MarketValueChange:        pr.TotalMarketChange(),
+		Dividends:                pr.Dividends(),
+		TotalGains:               pr.MarketGain().Add(forexGain).Add(pr.Dividends()),
 
 		TotalStartMarketValue: pr.Start().TotalMarket(),
 		TotalEndMarketValue:   pr.End().TotalMarket(),
@@ -185,101 +193,4 @@ const (
 {{- template "asset_view" . -}}
 {{- template "review_transactions" . -}}
 `
-
-	// --- Partials ---
-
-	reviewTitleTemplate = `
-{{define "review_title"}}# {{ .Name }} Review for {{ .Range.Identifier }}
-
-*As of {{ .AsOf }}*
-{{end}}`
-
-	reviewSummaryTemplate = `
-{{define "review_summary"}}
-| **Total Portfolio Value** | **{{ .TotalPortfolioValue }}** |
-|---:|---:|
-| Previous Value | {{ .PreviousValue }} |
-| | |
-|   Capital Flow | {{ .CapitalFlow.SignedString }} |
-| + Market Gains | {{ .MarketGains.SignedString }} |
-| + Forex Gains | {{ .ForexGains.SignedString }} |
-| **= Net Change** | **{{ .NetChange }}** |
-{{- if or (not .CashChange.IsZero) (not .CounterpartiesChange.IsZero) (not .MarketValueChange.IsZero) }}
-| | |
-| Cash Change | {{ .CashChange.SignedString }} |
-| + Counterparties Change | {{ .CounterpartiesChange.SignedString }} |
-| + Market Value Change | {{ .MarketValueChange.SignedString }} |
-| **= Net Change** | **{{ .NetChange }}** |
-{{- end }}
-| | |
-|   Dividends | {{ .Dividends.SignedString }} |
-| + Market Gains | {{ .MarketGains.SignedString }} |
-| + Forex Gains | {{ .ForexGains.SignedString }} |
-| **=Total Gains** | **{{ .TotalGains.SignedString }}** |
-{{end}}`
-
-	reviewAccountsTemplate = `
-{{define "review_accounts"}}
-## Accounts
-
-|  **Cash Accounts** | Value | Forex % |
-|---:|---:|---:|
-{{- range .Accounts.Cash }}
-| {{ .Currency }} | {{ .Value }} | {{ .ForexReturn.SignedString }} |
-{{- end }}
-
-| **Counterparty Accounts**  | Value |
-|---:|---:|
-{{- range .Accounts.Counterparty }}
-| {{ .Name }} | {{ .Value }} |
-{{- end }}
-{{end}}`
-
-	reviewTransactionsTemplate = `
-{{define "review_transactions"}}
-{{- if .Transactions }}
-
-## Transactions
-
-{{ range .Transactions -}}
-* {{ .When }}: {{ .Detail }}
-{{ end }}
-{{- end }}
-{{end}}`
-
-	// --- Asset View Implementations ---
-
-	assetViewConsolidated = `
-{{define "asset_view"}}
-{{- if .Assets }}
-
-## Consolidated Asset Report
-
-| Asset | Start Value | End Value | Trading Flow | Market Gain | Realized Gain | Unrealized Gain | Dividends | TWR |
-|:---|---:|---:|---:|---:|---:|---:|---:|---:|
-{{- range .Assets }}
-{{- if not .IsZero }}
-| {{ .Ticker }} | {{ .StartValue }} | {{ .EndValue }} | {{ .TradingFlow.SignedString }} | {{ .MarketGain.SignedString }} | {{ .RealizedGain.SignedString }} | {{ .UnrealizedGain.SignedString }} | {{ .Dividends.SignedString }} | {{ .TWR.SignedString }} |
-{{- end }}
-{{- end }}
-| **Total** | **{{ .TotalStartMarketValue }}** | **{{ .TotalEndMarketValue }}** | **{{ .TotalNetTradingFlow.SignedString }}** | **{{ .MarketGains.SignedString }}** | **{{ .TotalRealizedGains.SignedString }}** | **{{ .TotalUnrealizedGains.SignedString }}** | **{{ .Dividends.SignedString }}** | **{{ .TotalTWR.SignedString }}** |
-{{- end }}
-{{end}}`
-
-	assetViewSimplified = `
-{{define "asset_view"}}
-{{- if .Assets }}
-
-## Asset Performance
-
-| Asset | Value | Gain | TWR |
-|:---|---:|---:|---:|
-{{- range .Assets }}
-{{- if not .MarketGain.IsZero }}
-| {{ .Ticker }} | {{ .EndValue }} | {{ .MarketGain.SignedString }} | {{ .TWR.SignedString }} |
-{{- end }}
-{{- end }}
-| **Total** | **{{ .TotalEndMarketValue }}** | **{{ .MarketGains.SignedString }}** | **{{ .TotalTWR.SignedString }}** |
-{{- end }}
-{{end}}`
 )

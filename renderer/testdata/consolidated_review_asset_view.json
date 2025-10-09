@@ -1,0 +1,23 @@
+{
+    "consolidatedTotalStartMarketValue": { "amount": "5000", "currency": "EUR" },
+    "consolidatedTotalEndMarketValue": { "amount": "7500", "currency": "EUR" },
+    "consolidatedTotalNetTradingFlow": { "amount": "1000", "currency": "EUR" },
+    "consolidatedMarketGains": { "amount": "1500", "currency": "EUR" },
+    "consolidatedTotalRealizedGains": { "amount": "200", "currency": "EUR" },
+    "consolidatedTotalUnrealizedGains": { "amount": "1300", "currency": "EUR" },
+    "consolidatedDividends": { "amount": "50", "currency": "EUR" },
+    "reviews": [
+        {
+            "name": "Ledger A",
+            "totalStartMarketValue": { "amount": "5000", "currency": "EUR" },
+            "totalEndMarketValue": { "amount": "7500", "currency": "EUR" },
+            "totalNetTradingFlow": { "amount": "1000", "currency": "EUR" },
+            "marketGains": { "amount": "1500", "currency": "EUR" },
+            "totalRealizedGains": { "amount": "200", "currency": "EUR" },
+            "totalUnrealizedGains": { "amount": "1300", "currency": "EUR" },
+            "dividends": { "amount": "50", "currency": "EUR" },
+            "totalTwr": 25.0,
+            "assets": []
+        }
+    ]
+}

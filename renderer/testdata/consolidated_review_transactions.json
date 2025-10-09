@@ -1,0 +1,13 @@
+{
+    "reviews": [
+        {
+            "name": "Ledger A",
+            "transactions": [
+                {
+                    "When": "2024-01-10",
+                    "Detail": "Deposit €1,000.00"
+                }
+            ]
+        }
+    ]
+}

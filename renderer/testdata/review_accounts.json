@@ -1,0 +1,30 @@
+{
+    "totalCashValue": {
+        "amount": "1550.50",
+        "currency": "EUR"
+    },
+    "totalCounterpartiesValue": {
+        "amount": "-25.00",
+        "currency": "EUR"
+    },
+    "accounts": {
+        "cash": [
+            {
+                "currency": "EUR",
+                "value": { "amount": "1000.00", "currency": "EUR" },
+                "forexReturn": 0
+            },
+            {
+                "currency": "USD",
+                "value": { "amount": "550.50", "currency": "EUR" },
+                "forexReturn": 1.5
+            }
+        ],
+        "counterparty": [
+            {
+                "name": "Broker Fees",
+                "value": { "amount": "-25.00", "currency": "EUR" }
+            }
+        ]
+    }
+}
