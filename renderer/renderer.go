@@ -69,7 +69,12 @@ func RenderConsolidatedReview(cr *ConsolidatedReview, opts ReviewRenderOptions) 
 		"consolidated_review_title":    "consolidated_review_title.md",
 		"consolidated_review_summary":  "consolidated_review_summary.md",
 		"consolidated_review_accounts": "consolidated_review_accounts.md",
-		"consolidated_asset_view":      "consolidated_review_asset_view.md",
+	}
+
+	if opts.SimplifiedView {
+		partials["consolidated_asset_view"] = "consolidated_review_asset_view_simplified.md"
+	} else {
+		partials["consolidated_asset_view"] = "consolidated_review_asset_view.md"
 	}
 
 	// For now, we don't have a simplified view for consolidated review.

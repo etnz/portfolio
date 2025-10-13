@@ -1,5 +1,4 @@
-{{- if .Assets }}
-
+{{- if .Assets -}}
 ## Asset Performance
 
 | Asset | Value | Gain | TWR |

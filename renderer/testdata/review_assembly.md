@@ -1,6 +1,8 @@
 # My Full Review Review for 2023-Q4
 
-*As of 2024-01-15 10:00:00*| **Total Portfolio Value** | **0.00** |
+*As of 2024-01-15 10:00:00*
+
+| **Total Portfolio Value** | **0.00** |
 |---:|---:|
 | Previous Value | 0.00 |
 | | |
@@ -12,7 +14,9 @@
 |   Dividends | - |
 | + Market Gains | - |
 | + Forex Gains | - |
-| **=Total Gains** | **-** |## Accounts
+| **=Total Gains** | **-** |
+
+## Accounts
 
 |  **Cash Accounts** | Value | Forex % |
 |---:|---:|---:|
@@ -30,6 +34,8 @@
 | Asset | Start Value | End Value | Trading Flow | Market Gain | Realized Gain | Unrealized Gain | Dividends | TWR |
 |:---|---:|---:|---:|---:|---:|---:|---:|---:|
 | **Total** | **0.00** | **0.00** | **-** | **-** | **-** | **-** | **-** | **+25.00%** |
+
+
 
 ## Transactions
 

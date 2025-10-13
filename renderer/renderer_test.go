@@ -102,6 +102,12 @@ func TestTemplatePartials(t *testing.T) {
 			dataType:   &ConsolidatedReview{},
 		},
 		{
+			name:       "consolidated_review_asset_view_simplified",
+			structFile: "testdata/consolidated_review_asset_view.json",
+			goldenFile: "testdata/consolidated_review_asset_view_simplified.md",
+			dataType:   &ConsolidatedReview{},
+		},
+		{
 			name:       "consolidated_review_transactions",
 			structFile: "testdata/consolidated_review_transactions.json",
 			goldenFile: "testdata/consolidated_review_transactions.md",

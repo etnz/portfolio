@@ -1,5 +1,3 @@
-
-
 ## Asset Performance
 
 | Asset | Value | Gain | TWR |
