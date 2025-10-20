@@ -639,6 +639,7 @@ func (ledger *Ledger) LastOperationDate(s string) Date {
 
 // LastKnownMarketDataDate scans the ledger in reverse and returns the date of the most
 // recent `update-price` or `split` transaction for the given security ticker.
+// Deprecated: use Ledger.LastMarketDataDate instead.
 func (l *Ledger) LastKnownMarketDataDate(security string) Date {
 	// Iterate backwards for efficiency, as we want the most recent date.
 	for i := len(l.transactions) - 1; i >= 0; i-- {

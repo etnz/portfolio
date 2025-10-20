@@ -153,24 +153,28 @@ pcs review -d 2025-08-27
 ```console check
 # ledger Review for 2025-08-27
 
-  *As of 2006-01-02 15:04:05*| **Total Portfolio Value** | **€10,355.00** |
-  |---:|---:|
-  | Previous Value | €0.00 |
-  | | |
-  |   Capital Flow | +€10,000.00 |
-  | + Market Gains | +€355.00 |
-  | + Forex Gains | - |
-  | **= Net Change** | **€10,355.00** |
-  | | |
-  | Cash Change | +€7,300.00 |
-  | + Counterparties Change | - |
-  | + Market Value Change | +€3,055.00 |
-  | **= Net Change** | **€10,355.00** |
-  | | |
-  |   Dividends | - |
-  | + Market Gains | +€355.00 |
-  | + Forex Gains | - |
-  | **=Total Gains** | **+€355.00** |## Accounts
+  *As of 2006-01-02 15:04:05*
+
+   **Total Portfolio Value** | **€10,355.00** 
+  ---------------------------|----------------
+              Previous Value |          €0.00 
+                             |                
+                Capital Flow |    +€10,000.00 
+              + Market Gains |       +€355.00 
+               + Forex Gains |              - 
+            **= Net Change** | **€10,355.00** 
+                             |                
+                 Cash Change |     +€7,300.00 
+     + Counterparties Change |              - 
+       + Market Value Change |     +€3,055.00 
+            **= Net Change** | **€10,355.00** 
+                             |                
+                   Dividends |              - 
+              + Market Gains |       +€355.00 
+               + Forex Gains |              - 
+            **=Total Gains** |   **+€355.00** 
+
+  ## Accounts
 
    **Cash Accounts** |         Value | Forex % 
   -------------------|---------------|---------

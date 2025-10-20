@@ -254,7 +254,7 @@ func assetBounds(sec portfolio.Security, ledger *portfolio.Ledger, inception boo
 	from = ledger.InceptionDate(sec.Ticker())
 	if !inception {
 		// If we want incremental updates, start from the last known date + 1
-		lastKnown := ledger.LastKnownMarketDataDate(sec.Ticker()).Add(1)
+		lastKnown := ledger.NewSnapshot(portfolio.Today()).LastMarketDataDate(sec.Ticker()).Add(1)
 		// caveat: if there are no market data known (it's the case for new assets),
 		// lastKnown will be the zero date, which is before inception date.
 		// so we need to take the max of both.

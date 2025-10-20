@@ -133,6 +133,24 @@ func (s *Snapshot) Price(ticker string) Money {
 	return lastPrice
 }
 
+// LastMarketDataDate returns the date of the most recent market data (price or split)
+// for a security on or before the snapshot's date.
+func (s *Snapshot) LastMarketDataDate(ticker string) Date {
+	var lastDate Date
+	for e := range s.events() {
+		switch v := e.(type) {
+		case updatePrice:
+			if v.security == ticker {
+				lastDate = v.date()
+			}
+		case splitShare:
+			if v.security == ticker {
+				lastDate = v.date()
+			}
+		}
+	}
+	return lastDate
+}
 // --- public calculation helpers ---
 
 // Position calculates the quantity held of a single security on the snapshot's date.

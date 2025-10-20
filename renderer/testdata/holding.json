@@ -12,7 +12,8 @@
             "price": { "amount": "1000.00", "currency": "EUR" },
             "marketValue": { "amount": "10000.00", "currency": "EUR" },
             "id": "US0378331005",
-            "description": "Apple Inc."
+            "description": "Apple Inc.",
+            "lastUpdate": "2024-01-14"
         }
     ],
     "cash": [

@@ -36,6 +36,7 @@ type HoldingSecurity struct {
 	Price       portfolio.Money    `json:"price"`
 	MarketValue portfolio.Money    `json:"marketValue"`
 	ID          portfolio.ID       `json:"id"`
+	LastUpdate  portfolio.Date     `json:"lastUpdate"`
 	Description string             `json:"description,omitempty"`
 }
 
@@ -79,6 +80,7 @@ func NewHolding(s *portfolio.Snapshot) *Holding {
 			Price:       s.Price(ticker),
 			MarketValue: s.MarketValue(ticker),
 			ID:          sec.ID(),
+			LastUpdate:  s.LastMarketDataDate(ticker),
 			Description: sec.Description(),
 		})
 	}

@@ -46,10 +46,10 @@ pcs holding -d 2025-03-05
 
   ## Securities
 
-   Ticker    | Quantity |   Price |  Market Value 
-  -----------|----------|---------|---------------
-   MSFT      |       10 | $420.00 |     $4,200.00 
-   **Total** |          |         | **€3,818.17** 
+   Ticker    | Quantity | Price   | Market Value  | Last Update 
+  -----------|----------|---------|---------------|-------------
+   MSFT      | 10       | $420.00 | $4,200.00     | 2025-03-05  
+   **Total** |          |         | **€3,818.17** |             
 
   ## Cash
 
@@ -82,10 +82,10 @@ pcs holding -d 2025-03-06
 
   ## Securities
 
-   Ticker    | Quantity |   Price |  Market Value 
-  -----------|----------|---------|---------------
-   MSFT      |        5 | $420.00 |     $2,100.00 
-   **Total** |          |         | **€1,909.08** 
+   Ticker    | Quantity | Price   | Market Value  | Last Update 
+  -----------|----------|---------|---------------|-------------
+   MSFT      | 5        | $420.00 | $2,100.00     | 2025-03-05  
+   **Total** |          |         | **€1,909.08** |             
 
   ## Cash
 

@@ -4,10 +4,10 @@ Total My Holding Portfolio Value: **0.00**
 
 ## Securities
 
-| Ticker | Quantity | Price | Market Value |
-|:---|---:|---:|---:|
-| AAPL | 10 | 0.00 | 0.00 |
-| **Total** | | | **0.00** |
+   Ticker    | Quantity |   Price |  Market Value | Last Update 
+  -----------|----------|---------|---------------|-------------
+   AAPL      |       10 |    0.00 |          0.00 | 2024-01-14
+   **Total** |          |         | **0.00** |  |
 
 ## Cash
 
