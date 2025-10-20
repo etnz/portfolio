@@ -250,10 +250,17 @@ func assetBounds(sec portfolio.Security, ledger *portfolio.Ledger, inception boo
 	}
 
 	// Determine the from Date.
-	if inception {
-		from = ledger.InceptionDate(sec.Ticker())
-	} else {
-		from = ledger.LastKnownMarketDataDate(sec.Ticker()).Add(1)
+	// The oldest possible value is inception date.
+	from = ledger.InceptionDate(sec.Ticker())
+	if !inception {
+		// If we want incremental updates, start from the last known date + 1
+		lastKnown := ledger.LastKnownMarketDataDate(sec.Ticker()).Add(1)
+		// caveat: if there are no market data known (it's the case for new assets),
+		// lastKnown will be the zero date, which is before inception date.
+		// so we need to take the max of both.
+		if lastKnown.After(from) {
+			from = lastKnown
+		}
 	}
 
 	// Determine the to Date.
