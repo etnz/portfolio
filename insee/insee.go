@@ -61,10 +61,12 @@ func Fetch(ledger *portfolio.Ledger, inception bool) ([]portfolio.Transaction, e
 
 // getSeries constructs the URL, downloads, and parses an INSEE time series.
 func getSeries(idBank string, from, to portfolio.Date) (*Series, error) {
+	// INSEE date is relative to the data, while we are sending date about when the data was publish, INSEE index can take up to 2 months to be published.
+	from = from.AddMonth(-3)
 	startYear, startPeriod := from.Year(), from.Quarter()
 	endYear, endPeriod := to.Year(), to.Quarter()
 
-	url := fmt.Sprintf("https://bdm.insee.fr/series/%s/csv?lang=fr&ordre=antechronologique&transposition=donneescolonne&periodeDebut=%d&anneeDebut=%d&periodeFin=%d&anneeFin=%d&revision=sansrevisions",
+	url := fmt.Sprintf("https://bdm.insee.fr/series/%s/csv?lang=fr&ordre=antechronologique&periodeDebut=%d&anneeDebut=%d&periodeFin=%d&anneeFin=%d&revision=sansrevisions",
 		idBank,
 		startPeriod, startYear,
 		endPeriod, endYear,
@@ -178,6 +180,7 @@ func parseQuarterlyDate(s string) (portfolio.Date, error) {
 
 // parseSeries reads the INSEE CSV format from an io.Reader.
 func parseSeries(r io.Reader) (*Series, error) {
+
 	reader := csv.NewReader(r)
 	reader.Comma = ';'
 	reader.FieldsPerRecord = -1 // Allow variable number of fields
@@ -187,8 +190,17 @@ func parseSeries(r io.Reader) (*Series, error) {
 		return nil, fmt.Errorf("failed to read csv: %w", err)
 	}
 
-	if len(records) < 4 {
-		return nil, fmt.Errorf("not enough records in csv to parse series")
+	// records are in three lines and in columns, values start at col 5 (index 4)
+	// something like this:
+	/*
+	   Libellé     "idBank"    "Mises à jour"      "Période"   "2026-T2"   "2026-T1"   "2025-T4"       "2025-T3"
+	   lib         "010567069" "20/11/2025 08:45"  ""          ""          ""          ""              "136.9"
+	   Codes       ""          ""                  ""          ""          ""          ""               "P"
+
+	*/
+
+	if len(records) < 5 {
+		return nil, fmt.Errorf("INSEE csv serie is empty with  %d colums. %v", len(records), records)
 	}
 
 	series := &Series{
@@ -197,13 +209,16 @@ func parseSeries(r io.Reader) (*Series, error) {
 		Values:  make(map[portfolio.Date]float64),
 	}
 
+	// parse the updated date.
 	series.LastUpdate, err = time.Parse("02/01/2006 15:04", records[2][1])
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse last update date %q: %w", records[2][1], err)
 	}
 
+	// parse each value in the serie.
 	for i := 4; i < len(records); i++ {
 		if len(records[i]) > 1 && records[i][1] != "" {
+			log.Printf("INSEE: %v : %v", records[i][0], records[i][1])
 			date, err := parseInseeDate(records[i][0])
 			if err != nil {
 				// Don't wrap, parseInseeDate provides good context
