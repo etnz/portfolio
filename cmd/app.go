@@ -19,6 +19,7 @@ func Register(c *subcommands.Commander) {
 	c.Register(&amundiCmd{}, "providers")
 	c.Register(&eodhdCmd{}, "providers")
 	c.Register(&inseeCmd{}, "providers")
+	c.Register(&sgCmd{}, "providers")
 
 	c.Register(&initCmd{}, "transactions")
 	c.Register(&buyCmd{}, "transactions")
