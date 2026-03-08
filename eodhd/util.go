@@ -93,13 +93,6 @@ func newDailyCachingClient() *http.Client {
 	return client
 }
 
-// newDailyCachingClient returns an http.Client that uses a disk cache where entries expire daily.
-func newMonthlyCachingClient() *http.Client {
-	client := new(http.Client)
-	client.Transport = &diskCache{base: http.DefaultTransport, period: portfolio.Monthly}
-	return client
-}
-
 // jwget performs an HTTP GET request to the given address and unmarshals the
 // JSON response body into the provided data structure. It uses the provided
 // http.Client for the request.

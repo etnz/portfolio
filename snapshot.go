@@ -151,6 +151,7 @@ func (s *Snapshot) LastMarketDataDate(ticker string) Date {
 	}
 	return lastDate
 }
+
 // --- public calculation helpers ---
 
 // Position calculates the quantity held of a single security on the snapshot's date.
@@ -180,7 +181,7 @@ func (s *Snapshot) Position(ticker string) Quantity {
 func (s *Snapshot) SecurityDetails(ticker string) (Security, bool) {
 	for e := range s.events() {
 		if d, ok := e.(declareSecurity); ok && d.ticker == ticker {
-			return NewSecurity(d.id, d.ticker, d.currency, d.memo), true
+			return NewSecurity(d.id, d.ticker, d.currency, d.memo, d.fetcher), true
 		}
 	}
 	return Security{}, false

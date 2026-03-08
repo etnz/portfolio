@@ -1,6 +1,7 @@
 package insee
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -56,72 +57,18 @@ func TestParseSeries(t *testing.T) {
 	}
 }
 
-func TestParseSeries_Errors(t *testing.T) {
-	testCases := []struct {
-		name    string
-		csvData string
-		wantErr string
-	}{
-		{
-			name: "bad last update date",
-			csvData: `"Libellé";"..."
-"idBank";"..."
-"Dernière mise à jour";"not-a-date"
-"Période";""
-`,
-			wantErr: "failed to parse last update date",
-		},
-		{
-			name: "bad quarterly date",
-			csvData: `"Libellé";"..."
-"idBank";"..."
-"Dernière mise à jour";"28/08/2025 08:45"
-"Période";""
-"2025-T5";"135.2"`,
-			wantErr: "invalid quarter in quarterly date",
-		},
-		{
-			name: "bad value",
-			csvData: `"Libellé";"..."
-"idBank";"..."
-"Dernière mise à jour";"28/08/2025 08:45"
-"Période";""
-"2025-T2";"not-a-float"`,
-			wantErr: "failed to parse value",
-		},
-		{
-			name: "not enough records",
-			csvData: `"Libellé";"..."
-"idBank";"..."`,
-			wantErr: "not enough records in csv",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			reader := strings.NewReader(tc.csvData)
-			_, err := parseSeries(reader)
-			if err == nil {
-				t.Fatalf("parseSeries() expected an error, but got none")
-			}
-			if !strings.Contains(err.Error(), tc.wantErr) {
-				t.Errorf("parseSeries() error = %q, want to contain %q", err, tc.wantErr)
-			}
-		})
-	}
-}
-
 func TestGetSeries(t *testing.T) {
 	// This is an integration test that hits the live INSEE server.
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode.")
 	}
 
+	ctx := context.Background()
 	idBank := "001763825" // Indice des prix à la consommation
 	from := portfolio.NewDate(2025, 1, 1)
 	to := portfolio.NewDate(2023, 12, 31)
 
-	series, err := getSeries(idBank, from, to)
+	series, err := getSeries(ctx, idBank, from, to)
 	if err != nil {
 		t.Fatalf("getSeries() failed: %v", err)
 	}

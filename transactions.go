@@ -301,15 +301,17 @@ type Declare struct {
 	Ticker   string `json:"ticker"`
 	ID       ID     `json:"id"`
 	Currency string `json:"currency"`
+	Fetcher  string `json:"fetcher,omitempty"` // Fetcher provides the URI to configure the financial data fetcher.
 }
 
 // NewDeclare creates a new Declare transaction.
-func NewDeclare(day Date, memo, ticker string, id ID, currency string) Declare {
+func NewDeclare(day Date, memo, ticker string, id ID, currency string, fetcher string) Declare {
 	return Declare{
 		baseCmd:  baseCmd{Command: CmdDeclare, Date: day, Memo: memo},
 		Ticker:   ticker,
 		ID:       ID(id),
 		Currency: currency,
+		Fetcher:  fetcher,
 	}
 }
 
@@ -320,6 +322,7 @@ func (t Declare) MarshalJSON() ([]byte, error) {
 	w.Append("ticker", t.Ticker)
 	w.Append("id", t.ID)
 	w.Append("currency", t.Currency)
+	w.Optional("fetcher", t.Fetcher)
 	return w.MarshalJSON()
 }
 

@@ -84,7 +84,7 @@ func TestSnapshot_BasicSingleSecurity(t *testing.T) {
 	ledger.currency = "EUR"
 
 	txs := []Transaction{
-		NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR"),
+		NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR", ""),
 		NewDeposit(NewDate(2025, 1, 2), "", EUR(10000), ""),
 		NewBuy(NewDate(2025, 1, 3), "", "AAPL", Q(10), EUR(1500)),
 		NewUpdatePrice(NewDate(2025, 1, 4), "AAPL", EUR(160)),
@@ -128,8 +128,8 @@ func TestSnapshot_MultiCurrency(t *testing.T) {
 	ledger := NewLedger()
 	ledger.currency = "EUR"
 	txs := []Transaction{
-		NewDeclare(NewDate(2025, 1, 1), "", "MSFT", "US5949181045.XNAS", "USD"), // Not using a constant for MSFT as it's not defined in helpers
-		NewDeclare(NewDate(2025, 1, 1), "", "USDEUR", USDEUR, "EUR"),
+		NewDeclare(NewDate(2025, 1, 1), "", "MSFT", "US5949181045.XNAS", "USD", ""), // Not using a constant for MSFT as it's not defined in helpers
+		NewDeclare(NewDate(2025, 1, 1), "", "USDEUR", USDEUR, "EUR", ""),
 		NewDeposit(NewDate(2025, 1, 2), "", EUR(10000), ""),
 		NewDeposit(NewDate(2025, 1, 2), "", USD(5000), ""),
 		NewUpdatePrice(NewDate(2025, 1, 2), "USDEUR", EUR(0.9)),
@@ -203,7 +203,7 @@ func TestSnapshot_RealizedGains(t *testing.T) {
 			ledger := NewLedger()
 			ledger.currency = "EUR"
 			txs := []Transaction{
-				NewDeclare(NewDate(2025, 1, 1), "", "AAPL", "US0378331005.XNAS", "EUR"),
+				NewDeclare(NewDate(2025, 1, 1), "", "AAPL", "US0378331005.XNAS", "EUR", ""),
 				NewDeposit(NewDate(2025, 1, 2), "", M(10000, "EUR"), ""),
 				NewBuy(NewDate(2025, 1, 3), "", "AAPL", Q(10), M(1000, "EUR")), // Lot 1: 10 @ 100
 				NewBuy(NewDate(2025, 1, 4), "", "AAPL", Q(10), M(1200, "EUR")), // Lot 2: 10 @ 120
@@ -236,7 +236,7 @@ func TestSnapshot_CorporateActions(t *testing.T) {
 	ledger := NewLedger()
 	ledger.currency = "EUR"
 	txs := []Transaction{
-		NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR"),
+		NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR", ""),
 		NewDeposit(NewDate(2025, 1, 2), "", EUR(10000), ""),
 		NewBuy(NewDate(2025, 1, 3), "", "AAPL", Q(10), EUR(1500)),
 		NewDividend(NewDate(2025, 1, 4), "", "AAPL", EUR(5)),
@@ -331,7 +331,7 @@ func TestSnapshot_TimeWeightedReturn_VirtualAssetValue(t *testing.T) {
 		ledger := NewLedger()
 		ledger.currency = "EUR"
 		txs := []Transaction{
-			NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR"),
+			NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR", ""),
 			NewBuy(NewDate(2025, 1, 2), "", "AAPL", Q(10), EUR(1000)), // Price is 100
 			NewUpdatePrice(NewDate(2025, 1, 3), "AAPL", EUR(110)),
 		}
@@ -350,7 +350,7 @@ func TestSnapshot_TimeWeightedReturn_VirtualAssetValue(t *testing.T) {
 		ledger := NewLedger()
 		ledger.currency = "EUR"
 		txs := []Transaction{
-			NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR"),
+			NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR", ""),
 			NewBuy(NewDate(2025, 1, 2), "", "AAPL", Q(10), EUR(1000)), // Price is 100
 			NewUpdatePrice(NewDate(2025, 1, 3), "AAPL", EUR(110)),     // Up 10%
 			NewDeposit(NewDate(2025, 1, 3), "", EUR(5000), ""),        // <-- Cash flow, should not affect TWR
@@ -372,7 +372,7 @@ func TestSnapshot_TimeWeightedReturn_VirtualAssetValue(t *testing.T) {
 		ledger := NewLedger()
 		ledger.currency = "EUR"
 		txs := []Transaction{
-			NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR"),
+			NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR", ""),
 			NewBuy(NewDate(2025, 1, 2), "", "AAPL", Q(10), EUR(1000)),  // Price 100
 			NewUpdatePrice(NewDate(2025, 1, 3), "AAPL", EUR(110)),      // Up 10%
 			NewSell(NewDate(2025, 1, 4), "", "AAPL", Q(10), EUR(1100)), // Sell all
@@ -399,7 +399,7 @@ func TestSnapshot_TimeWeightedReturn_VirtualAssetValue(t *testing.T) {
 		ledger := NewLedger()
 		ledger.currency = "EUR"
 		txs := []Transaction{
-			NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR"),
+			NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR", ""),
 			NewUpdatePrice(NewDate(2025, 1, 3), "AAPL", EUR(110)),
 		}
 		ledger.Append(txs...)
@@ -415,8 +415,8 @@ func TestSnapshot_TimeWeightedReturn_VirtualAssetValue(t *testing.T) {
 		ledger := NewLedger()
 		ledger.currency = "EUR"
 		txs := []Transaction{
-			NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR"),
-			NewDeclare(NewDate(2025, 1, 1), "", "MSFT", "US5949181045.XNAS", "EUR"),
+			NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR", ""),
+			NewDeclare(NewDate(2025, 1, 1), "", "MSFT", "US5949181045.XNAS", "EUR", ""),
 			NewBuy(NewDate(2025, 1, 2), "", "MSFT", Q(10), EUR(1000)),
 			NewUpdatePrice(NewDate(2025, 1, 3), "MSFT", EUR(110)),
 		}

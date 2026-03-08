@@ -514,6 +514,7 @@ type declareCmd struct {
 	ticker   string
 	id       string
 	currency string
+	fetcher  string
 	date     string
 	memo     string
 	ledger   string
@@ -534,6 +535,7 @@ func (c *declareCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.ticker, "s", "", "Ledger-internal ticker to define (e.g., 'MY_AAPL')")
 	f.StringVar(&c.id, "id", "", "Full, unique security ID (e.g., 'US0378331005.XNAS')")
 	f.StringVar(&c.currency, "c", "", "The currency of the security (e.g., 'USD')")
+	f.StringVar(&c.fetcher, "f", "", "The fetcher URI (e.g., 'yahoo://ticker')")
 	f.StringVar(&c.date, "d", portfolio.Today().String(), "Transaction date. See the user manual for supported date formats.")
 	f.StringVar(&c.memo, "m", "", "An optional rationale or note for the transaction")
 	f.StringVar(&c.ledger, "l", "", "Ledger to add the transaction to.")
@@ -564,7 +566,7 @@ func (c *declareCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 		fmt.Fprintf(os.Stderr, "Invalid security ID: %v\n", err)
 		return subcommands.ExitUsageError
 	}
-	tx := portfolio.NewDeclare(day, c.memo, c.ticker, id, c.currency)
+	tx := portfolio.NewDeclare(day, c.memo, c.ticker, id, c.currency, c.fetcher)
 	_, status := handleTransaction(c.ledger, tx)
 	return status
 }

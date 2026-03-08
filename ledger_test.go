@@ -9,7 +9,7 @@ func TestLedger_CashBalance(t *testing.T) {
 	ledger := NewLedger()
 	o := NewDate(2025, time.January, 1)
 	ledger.Append(
-		NewDeclare(o, "", "AAPL", AAPL, "USD"),
+		NewDeclare(o, "", "AAPL", AAPL, "USD", ""),
 		// Transactions are sorted by date to match the function's assumption for optimization.
 		NewDeposit(NewDate(2025, time.January, 5), "", EUR(10000), ""),
 		NewDeposit(NewDate(2025, time.January, 10), "", USD(50000), ""),             // +50000 USD

@@ -52,7 +52,7 @@ func fetchMicToExchangeCode(apiKey string) (map[string]string, error) {
 
 // fetchPrices fills the daily open and close prices for a given EODHD ticker.
 // The EODHD ticker format is typically "SYMBOL.EXCHANGECODE".
-func fetchPrices(apiKey string, id portfolio.ID, ticker string, from, to portfolio.Date, open, close map[point]PriceChange) (err error) {
+func fetchPrices(apiKey string, id portfolio.ID, ticker string, from, to portfolio.Date, open, close map[point]priceChange) (err error) {
 	// https://eodhd.com/api/eod/NVD.F?api_token=demo&fmt=json
 	// [
 	//
@@ -89,7 +89,7 @@ func fetchPrices(apiKey string, id portfolio.ID, ticker string, from, to portfol
 
 	for _, info := range content {
 		if close != nil {
-			close[point{info.Date, id}] = PriceChange{
+			close[point{info.Date, id}] = priceChange{
 				Date: info.Date,
 				ID:   id,
 				Old:  nil,
@@ -97,7 +97,7 @@ func fetchPrices(apiKey string, id portfolio.ID, ticker string, from, to portfol
 			}
 		}
 		if open != nil {
-			open[point{info.Date, id}] = PriceChange{
+			open[point{info.Date, id}] = priceChange{
 				Date: info.Date,
 				ID:   id,
 				Old:  nil,
@@ -108,8 +108,36 @@ func fetchPrices(apiKey string, id portfolio.ID, ticker string, from, to portfol
 	return
 }
 
+func findPrices(apiKey string, id portfolio.ID, ticker string, from, to portfolio.Date, prices map[point]priceChange) (err error) {
+	if id.IsCurrencyPair() {
+		open := make(map[point]priceChange)
+		err = fetchPrices(apiKey, id, ticker, from.Add(1), to.Add(1), open, nil)
+		if err != nil {
+			return err
+		}
+		// eodhd forex sucks, the so called close value is probably buggy and equal to the open most of the time.
+		// Instead the open of the next day is the closer to the truth, so be it.
+		for pt, v := range open {
+			prices[point{pt.Date.Add(-1), pt.ID}] = priceChange{
+				Date: v.Date,
+				ID:   v.ID,
+				Old:  nil,
+				New:  v.New,
+			}
+		}
+		return nil
+	}
+
+	err = fetchPrices(apiKey, id, ticker, from, to, nil, prices)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // fetchSplits returns the split history for a given EODHD ticker.
-func fetchSplits(apiKey string, id portfolio.ID, ticker string, from, to portfolio.Date, splits map[point]SplitChange) error {
+func fetchSplits(apiKey string, id portfolio.ID, ticker string, from, to portfolio.Date, splits map[point]splitChange) error {
 	addr := fmt.Sprintf("https://eodhd.com/api/splits/%s?fmt=json&api_token=%s&from=%s&to=%s", ticker, apiKey, from, to)
 
 	type apiSplit struct {
@@ -138,7 +166,7 @@ func fetchSplits(apiKey string, id portfolio.ID, ticker string, from, to portfol
 		}
 
 		num, den := simplifyDecimalRatio(numDecimal, denDecimal)
-		splits[point{s.Date, id}] = SplitChange{
+		splits[point{s.Date, id}] = splitChange{
 			Date:        s.Date,
 			ID:          id,
 			Numerator:   num,
@@ -149,7 +177,7 @@ func fetchSplits(apiKey string, id portfolio.ID, ticker string, from, to portfol
 }
 
 // fetchDividends returns the dividend history for a given EODHD ticker.
-func fetchDividends(apiKey string, id portfolio.ID, ticker string, from, to portfolio.Date, dividends map[point]DividendChange) error {
+func fetchDividends(apiKey string, id portfolio.ID, ticker string, from, to portfolio.Date, dividends map[point]dividendChange) error {
 	addr := fmt.Sprintf("https://eodhd.com/api/div/%s?fmt=json&api_token=%s&from=%s&to=%s", ticker, apiKey, from, to)
 
 	type apiDividend struct {
@@ -164,7 +192,7 @@ func fetchDividends(apiKey string, id portfolio.ID, ticker string, from, to port
 	}
 
 	for _, d := range content {
-		dividends[point{d.Date, id}] = DividendChange{
+		dividends[point{d.Date, id}] = dividendChange{
 			Date:     d.Date,
 			ID:       id,
 			Amount:   d.Value,
@@ -172,53 +200,4 @@ func fetchDividends(apiKey string, id portfolio.ID, ticker string, from, to port
 		}
 	}
 	return nil
-}
-
-// TickerInfo holds information about a specific ticker on an exchange from the EODHD API.
-type TickerInfo struct {
-	Code     string `json:"Code"`
-	Name     string `json:"Name"`
-	Country  string `json:"Country"`
-	Exchange string `json:"Exchange"`
-	Currency string `json:"Currency"`
-	Type     string `json:"Type"`
-	Isin     string `json:"Isin"`
-}
-
-// fetchTickers retrieves the list of all tickers for a given exchange code.
-func fetchTickers(apiKey string, exchangeCode string, delisted bool) ([]TickerInfo, error) {
-	// API Documentation: https://eodhd.com/api/exchange-symbol-list/{EXCHANGE_CODE}
-	// Example response
-	// [
-	// {
-	// "Code": "CDR",
-	// "Name": "CD PROJEKT SA",
-	// "Country": "Poland",
-	// "Exchange": "WAR",
-	// "Currency": "PLN",
-	// "Type": "Common Stock",
-	// "Isin": "PLOPTTC00011"
-	// },
-	// {
-	// "Code": "PKN",
-	// "Name": "PKN Orlen SA",
-	// "Country": "Poland",
-	// "Exchange": "WAR",
-	// "Currency": "PLN",
-	// "Type": "Common Stock",
-	// "Isin": "PLPKN0000018"
-	// }
-	// ... ]
-
-	addr := fmt.Sprintf("https://eodhd.com/api/exchange-symbol-list/%s?api_token=%s&fmt=json", exchangeCode, apiKey)
-	if delisted {
-		addr = fmt.Sprintf("https://eodhd.com/api/exchange-symbol-list/%s?api_token=%s&fmt=json&delisted=1", exchangeCode, apiKey)
-	}
-
-	var content []TickerInfo
-	if err := jwget(newMonthlyCachingClient(), addr, &content); err != nil {
-		return nil, fmt.Errorf("failed to fetch tickers for exchange %s: %w", exchangeCode, err)
-	}
-
-	return content, nil
 }

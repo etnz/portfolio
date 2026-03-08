@@ -3,12 +3,14 @@ package insee
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -17,50 +19,35 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-const inseePrefix = "INSEE-"
-
 // Fetch retrieves market data from INSEE for the requested securities and date ranges.
-func Fetch(ledger *portfolio.Ledger, inception bool) ([]portfolio.Transaction, error) {
-	var updates []portfolio.Transaction
-	var errs error
-
-	for sec := range ledger.AllSecurities() {
-		id := sec.ID()
-		idStr := string(id)
-		if !strings.HasPrefix(idStr, inseePrefix) {
-			continue
-		}
-
-		var from, to portfolio.Date
-		if inception {
-			from = ledger.InceptionDate(sec.Ticker())
-		} else {
-			from = ledger.LastKnownMarketDataDate(sec.Ticker()).Add(1)
-		}
-		to = portfolio.Today()
-
-		if from.After(to) {
-			continue
-		}
-
-		idBank := strings.TrimPrefix(idStr, inseePrefix)
-
-		series, err := getSeries(idBank, from, to)
-		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("failed to get series for INSEE ID %s: %w", id, err))
-			continue
-		}
-
-		for date, price := range series.Values {
-			tx := portfolio.NewUpdatePrice(date, sec.Ticker(), portfolio.M(decimal.NewFromFloat(price), sec.Currency()))
-			updates = append(updates, tx)
-		}
+func Fetch(ctx context.Context, security portfolio.Security, from, to portfolio.Date) ([]portfolio.Transaction, error) {
+	u, err := url.Parse(security.Fetcher())
+	if err != nil {
+		return nil, fmt.Errorf("invalid fetcher URI: %w", err)
 	}
-	return updates, errs
+	idBank := u.Host
+	if idBank == "" {
+		idBank = u.Path
+	}
+
+	series, err := getSeries(ctx, idBank, from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	var updates []portfolio.Transaction
+	for date, price := range series.Values {
+		if date.Before(from) || date.After(to) {
+			continue
+		}
+		tx := portfolio.NewUpdatePrice(date, security.Ticker(), portfolio.M(decimal.NewFromFloat(price), security.Currency()))
+		updates = append(updates, tx)
+	}
+	return updates, nil
 }
 
 // getSeries constructs the URL, downloads, and parses an INSEE time series.
-func getSeries(idBank string, from, to portfolio.Date) (*Series, error) {
+func getSeries(ctx context.Context, idBank string, from, to portfolio.Date) (*Series, error) {
 	// INSEE date is relative to the data, while we are sending date about when the data was publish, INSEE index can take up to 2 months to be published.
 	from = from.AddMonth(-3)
 	startYear, startPeriod := from.Year(), from.Quarter()
@@ -78,7 +65,11 @@ func getSeries(idBank string, from, to portfolio.Date) (*Series, error) {
 	const retries = 3
 	for i := 1; i <= retries; i++ {
 		var e error
-		resp, e = http.Get(url)
+		req, reqErr := http.NewRequestWithContext(ctx, "GET", url, nil)
+		if reqErr != nil {
+			return nil, reqErr
+		}
+		resp, e = http.DefaultClient.Do(req)
 		if e != nil {
 			log.Println("Error downloading from INSEE Retrying.", i)
 			err = errors.Join(err, e)

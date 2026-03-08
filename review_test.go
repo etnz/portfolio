@@ -10,7 +10,7 @@ func TestReview_PeriodWithInvestmentAndGains(t *testing.T) {
 
 	txs := []Transaction{
 		// --- BEFORE Period ---
-		NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR"),
+		NewDeclare(NewDate(2025, 1, 1), "", "AAPL", AAPL, "EUR", ""),
 		NewDeposit(NewDate(2025, 1, 2), "", EUR(10000), ""),
 		NewBuy(NewDate(2025, 1, 3), "", "AAPL", Q(10), EUR(1000)), // Price: 100
 		NewUpdatePrice(NewDate(2025, 1, 4), "AAPL", EUR(110)),

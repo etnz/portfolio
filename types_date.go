@@ -54,6 +54,9 @@ func (d Date) DayString() string {
 	return d.String()
 }
 
+// Unix returns t as a Unix time, the number of seconds elapsed since January 1, 1970 UTC.
+func (d Date) Unix() int64 { return d.time().Unix() }
+
 // Full format the date in date-time RFC3339
 func (d Date) Full() string { return d.time().Format(DatetimeFormat) }
 

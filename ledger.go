@@ -358,7 +358,7 @@ func (l *Ledger) processTx(txs ...Transaction) {
 		case Init:
 			l.currency = v.Currency
 		case Declare:
-			sec := NewSecurity(v.ID, v.Ticker, v.Currency, v.Memo)
+			sec := NewSecurity(v.ID, v.Ticker, v.Currency, v.Memo, v.Fetcher)
 			l.securities[sec.Ticker()] = sec
 		case Accrue:
 			if v.Create {
