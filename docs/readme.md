@@ -27,3 +27,11 @@ pcs topic gains holding
 # View all documentation
 pcs topic '*'
 ```
+
+
+TODO:
+
+- add support for the https://stooq.com/ data provider
+- add support for tiingo data provider (free for up to 500 unique symbols)
+- add support for ft as data provider (json api on charts)
+- investigate support for euronext as a data provider

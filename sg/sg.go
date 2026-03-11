@@ -2,9 +2,13 @@ package sg
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+
+	"github.com/etnz/portfolio"
 )
 
 const listURL = "https://www.societegeneralegestion.fr/product-services/tip/shares/v2/categories/public/search.json?filters%5B818%5D%5B0%5D=Action&filters%5B879%5D%5B0%5D=true&limit=2000&page=1&sort%5B0%5D%5Bfield%5D=label&sort%5B0%5D%5Border%5D=ASC&perimeter=501&searchText=&offset=0&grouping=false&category=public&partnerId=699&locale=fr-FR&id=282"
@@ -83,4 +87,33 @@ func FetchHistory(isin string) ([]NavPoint, error) {
 	}
 
 	return items[0].NavHistory, nil
+}
+
+// Fetch implements the Fetcher interface for Societe Generale.
+func Fetch(ctx context.Context, security portfolio.Security, from, to portfolio.Date) ([]portfolio.Transaction, error) {
+	u, err := url.Parse(security.Fetcher())
+	if err != nil {
+		return nil, fmt.Errorf("invalid fetcher URI: %w", err)
+	}
+	isin := u.Host
+	history, err := FetchHistory(isin)
+	if err != nil {
+		return nil, err
+	}
+
+	var txs []portfolio.Transaction
+	for _, item := range history {
+		date, err := portfolio.ParseDate(item.Date)
+		if err != nil {
+			continue
+		}
+		if date.Before(from) || date.After(to) {
+			continue
+		}
+
+		price := portfolio.M(item.Value, security.Currency())
+		tx := portfolio.NewUpdatePrice(date, security.Ticker(), price)
+		txs = append(txs, tx)
+	}
+	return txs, nil
 }

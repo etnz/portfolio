@@ -9,8 +9,10 @@ import (
 	"os"
 
 	"github.com/etnz/portfolio"
+	"github.com/etnz/portfolio/amundi"
 	"github.com/etnz/portfolio/eodhd"
 	"github.com/etnz/portfolio/insee"
+	"github.com/etnz/portfolio/sg"
 	"github.com/etnz/portfolio/yahoo"
 	"github.com/google/subcommands"
 )
@@ -29,12 +31,26 @@ func RegisterFetcher(protocol string, f Fetcher) {
 func init() {
 	RegisterFetcher("yahoo", yahoo.Fetch)
 	RegisterFetcher("insee", insee.Fetch)
+	RegisterFetcher("amundi", amundi.Fetch)
 	RegisterFetcher("eodhd", eodhd.FetchSecurity)
+	RegisterFetcher("sg", sg.Fetch)
+}
+
+type stringList []string
+
+func (s *stringList) String() string {
+	return fmt.Sprintf("%v", *s)
+}
+
+func (s *stringList) Set(value string) error {
+	*s = append(*s, value)
+	return nil
 }
 
 type fetchCmd struct {
 	ledgerFile string
 	inception  bool
+	providers  stringList
 }
 
 func (*fetchCmd) Name() string { return "fetch" }
@@ -42,7 +58,7 @@ func (*fetchCmd) Synopsis() string {
 	return "fetches market data for all securities with a declared fetcher"
 }
 func (*fetchCmd) Usage() string {
-	return `pcs fetch [-l <ledger>] [-inception]
+	return `pcs fetch [-l <ledger>] [-inception] [-f <provider>]
 
 Fetches market data for all securities in the ledger that have a 'fetcher' URI declared.
 It uses the protocol specified in the URI (e.g., "yahoo://") to select the appropriate provider.
@@ -52,6 +68,7 @@ It uses the protocol specified in the URI (e.g., "yahoo://") to select the appro
 func (c *fetchCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.ledgerFile, "l", "", "Ledger to update. Updates all ledgers by default.")
 	f.BoolVar(&c.inception, "inception", false, "Fetch data from inception date, ignoring existing history.")
+	f.Var(&c.providers, "f", "Limit fetch to specific providers (e.g. -f yahoo). Can be repeated.")
 }
 
 func (c *fetchCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -78,13 +95,18 @@ func (c *fetchCmd) processLedger(ctx context.Context, ledger *portfolio.Ledger) 
 
 	for sec := range ledger.AllSecurities() {
 		// Determine date range
-		to := portfolio.Today()
-
-		// Optimization: if the asset is no longer held, we don't need to fetch data up to today.
-		// We can stop at the last operation date (e.g. the date of the sale).
-		lastOp := ledger.LastOperationDate(sec.Ticker())
-		if !lastOp.IsZero() && ledger.Position(lastOp, sec.Ticker()).IsZero() {
-			to = lastOp.Add(-1)
+		var to portfolio.Date
+		if sec.ID().IsCurrencyPair() {
+			// For currencies, the EOD price is for the previous day.
+			to = portfolio.Today().Add(-1)
+		} else {
+			to = portfolio.Today()
+			// Optimization: if the asset is no longer held, we don't need to fetch data up to today.
+			// We can stop at the last operation date (e.g. the date of the sale).
+			lastOp := ledger.LastOperationDate(sec.Ticker())
+			if !lastOp.IsZero() && ledger.Position(lastOp, sec.Ticker()).IsZero() {
+				to = lastOp.Add(-1)
+			}
 		}
 
 		// Determine the from Date.
@@ -116,6 +138,19 @@ func (c *fetchCmd) processLedger(ctx context.Context, ledger *portfolio.Ledger) 
 		}
 
 		protocol := u.Scheme
+
+		if len(c.providers) > 0 {
+			found := false
+			for _, p := range c.providers {
+				if p == protocol {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
 		fetcher, ok := fetcherRegistry[protocol]
 		if !ok {
 			log.Printf("No fetcher registered for protocol %q (security %s)", protocol, sec.Ticker())

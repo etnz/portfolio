@@ -119,7 +119,7 @@ func findPrices(apiKey string, id portfolio.ID, ticker string, from, to portfoli
 		// Instead the open of the next day is the closer to the truth, so be it.
 		for pt, v := range open {
 			prices[point{pt.Date.Add(-1), pt.ID}] = priceChange{
-				Date: v.Date,
+				Date: v.Date.Add(-1),
 				ID:   v.ID,
 				Old:  nil,
 				New:  v.New,
