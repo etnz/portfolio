@@ -2,6 +2,7 @@ package eodhd
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/etnz/portfolio"
@@ -73,6 +74,8 @@ func fetchPrices(apiKey string, id portfolio.ID, ticker string, from, to portfol
 	// bounds are included in the response, and time is limited to 1 year with free subscription.
 
 	addr := fmt.Sprintf("https://eodhd.com/api/eod/%s?fmt=json&api_token=%s&from=%s&to=%s", ticker, apiKey, from, to)
+	log.Printf("https://eodhd.com/api/eod/%s?fmt=json&api_token=%s&from=%s&to=%s", ticker, "xxx", from, to)
+
 	type Info struct {
 		Date  portfolio.Date  `json:"date"`
 		Close decimal.Decimal `json:"close"`
