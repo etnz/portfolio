@@ -2,7 +2,6 @@ package portfolio
 
 import (
 	"iter"
-	"log"
 )
 
 // Snapshot represents a view of the portfolio at a single point in time.
@@ -202,12 +201,12 @@ func (s *Snapshot) Cash(currency string) Money {
 		case creditCash:
 			if v.currency() == currency {
 				balance = balance.Add(v.amount)
-				log.Printf("%s New Balance: %s", v.on, balance.value.String())
+				// log.Printf("%s New Balance: %s", v.on, balance.value.String())
 			}
 		case debitCash:
 			if v.currency() == currency {
 				balance = balance.Sub(v.amount)
-				log.Printf("%s New Balance: %s", v.on, balance.value.String())
+				// log.Printf("%s New Balance: %s", v.on, balance.value.String())
 			}
 		}
 	}
