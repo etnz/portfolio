@@ -84,10 +84,10 @@ func (d Date) time() time.Time { return time.Date(d.y, d.m, d.d, 0, 0, 0, 0, tim
 func (d Date) Format(format string) string { return d.time().Format(format) }
 
 // Before reports whether the day d is before x.
-func (d Date) Before(x Date) bool { return d.time().Before(x.time()) }
+func (d Date) Before(x Date) bool { return d.Compare(x) < 0 }
 
 // After reports whether the day d is after x.
-func (d Date) After(x Date) bool { return d.time().After(x.time()) }
+func (d Date) After(x Date) bool { return d.Compare(x) > 0 }
 
 // Today returns the current date.
 func Today() Date { return NewDate(time.Now().Date()) }

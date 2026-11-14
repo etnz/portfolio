@@ -3,6 +3,7 @@ package portfolio
 import (
 	"maps"
 	"math"
+	"sort"
 )
 
 // Review represents an analysis of the portfolio over a specific period (Range).
@@ -11,6 +12,15 @@ import (
 type Review struct {
 	start *Snapshot // Snapshot at period.From - 1 day
 	end   *Snapshot // Snapshot at period.To
+}
+
+// NewReview creates a Review comparing two pre-constructed Snapshots:
+// start (taken at period.From - 1 day) and end (taken at period.To).
+func NewReview(start, end *Snapshot) *Review {
+	return &Review{
+		start: start,
+		end:   end,
+	}
 }
 
 func (r *Review) Name() string {
@@ -38,36 +48,29 @@ func (r *Review) CashFlow() Money {
 	periodRange := r.Range()
 	flowsByCurrency := make(map[string]Money)
 
-	for _, e := range r.end.journal.events {
-		eventDate := e.date()
-		if eventDate.Before(periodRange.From) {
-			continue
-		}
-		if eventDate.After(periodRange.To) {
+	flows := r.end.journal.externalFlows
+	startIdx := sort.Search(len(flows), func(i int) bool {
+		return !flows[i].date().Before(periodRange.From)
+	})
+
+	for _, e := range flows[startIdx:] {
+		if e.date().After(periodRange.To) {
 			break
 		}
 
 		switch v := e.(type) {
 		case creditCash:
-			if v.external {
-				cur := v.currency()
-				flowsByCurrency[cur] = flowsByCurrency[cur].Add(v.amount)
-			}
+			cur := v.currency()
+			flowsByCurrency[cur] = flowsByCurrency[cur].Add(v.amount)
 		case debitCash:
-			if v.external {
-				cur := v.currency()
-				flowsByCurrency[cur] = flowsByCurrency[cur].Sub(v.amount)
-			}
+			cur := v.currency()
+			flowsByCurrency[cur] = flowsByCurrency[cur].Sub(v.amount)
 		case creditCounterparty:
-			if v.external {
-				cur := v.currency()
-				flowsByCurrency[cur] = flowsByCurrency[cur].Add(v.amount)
-			}
+			cur := v.currency()
+			flowsByCurrency[cur] = flowsByCurrency[cur].Add(v.amount)
 		case debitCounterparty:
-			if v.external {
-				cur := v.currency()
-				flowsByCurrency[cur] = flowsByCurrency[cur].Sub(v.amount)
-			}
+			cur := v.currency()
+			flowsByCurrency[cur] = flowsByCurrency[cur].Sub(v.amount)
 		}
 	}
 
@@ -138,6 +141,20 @@ func (r *Review) TotalReturn() Money {
 	return marketGainLoss.Add(dividends)
 }
 
+// ForexGain calculates the gain or loss attributable to foreign exchange rate movements
+// during the review period.
+func (r *Review) ForexGain() Money {
+	return r.PortfolioChange().Sub(r.CashFlow()).Sub(r.MarketGain())
+}
+
+// TotalGains calculates the total economic gain of the portfolio over the review period,
+// combining market gains, foreign exchange gains, and dividend income.
+// Since MarketGain + ForexGain equals PortfolioChange - CashFlow, this is computed
+// directly without evaluating per-asset market gains.
+func (r *Review) TotalGains() Money {
+	return r.PortfolioChange().Sub(r.CashFlow()).Add(r.Dividends())
+}
+
 // DividendReturn calculates the return from dividends as a percentage of the starting portfolio value.
 func (r *Review) DividendReturn() Percent {
 	dividends := r.Dividends()
@@ -172,11 +189,15 @@ func (r *Review) TotalMarketChange() Money {
 func (r *Review) Transactions() []Transaction {
 	var periodTxs []Transaction
 	periodRange := r.Range()
-	// This assumes the journal is accessible via the snapshot.
-	for _, tx := range r.end.journal.txs {
-		if periodRange.Contains(tx.When()) {
-			periodTxs = append(periodTxs, tx)
+	txs := r.end.journal.txs
+	startIdx := sort.Search(len(txs), func(i int) bool {
+		return !txs[i].When().Before(periodRange.From)
+	})
+	for _, tx := range txs[startIdx:] {
+		if tx.When().After(periodRange.To) {
+			break
 		}
+		periodTxs = append(periodTxs, tx)
 	}
 	return periodTxs
 }

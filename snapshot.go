@@ -2,15 +2,29 @@ package portfolio
 
 import (
 	"iter"
+	"sort"
+	"sync"
 )
 
 // Snapshot represents a view of the portfolio at a single point in time.
-// It is a stateless calculator that computes all values on-the-fly by
-// processing journal events up to its 'on' date.
+// It computes values by processing journal events up to its 'on' date,
+// memoizing pure results for repeated queries on the same Snapshot.
 type Snapshot struct {
 	name    string // the ledger's name
 	journal *Journal
 	on      Date
+
+	mu             sync.Mutex
+	hasTotalMarket bool
+	totalMarket    Money
+	hasTotalCash   bool
+	totalCash      Money
+	hasTotalCP     bool
+	totalCP        Money
+	marketValues   map[string]Money
+	dividends      map[string]Money
+	netFlows       map[string]Money
+	fxRates        map[string]Money
 }
 
 func (s *Snapshot) Name() string {
@@ -24,18 +38,16 @@ func (s *Snapshot) On() Date {
 
 // --- private calculation helpers ---
 
-// events returns an iterator over journal events up to the snapshot's date.
-func (s *Snapshot) events() iter.Seq[event] {
-	return func(yield func(event) bool) {
-		for _, e := range s.journal.events {
-			if e.date().After(s.on) {
-				break
-			}
-			if !yield(e) {
-				return
-			}
-		}
+// eventsUpTo returns the prefix of a chronologically sorted event slice with date <= on.
+func eventsUpTo[T event](evs []T, on Date) []T {
+	n := len(evs)
+	if n == 0 || !evs[n-1].date().After(on) {
+		return evs
 	}
+	idx := sort.Search(n, func(i int) bool {
+		return evs[i].date().After(on)
+	})
+	return evs[:idx]
 }
 
 // sum iterates over a sequence of keys (like tickers or currencies),
@@ -65,43 +77,33 @@ func (s *Snapshot) VirtualAssetValue(ticker string) Money {
 	// These track the state of the *actual* portfolio.
 	var actualPosition Quantity
 	var lastPrice Money
-	for e := range s.events() {
+	for _, e := range eventsUpTo(s.journal.secEvents[ticker], s.on) {
 		switch v := e.(type) {
 		case declareSecurity:
-			if v.ticker == ticker {
-				lastPrice = M(0, v.currency)
-				virtualCash = M(1, v.currency)
-			}
+			lastPrice = M(0, v.currency)
+			virtualCash = M(1, v.currency)
 		case acquireLot:
-			if v.security == ticker {
-				if actualPosition.IsZero() {
-					// First buy. The virtual portfolio uses its cash to buy virtual shares.
-					lastPrice = v.cost.Div(v.quantity)
-					virtualPosition = virtualCash.Mul(v.quantity).DivPrice(v.cost)
-					virtualCash = M(0, virtualCash.Currency()) // All cash is now invested.
-				}
-				actualPosition = actualPosition.Add(v.quantity)
+			if actualPosition.IsZero() {
+				// First buy. The virtual portfolio uses its cash to buy virtual shares.
+				lastPrice = v.cost.Div(v.quantity)
+				virtualPosition = virtualCash.Mul(v.quantity).DivPrice(v.cost)
+				virtualCash = M(0, virtualCash.Currency()) // All cash is now invested.
 			}
+			actualPosition = actualPosition.Add(v.quantity)
 		case disposeLot:
-			if v.security == ticker {
-				actualPosition = actualPosition.Sub(v.quantity)
-				if actualPosition.IsZero() {
-					// Actual position is down to zero. "Sell all" the virtual position.
-					virtualCash = lastPrice.Mul(virtualPosition)
-					virtualPosition = Q(0)
-				}
+			actualPosition = actualPosition.Sub(v.quantity)
+			if actualPosition.IsZero() {
+				// Actual position is down to zero. "Sell all" the virtual position.
+				virtualCash = lastPrice.Mul(virtualPosition)
+				virtualPosition = Q(0)
 			}
 		case updatePrice:
-			if v.security == ticker {
-				lastPrice = v.price
-			}
+			lastPrice = v.price
 		case splitShare:
-			if v.security == ticker {
-				num, den := Q(v.numerator), Q(v.denominator)
-				actualPosition = actualPosition.Mul(num).Div(den)
-				// The virtual position also splits.
-				virtualPosition = virtualPosition.Mul(num).Div(den)
-			}
+			num, den := Q(v.numerator), Q(v.denominator)
+			actualPosition = actualPosition.Mul(num).Div(den)
+			// The virtual position also splits.
+			virtualPosition = virtualPosition.Mul(num).Div(den)
 		}
 	}
 
@@ -118,37 +120,30 @@ func (s *Snapshot) VirtualTotalValue() Money {
 
 // Price finds the last known price for a security on or before the snapshot's date.
 func (s *Snapshot) Price(ticker string) Money {
-	var lastPrice Money
-	if sec, ok := s.SecurityDetails(ticker); !ok {
+	sec, ok := s.SecurityDetails(ticker)
+	if !ok {
 		return Money{} // undeclared security, cannot have price
-	} else {
-		lastPrice = M(0, sec.Currency())
 	}
-	for e := range s.events() {
-		if u, ok := e.(updatePrice); ok && u.security == ticker {
-			lastPrice = u.price
-		}
+	prices := eventsUpTo(s.journal.prices[ticker], s.on)
+	if len(prices) > 0 {
+		return prices[len(prices)-1].price
 	}
-	return lastPrice
+	return M(0, sec.Currency())
 }
 
 // LastMarketDataDate returns the date of the most recent market data (price or split)
 // for a security on or before the snapshot's date.
 func (s *Snapshot) LastMarketDataDate(ticker string) Date {
-	var lastDate Date
-	for e := range s.events() {
-		switch v := e.(type) {
+	evs := eventsUpTo(s.journal.secEvents[ticker], s.on)
+	for i := len(evs) - 1; i >= 0; i-- {
+		switch v := evs[i].(type) {
 		case updatePrice:
-			if v.security == ticker {
-				lastDate = v.date()
-			}
+			return v.date()
 		case splitShare:
-			if v.security == ticker {
-				lastDate = v.date()
-			}
+			return v.date()
 		}
 	}
-	return lastDate
+	return Date{}
 }
 
 // --- public calculation helpers ---
@@ -156,21 +151,15 @@ func (s *Snapshot) LastMarketDataDate(ticker string) Date {
 // Position calculates the quantity held of a single security on the snapshot's date.
 func (s *Snapshot) Position(ticker string) Quantity {
 	var position Quantity
-	for e := range s.events() {
+	for _, e := range eventsUpTo(s.journal.secOps[ticker], s.on) {
 		switch v := e.(type) {
 		case acquireLot:
-			if v.security == ticker {
-				position = position.Add(v.quantity)
-			}
+			position = position.Add(v.quantity)
 		case disposeLot:
-			if v.security == ticker {
-				position = position.Sub(v.quantity)
-			}
+			position = position.Sub(v.quantity)
 		case splitShare:
-			if v.security == ticker {
-				num, den := Q(v.numerator), Q(v.denominator)
-				position = position.Mul(num).Div(den)
-			}
+			num, den := Q(v.numerator), Q(v.denominator)
+			position = position.Mul(num).Div(den)
 		}
 	}
 	return position
@@ -178,8 +167,8 @@ func (s *Snapshot) Position(ticker string) Quantity {
 
 // SecurityDetails finds the declaration for a given ticker.
 func (s *Snapshot) SecurityDetails(ticker string) (Security, bool) {
-	for e := range s.events() {
-		if d, ok := e.(declareSecurity); ok && d.ticker == ticker {
+	for _, e := range eventsUpTo(s.journal.secOps[ticker], s.on) {
+		if d, ok := e.(declareSecurity); ok {
 			return NewSecurity(d.id, d.ticker, d.currency, d.memo, d.fetcher), true
 		}
 	}
@@ -188,26 +177,41 @@ func (s *Snapshot) SecurityDetails(ticker string) (Security, bool) {
 
 // MarketValue calculates the market value of a single security on the snapshot's date.
 func (s *Snapshot) MarketValue(ticker string) Money {
+	s.mu.Lock()
+	if v, ok := s.marketValues[ticker]; ok {
+		s.mu.Unlock()
+		return v
+	}
+	s.mu.Unlock()
+
 	pos := s.Position(ticker)
-	price := s.Price(ticker)
-	return price.Mul(pos)
+	var val Money
+	if pos.IsZero() {
+		if sec, ok := s.SecurityDetails(ticker); ok {
+			val = M(0, sec.Currency())
+		}
+	} else {
+		val = s.Price(ticker).Mul(pos)
+	}
+
+	s.mu.Lock()
+	if s.marketValues == nil {
+		s.marketValues = make(map[string]Money)
+	}
+	s.marketValues[ticker] = val
+	s.mu.Unlock()
+	return val
 }
 
 // Cash returns the balance of a specific cash account on the snapshot's date.
 func (s *Snapshot) Cash(currency string) Money {
 	balance := M(0, currency)
-	for e := range s.events() {
+	for _, e := range eventsUpTo(s.journal.cashByCur[currency], s.on) {
 		switch v := e.(type) {
 		case creditCash:
-			if v.currency() == currency {
-				balance = balance.Add(v.amount)
-				// log.Printf("%s New Balance: %s", v.on, balance.value.String())
-			}
+			balance = balance.Add(v.amount)
 		case debitCash:
-			if v.currency() == currency {
-				balance = balance.Sub(v.amount)
-				// log.Printf("%s New Balance: %s", v.on, balance.value.String())
-			}
+			balance = balance.Sub(v.amount)
 		}
 	}
 	return balance
@@ -216,31 +220,37 @@ func (s *Snapshot) Cash(currency string) Money {
 // Dividends calculates the total income received from
 // dividends for a specific security since inception.
 func (s *Snapshot) Dividends(ticker string) Money {
+	s.mu.Lock()
+	if v, ok := s.dividends[ticker]; ok {
+		s.mu.Unlock()
+		return v
+	}
+	s.mu.Unlock()
+
 	var totalDividends Money
 	var position Quantity
 
-	for e := range s.events() {
+	for _, e := range eventsUpTo(s.journal.secOps[ticker], s.on) {
 		switch v := e.(type) {
 		case acquireLot:
-			if v.security == ticker {
-				position = position.Add(v.quantity)
-			}
+			position = position.Add(v.quantity)
 		case splitShare:
-			if v.security == ticker {
-				num, den := Q(v.numerator), Q(v.denominator)
-				position = position.Mul(num).Div(den)
-			}
+			num, den := Q(v.numerator), Q(v.denominator)
+			position = position.Mul(num).Div(den)
 		case disposeLot:
-			if v.security == ticker {
-				position = position.Sub(v.quantity)
-			}
+			position = position.Sub(v.quantity)
 		case receiveDividend:
-			if v.security == ticker {
-				totalAmount := v.amount.Mul(position)
-				totalDividends = totalDividends.Add(totalAmount)
-			}
+			totalAmount := v.amount.Mul(position)
+			totalDividends = totalDividends.Add(totalAmount)
 		}
 	}
+
+	s.mu.Lock()
+	if s.dividends == nil {
+		s.dividends = make(map[string]Money)
+	}
+	s.dividends[ticker] = totalDividends
+	s.mu.Unlock()
 	return totalDividends
 }
 
@@ -250,50 +260,38 @@ func (s *Snapshot) CostBasis(ticker string, method CostBasisMethod) Money {
 	case AverageCost:
 		var totalQuantity Quantity
 		var totalCost Money
-		for e := range s.events() {
+		for _, e := range eventsUpTo(s.journal.secOps[ticker], s.on) {
 			switch v := e.(type) {
 			case acquireLot:
-				if v.security == ticker {
-					totalQuantity = totalQuantity.Add(v.quantity)
-					totalCost = totalCost.Add(v.cost)
-				}
+				totalQuantity = totalQuantity.Add(v.quantity)
+				totalCost = totalCost.Add(v.cost)
 			case splitShare:
-				if v.security == ticker {
-					num, den := Q(v.numerator), Q(v.denominator)
-					totalQuantity = totalQuantity.Mul(num).Div(den)
-				}
+				num, den := Q(v.numerator), Q(v.denominator)
+				totalQuantity = totalQuantity.Mul(num).Div(den)
 			case disposeLot:
-				if v.security == ticker {
-					if !totalQuantity.IsZero() {
-						costOfSale := totalCost.Mul(v.quantity).Div(totalQuantity)
-						totalCost = totalCost.Sub(costOfSale)
-					}
-					totalQuantity = totalQuantity.Sub(v.quantity)
+				if !totalQuantity.IsZero() {
+					costOfSale := totalCost.Mul(v.quantity).Div(totalQuantity)
+					totalCost = totalCost.Sub(costOfSale)
 				}
+				totalQuantity = totalQuantity.Sub(v.quantity)
 			}
 		}
 		return totalCost
 	case FIFO:
 		var securityLots lots
-		for e := range s.events() {
+		for _, e := range eventsUpTo(s.journal.secOps[ticker], s.on) {
 			switch v := e.(type) {
 			case acquireLot:
-				if v.security == ticker {
-					newLot := lot{Date: v.on, Quantity: v.quantity, Cost: v.cost}
-					securityLots = append(securityLots, newLot)
-				}
+				newLot := lot{Date: v.on, Quantity: v.quantity, Cost: v.cost}
+				securityLots = append(securityLots, newLot)
 			case splitShare:
-				if v.security == ticker {
-					num, den := Q(v.numerator), Q(v.denominator)
-					// we need to split shares in all lots
-					for i := range securityLots {
-						securityLots[i].Quantity = securityLots[i].Quantity.Mul(num).Div(den)
-					}
+				num, den := Q(v.numerator), Q(v.denominator)
+				// we need to split shares in all lots
+				for i := range securityLots {
+					securityLots[i].Quantity = securityLots[i].Quantity.Mul(num).Div(den)
 				}
 			case disposeLot:
-				if v.security == ticker {
-					securityLots = securityLots.sell(v.quantity)
-				}
+				securityLots = securityLots.sell(v.quantity)
 			}
 		}
 		var totalCost Money
@@ -314,54 +312,42 @@ func (s *Snapshot) RealizedGains(ticker string, method CostBasisMethod) Money {
 		var realizedGain Money
 		var totalQuantity Quantity
 		var totalCost Money
-		for e := range s.events() {
+		for _, e := range eventsUpTo(s.journal.secOps[ticker], s.on) {
 			switch v := e.(type) {
 			case acquireLot:
-				if v.security == ticker {
-					totalQuantity = totalQuantity.Add(v.quantity)
-					totalCost = totalCost.Add(v.cost)
-				}
+				totalQuantity = totalQuantity.Add(v.quantity)
+				totalCost = totalCost.Add(v.cost)
 			case splitShare:
-				if v.security == ticker {
-					num, den := Q(v.numerator), Q(v.denominator)
-					totalQuantity = totalQuantity.Mul(num).Div(den)
-				}
+				num, den := Q(v.numerator), Q(v.denominator)
+				totalQuantity = totalQuantity.Mul(num).Div(den)
 			case disposeLot:
-				if v.security == ticker {
-					costOfSale := totalCost.Mul(v.quantity).Div(totalQuantity)
-					gain := v.proceeds.Sub(costOfSale)
-					realizedGain = realizedGain.Add(gain)
-					totalCost = totalCost.Sub(costOfSale)
-					totalQuantity = totalQuantity.Sub(v.quantity)
-				}
+				costOfSale := totalCost.Mul(v.quantity).Div(totalQuantity)
+				gain := v.proceeds.Sub(costOfSale)
+				realizedGain = realizedGain.Add(gain)
+				totalCost = totalCost.Sub(costOfSale)
+				totalQuantity = totalQuantity.Sub(v.quantity)
 			}
 		}
 		return realizedGain
 	case FIFO:
 		var realizedGain Money
 		var securityLots lots
-		for e := range s.events() {
+		for _, e := range eventsUpTo(s.journal.secOps[ticker], s.on) {
 			switch v := e.(type) {
 			case acquireLot:
-				if v.security == ticker {
-					newLot := lot{Date: v.on, Quantity: v.quantity, Cost: v.cost}
-					securityLots = append(securityLots, newLot)
-				}
+				newLot := lot{Date: v.on, Quantity: v.quantity, Cost: v.cost}
+				securityLots = append(securityLots, newLot)
 			case splitShare:
-				if v.security == ticker {
-					num, den := Q(v.numerator), Q(v.denominator)
-					// we need to split shares in all lots
-					for i := range securityLots {
-						securityLots[i].Quantity = securityLots[i].Quantity.Mul(num).Div(den)
-					}
+				num, den := Q(v.numerator), Q(v.denominator)
+				// we need to split shares in all lots
+				for i := range securityLots {
+					securityLots[i].Quantity = securityLots[i].Quantity.Mul(num).Div(den)
 				}
 			case disposeLot:
-				if v.security == ticker {
-					costOfSale := securityLots.fifoCostOfSelling(v.quantity)
-					gain := v.proceeds.Sub(costOfSale)
-					realizedGain = realizedGain.Add(gain)
-					securityLots = securityLots.sell(v.quantity)
-				}
+				costOfSale := securityLots.fifoCostOfSelling(v.quantity)
+				gain := v.proceeds.Sub(costOfSale)
+				realizedGain = realizedGain.Add(gain)
+				securityLots = securityLots.sell(v.quantity)
 			}
 		}
 		return realizedGain
@@ -374,19 +360,29 @@ func (s *Snapshot) RealizedGains(ticker string, method CostBasisMethod) Money {
 // a specific security since inception. A positive value indicates a net cash
 // outflow (more spent on buys than received from sells).
 func (s *Snapshot) NetTradingFlow(ticker string) Money {
+	s.mu.Lock()
+	if v, ok := s.netFlows[ticker]; ok {
+		s.mu.Unlock()
+		return v
+	}
+	s.mu.Unlock()
+
 	var netFlow Money
-	for e := range s.events() {
+	for _, e := range eventsUpTo(s.journal.secOps[ticker], s.on) {
 		switch v := e.(type) {
 		case acquireLot:
-			if v.security == ticker {
-				netFlow = netFlow.Add(v.cost)
-			}
+			netFlow = netFlow.Add(v.cost)
 		case disposeLot:
-			if v.security == ticker {
-				netFlow = netFlow.Sub(v.proceeds)
-			}
+			netFlow = netFlow.Sub(v.proceeds)
 		}
 	}
+
+	s.mu.Lock()
+	if s.netFlows == nil {
+		s.netFlows = make(map[string]Money)
+	}
+	s.netFlows[ticker] = netFlow
+	s.mu.Unlock()
 	return netFlow
 }
 
@@ -394,22 +390,22 @@ func (s *Snapshot) NetTradingFlow(ticker string) Money {
 // of the portfolio from external sources for a specific currency since inception.
 func (s *Snapshot) CashFlow(currency string) Money {
 	flow := M(0, currency)
-	for e := range s.events() {
+	for _, e := range eventsUpTo(s.journal.externalFlows, s.on) {
 		switch v := e.(type) {
 		case creditCash:
-			if v.external && v.currency() == currency {
+			if v.currency() == currency {
 				flow = flow.Add(v.amount)
 			}
 		case debitCash:
-			if v.external && v.currency() == currency {
+			if v.currency() == currency {
 				flow = flow.Sub(v.amount)
 			}
 		case creditCounterparty:
-			if v.external && v.currency() == currency {
+			if v.currency() == currency {
 				flow = flow.Add(v.amount)
 			}
 		case debitCounterparty:
-			if v.external && v.currency() == currency {
+			if v.currency() == currency {
 				flow = flow.Sub(v.amount)
 			}
 		}
@@ -420,19 +416,15 @@ func (s *Snapshot) CashFlow(currency string) Money {
 // Counterparty returns the balance of a specific counterparty account on the snapshot's date.
 func (s *Snapshot) Counterparty(account string) Money {
 	var balance Money
-	for e := range s.events() {
+	for _, e := range eventsUpTo(s.journal.cpByAccount[account], s.on) {
 		switch v := e.(type) {
 		case creditCounterparty:
-			if v.account == account {
-				balance = balance.Add(v.amount)
-			}
+			balance = balance.Add(v.amount)
 		case debitCounterparty:
-			if v.account == account {
-				balance = balance.Sub(v.amount)
-			}
+			balance = balance.Sub(v.amount)
 		case declareCounterparty:
 			// This ensures the money has the correct currency even if balance is zero.
-			if v.account == account && balance.IsZero() {
+			if balance.IsZero() {
 				balance = M(0, v.currency)
 			}
 		}
@@ -445,13 +437,11 @@ func (s *Snapshot) Counterparty(account string) Money {
 func (s *Snapshot) Securities() iter.Seq[string] {
 	return func(yield func(string) bool) {
 		seen := make(map[string]struct{})
-		for e := range s.events() {
-			if v, ok := e.(declareSecurity); ok {
-				if _, exists := seen[v.ticker]; !exists {
-					seen[v.ticker] = struct{}{}
-					if !yield(v.ticker) {
-						return
-					}
+		for _, v := range eventsUpTo(s.journal.declarations, s.on) {
+			if _, exists := seen[v.ticker]; !exists {
+				seen[v.ticker] = struct{}{}
+				if !yield(v.ticker) {
+					return
 				}
 			}
 		}
@@ -463,13 +453,11 @@ func (s *Snapshot) Securities() iter.Seq[string] {
 func (s *Snapshot) Counterparties() iter.Seq[string] {
 	return func(yield func(string) bool) {
 		seen := make(map[string]struct{})
-		for e := range s.events() {
-			if v, ok := e.(declareCounterparty); ok {
-				if _, exists := seen[v.account]; !exists {
-					seen[v.account] = struct{}{}
-					if !yield(v.account) {
-						return
-					}
+		for _, v := range eventsUpTo(s.journal.counterparties, s.on) {
+			if _, exists := seen[v.account]; !exists {
+				seen[v.account] = struct{}{}
+				if !yield(v.account) {
+					return
 				}
 			}
 		}
@@ -481,40 +469,13 @@ func (s *Snapshot) Counterparties() iter.Seq[string] {
 // The order is based on their first appearance.
 func (s *Snapshot) Currencies() iter.Seq[string] {
 	return func(yield func(string) bool) {
-		seen := make(map[string]struct{})
-
-		// Helper to yield a currency if it's new
-		process := func(cur string) bool {
-			if cur != "" {
-				if _, exists := seen[cur]; !exists {
-					seen[cur] = struct{}{}
-					if !yield(cur) {
-						return false // Stop iteration
-					}
-				}
+		if s.journal.cur != "" {
+			if !yield(s.journal.cur) {
+				return
 			}
-			return true // Continue iteration
 		}
-
-		// Ensure reporting currency is always included first
-		if !process(s.journal.cur) {
-			return
-		}
-
-		for e := range s.events() {
-			var currency string
-			switch v := e.(type) {
-			case creditCash:
-				currency = v.currency()
-			case debitCash:
-				currency = v.currency()
-			case declareSecurity:
-				currency = v.currency
-			case declareCounterparty:
-				currency = v.currency
-			}
-
-			if !process(currency) {
+		for _, c := range eventsUpTo(s.journal.currencies, s.on) {
+			if !yield(c.currency) {
 				return
 			}
 		}
@@ -535,21 +496,49 @@ func (s *Snapshot) ExchangeRate(currency string) Money {
 	if currency == s.journal.cur {
 		return M(1, s.journal.cur)
 	}
-	var lastRate Money
-	for e := range s.events() {
-		if u, ok := e.(updateForex); ok && u.currency == currency {
-			lastRate = u.rate
-		}
+
+	s.mu.Lock()
+	if r, ok := s.fxRates[currency]; ok {
+		s.mu.Unlock()
+		return r
 	}
-	if lastRate.IsZero() {
-		return M(0, s.journal.cur)
+	s.mu.Unlock()
+
+	var rate Money
+	rates := eventsUpTo(s.journal.forex[currency], s.on)
+	if len(rates) > 0 {
+		rate = rates[len(rates)-1].rate
 	}
-	return lastRate
+	if rate.IsZero() {
+		rate = M(0, s.journal.cur)
+	}
+
+	s.mu.Lock()
+	if s.fxRates == nil {
+		s.fxRates = make(map[string]Money)
+	}
+	s.fxRates[currency] = rate
+	s.mu.Unlock()
+	return rate
 }
 
 // TotalMarket returns the total market value of all securities in the portfolio.
 func (s *Snapshot) TotalMarket() Money {
-	return s.sum(s.Securities(), s.MarketValue)
+	s.mu.Lock()
+	if s.hasTotalMarket {
+		v := s.totalMarket
+		s.mu.Unlock()
+		return v
+	}
+	s.mu.Unlock()
+
+	v := s.sum(s.Securities(), s.MarketValue)
+
+	s.mu.Lock()
+	s.totalMarket = v
+	s.hasTotalMarket = true
+	s.mu.Unlock()
+	return v
 }
 
 // TotalMarketIn returns the total market value of all securities denominated in a specific currency.
@@ -584,12 +573,40 @@ func (s *Snapshot) TotalCounterpartyIn(currency string) Money {
 
 // TotalCash returns the total cash balance across all currencies, converted to the reporting currency.
 func (s *Snapshot) TotalCash() Money {
-	return s.sum(s.Currencies(), s.Cash)
+	s.mu.Lock()
+	if s.hasTotalCash {
+		v := s.totalCash
+		s.mu.Unlock()
+		return v
+	}
+	s.mu.Unlock()
+
+	v := s.sum(s.Currencies(), s.Cash)
+
+	s.mu.Lock()
+	s.totalCash = v
+	s.hasTotalCash = true
+	s.mu.Unlock()
+	return v
 }
 
 // TotalCounterparty returns the total balance across all counterparty accounts, converted to the reporting currency.
 func (s *Snapshot) TotalCounterparty() Money {
-	return s.sum(s.Counterparties(), s.Counterparty)
+	s.mu.Lock()
+	if s.hasTotalCP {
+		v := s.totalCP
+		s.mu.Unlock()
+		return v
+	}
+	s.mu.Unlock()
+
+	v := s.sum(s.Counterparties(), s.Counterparty)
+
+	s.mu.Lock()
+	s.totalCP = v
+	s.hasTotalCP = true
+	s.mu.Unlock()
+	return v
 }
 
 // TotalPortfolio returns the total value of the portfolio, including securities, cash, and counterparty accounts.

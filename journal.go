@@ -13,11 +13,28 @@ type event interface {
 	source() int // index of the transaction that created that event
 }
 
-// Journal holds a chronologically sorted list of all atomic events.
+// currencyAppearance records the first event date on which a currency appears.
+type currencyAppearance struct {
+	baseEvent
+	currency string
+}
+
+// Journal holds a chronologically sorted list of all atomic events and
+// pre-built read-only indexes by category/key for fast Snapshot queries.
 type Journal struct {
-	cur    string  // the reporting currency.
-	events []event // sorted by date
-	txs    []Transaction
+	cur            string                   // the reporting currency.
+	events         []event                  // sorted by date
+	txs            []Transaction            // sorted transactions
+	declarations   []declareSecurity        // security declarations, sorted by date
+	counterparties []declareCounterparty    // counterparty declarations, sorted by date
+	currencies     []currencyAppearance     // first appearance of each non-reporting currency, sorted by date
+	secOps         map[string][]event       // non-price events per security (declare, acquire, dispose, split, dividend)
+	secEvents      map[string][]event       // operational + price events per security
+	prices         map[string][]updatePrice // price updates per security, sorted by date
+	forex          map[string][]updateForex // forex updates per currency, sorted by date
+	cashByCur      map[string][]event       // creditCash & debitCash per currency, sorted by date
+	cpByAccount    map[string][]event       // counterparty events per account, sorted by date
+	externalFlows  []event                  // external cash & counterparty flows, sorted by date
 }
 
 type baseEvent struct {
@@ -275,6 +292,87 @@ func (ledger *Ledger) newJournal() error {
 			return fmt.Errorf("cannot create the journal entry for transaction of unknown type: %T", tx)
 		}
 	}
+	journal.buildIndex()
 	ledger.journal = journal
 	return nil
+}
+
+// buildIndex populates read-only per-category/per-key event slices from journal.events.
+// Since journal.events is already sorted chronologically, all derived slices preserve
+// chronological and intra-day event ordering.
+func (j *Journal) buildIndex() {
+	j.secOps = make(map[string][]event)
+	j.secEvents = make(map[string][]event)
+	j.prices = make(map[string][]updatePrice)
+	j.forex = make(map[string][]updateForex)
+	j.cashByCur = make(map[string][]event)
+	j.cpByAccount = make(map[string][]event)
+
+	seenCur := make(map[string]struct{})
+	if j.cur != "" {
+		seenCur[j.cur] = struct{}{}
+	}
+	recordCurrency := func(b baseEvent, cur string) {
+		if cur == "" {
+			return
+		}
+		if _, exists := seenCur[cur]; !exists {
+			seenCur[cur] = struct{}{}
+			j.currencies = append(j.currencies, currencyAppearance{baseEvent: b, currency: cur})
+		}
+	}
+
+	for _, e := range j.events {
+		switch v := e.(type) {
+		case declareSecurity:
+			j.declarations = append(j.declarations, v)
+			j.secOps[v.ticker] = append(j.secOps[v.ticker], v)
+			j.secEvents[v.ticker] = append(j.secEvents[v.ticker], v)
+			recordCurrency(v.baseEvent, v.currency)
+		case acquireLot:
+			j.secOps[v.security] = append(j.secOps[v.security], v)
+			j.secEvents[v.security] = append(j.secEvents[v.security], v)
+		case disposeLot:
+			j.secOps[v.security] = append(j.secOps[v.security], v)
+			j.secEvents[v.security] = append(j.secEvents[v.security], v)
+		case splitShare:
+			j.secOps[v.security] = append(j.secOps[v.security], v)
+			j.secEvents[v.security] = append(j.secEvents[v.security], v)
+		case receiveDividend:
+			j.secOps[v.security] = append(j.secOps[v.security], v)
+		case updatePrice:
+			j.prices[v.security] = append(j.prices[v.security], v)
+			j.secEvents[v.security] = append(j.secEvents[v.security], v)
+		case updateForex:
+			j.forex[v.currency] = append(j.forex[v.currency], v)
+		case creditCash:
+			cur := v.currency()
+			j.cashByCur[cur] = append(j.cashByCur[cur], v)
+			if v.external {
+				j.externalFlows = append(j.externalFlows, v)
+			}
+			recordCurrency(v.baseEvent, cur)
+		case debitCash:
+			cur := v.currency()
+			j.cashByCur[cur] = append(j.cashByCur[cur], v)
+			if v.external {
+				j.externalFlows = append(j.externalFlows, v)
+			}
+			recordCurrency(v.baseEvent, cur)
+		case declareCounterparty:
+			j.counterparties = append(j.counterparties, v)
+			j.cpByAccount[v.account] = append(j.cpByAccount[v.account], v)
+			recordCurrency(v.baseEvent, v.currency)
+		case creditCounterparty:
+			j.cpByAccount[v.account] = append(j.cpByAccount[v.account], v)
+			if v.external {
+				j.externalFlows = append(j.externalFlows, v)
+			}
+		case debitCounterparty:
+			j.cpByAccount[v.account] = append(j.cpByAccount[v.account], v)
+			if v.external {
+				j.externalFlows = append(j.externalFlows, v)
+			}
+		}
+	}
 }

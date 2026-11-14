@@ -29,15 +29,27 @@ func RenderMultiPeriodSummary(w io.Writer, on portfolio.Date, ledger *portfolio.
 
 	// but each period lead to different ranges, one for the previous period one for the current period.
 	var reviews []*portfolio.Review
+	onSnap := ledger.NewSnapshot(on)
 	for _, p := range periods {
 		currentRange, previousRange := getPeriodRanges(p, on)
 
+		prevStartSnap := ledger.NewSnapshot(previousRange.From.Add(-1))
+		boundarySnap := ledger.NewSnapshot(previousRange.To)
+
 		// Add previous period
-		prevReview := ledger.NewReview(previousRange)
+		prevReview := portfolio.NewReview(prevStartSnap, boundarySnap)
 		reviews = append(reviews, prevReview)
 
-		// Add current period
-		currentReview := ledger.NewReview(currentRange)
+		// Add current period (reuses boundarySnap when adjacent and onSnap at end)
+		currStartSnap := boundarySnap
+		if currentRange.From.Add(-1) != boundarySnap.On() {
+			currStartSnap = ledger.NewSnapshot(currentRange.From.Add(-1))
+		}
+		currEndSnap := onSnap
+		if currentRange.To != on {
+			currEndSnap = ledger.NewSnapshot(currentRange.To)
+		}
+		currentReview := portfolio.NewReview(currStartSnap, currEndSnap)
 		reviews = append(reviews, currentReview)
 	}
 
@@ -90,7 +102,7 @@ func RenderMultiPeriodSummary(w io.Writer, on portfolio.Date, ledger *portfolio.
 	printRow("\u00A0\u00A0Capital Flow", func(r *portfolio.Review) string { return r.CashFlow().SignedString() })
 	printRow("+ Market Gains", func(r *portfolio.Review) string { return r.MarketGain().SignedString() })
 	printRow("+ Forex Gains", func(r *portfolio.Review) string {
-		return r.PortfolioChange().Sub(r.CashFlow()).Sub(r.MarketGain()).SignedString()
+		return r.ForexGain().SignedString()
 	})
 	printRowBold("= Net Change", func(r *portfolio.Review) string { return r.PortfolioChange().SignedString() })
 	printLine()
@@ -116,11 +128,10 @@ func RenderMultiPeriodSummary(w io.Writer, on portfolio.Date, ledger *portfolio.
 	printRow("\u00A0\u00A0Dividends", func(r *portfolio.Review) string { return r.Dividends().SignedString() })
 	printRow("+ Market Gains", func(r *portfolio.Review) string { return r.MarketGain().SignedString() })
 	printRow("+ Forex Gains", func(r *portfolio.Review) string {
-		return r.PortfolioChange().Sub(r.CashFlow()).Sub(r.MarketGain()).SignedString()
+		return r.ForexGain().SignedString()
 	})
 	printRowBold("= Total Gains", func(r *portfolio.Review) string {
-		forexGain := r.PortfolioChange().Sub(r.CashFlow()).Sub(r.MarketGain())
-		return r.MarketGain().Add(forexGain).Add(r.Dividends()).SignedString()
+		return r.TotalGains().SignedString()
 	})
 
 	return true

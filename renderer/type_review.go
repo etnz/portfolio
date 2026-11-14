@@ -102,7 +102,7 @@ func (ar AssetReview) IsZero() bool {
 // NewReview creates a new renderer.Review from a portfolio.Review.
 func NewReview(pr *portfolio.Review, method portfolio.CostBasisMethod) *Review {
 	start, end := pr.Start(), pr.End()
-	forexGain := pr.PortfolioChange().Sub(pr.CashFlow()).Sub(pr.MarketGain())
+	forexGain := pr.ForexGain()
 
 	r := &Review{
 		AsOf:                     Now().Format("2006-01-02 15:04:05"),
@@ -120,7 +120,7 @@ func NewReview(pr *portfolio.Review, method portfolio.CostBasisMethod) *Review {
 		CounterpartiesChange:     pr.CounterpartyChange(),
 		MarketValueChange:        pr.TotalMarketChange(),
 		Dividends:                pr.Dividends(),
-		TotalGains:               pr.MarketGain().Add(forexGain).Add(pr.Dividends()),
+		TotalGains:               pr.TotalGains(),
 
 		TotalStartMarketValue: pr.Start().TotalMarket(),
 		TotalEndMarketValue:   pr.End().TotalMarket(),

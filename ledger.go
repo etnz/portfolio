@@ -712,10 +712,7 @@ func (l *Ledger) NewSnapshot(on Date) *Snapshot {
 
 // NewReview creates a new portfolio review for a given period.
 func (l *Ledger) NewReview(period Range) *Review {
-	return &Review{
-		start: l.NewSnapshot(period.From.Add(-1)),
-		end:   l.NewSnapshot(period.To),
-	}
+	return NewReview(l.NewSnapshot(period.From.Add(-1)), l.NewSnapshot(period.To))
 }
 
 // GenerateLog generates a log of reviews for each sub-period within a given date range.
@@ -725,9 +722,18 @@ func (l *Ledger) GenerateLog(r Range, period Period) ([]*Review, error) {
 		return nil, errors.New("empty ledger")
 	}
 
+	var prevEnd *Snapshot
 	for subRange := range r.Periods(period) {
-		review := l.NewReview(subRange)
-		result = append(result, review)
+		startDate := subRange.From.Add(-1)
+		var startSnap *Snapshot
+		if prevEnd != nil && prevEnd.On() == startDate {
+			startSnap = prevEnd
+		} else {
+			startSnap = l.NewSnapshot(startDate)
+		}
+		endSnap := l.NewSnapshot(subRange.To)
+		result = append(result, NewReview(startSnap, endSnap))
+		prevEnd = endSnap
 	}
 	return result, nil
 }
