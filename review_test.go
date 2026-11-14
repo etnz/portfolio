@@ -97,5 +97,51 @@ func TestReview_PeriodWithInvestmentAndGains(t *testing.T) {
 		if got, want := review.TotalReturn(), EUR(250); !got.Equal(want) {
 			t.Errorf("TotalReturn() = %v, want %v", got, want)
 		}
+
+		if got, want := review.ForexGain(), EUR(0); !got.Equal(want) {
+			t.Errorf("ForexGain() = %v, want %v", got, want)
+		}
+
+		if got, want := review.TotalGains(), EUR(250); !got.Equal(want) {
+			t.Errorf("TotalGains() = %v, want %v", got, want)
+		}
 	})
+}
+
+func TestReview_SharedSnapshotsAndMultiCurrencyTotalGains(t *testing.T) {
+	ledger := NewLedger()
+	ledger.currency = "EUR"
+
+	txs := []Transaction{
+		NewDeclare(NewDate(2025, 1, 1), "", "MSFT", "US5949181045.XNAS", "USD", ""),
+		NewDeclare(NewDate(2025, 1, 1), "", "USDEUR", USDEUR, "EUR", ""),
+		NewDeposit(NewDate(2025, 1, 1), "", USD(1000), ""),
+		NewUpdatePrice(NewDate(2025, 1, 1), "USDEUR", EUR(0.90)),
+		NewBuy(NewDate(2025, 1, 1), "", "MSFT", Q(5), USD(500)),
+		NewUpdatePrice(NewDate(2025, 1, 1), "MSFT", USD(100)),
+
+		// Period starts Jan 2: FX moves 0.90 -> 1.00, MSFT moves 100 -> 110, dividend 2 USD/sh
+		NewUpdatePrice(NewDate(2025, 1, 2), "MSFT", USD(110)),
+		NewUpdatePrice(NewDate(2025, 1, 2), "USDEUR", EUR(1.00)),
+		NewDividend(NewDate(2025, 1, 2), "", "MSFT", USD(2)),
+		NewDeposit(NewDate(2025, 1, 3), "", EUR(200), ""),
+		NewUpdatePrice(NewDate(2025, 1, 3), "MSFT", USD(120)),
+	}
+	if err := ledger.Append(txs...); err != nil {
+		t.Fatalf("ledger.Append() error = %v", err)
+	}
+
+	startSnap := ledger.NewSnapshot(NewDate(2025, 1, 1))
+	for _, endDay := range []Date{NewDate(2025, 1, 2), NewDate(2025, 1, 3)} {
+		endSnap := ledger.NewSnapshot(endDay)
+		sharedRev := NewReview(startSnap, endSnap)
+		freshRev := ledger.NewReview(NewRange(NewDate(2025, 1, 2), endDay))
+
+		if got, want := sharedRev.TotalGains(), freshRev.MarketGain().Add(freshRev.ForexGain()).Add(freshRev.Dividends()); !got.Equal(want) {
+			t.Errorf("on %s: TotalGains() = %v, want MarketGain+ForexGain+Dividends = %v", endDay, got, want)
+		}
+		if got, want := sharedRev.MarketGain(), freshRev.MarketGain(); !got.Equal(want) {
+			t.Errorf("on %s: shared MarketGain() = %v, want %v", endDay, got, want)
+		}
+	}
 }

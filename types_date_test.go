@@ -19,6 +19,30 @@ func TestTime(t *testing.T) {
 	}
 }
 
+func TestDate_BeforeAfter(t *testing.T) {
+	dates := []Date{
+		{},
+		NewDate(2009, 9, 30),
+		NewDate(2024, 2, 28),
+		NewDate(2024, 2, 29),
+		NewDate(2024, 3, 1),
+		NewDate(2024, 12, 31),
+		NewDate(2025, 1, 1),
+		NewDate(2025, 1, 31),
+		NewDate(2025, 2, 1),
+	}
+	for i, a := range dates {
+		for j, b := range dates {
+			if got, want := a.Before(b), i < j; got != want {
+				t.Errorf("%v.Before(%v) = %v, want %v", a, b, got, want)
+			}
+			if got, want := a.After(b), i > j; got != want {
+				t.Errorf("%v.After(%v) = %v, want %v", a, b, got, want)
+			}
+		}
+	}
+}
+
 func TestParse(t *testing.T) {
 	today := Today()
 	currentYear := today.Year()
